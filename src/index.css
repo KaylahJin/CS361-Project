@@ -1,0 +1,37 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.home {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.home-title {
+  margin: 0;
+  font-size: 4rem;
+  color: #5064f5;
+}
+
+.home-subtitle {
+  margin: 0;
+  font-size: 3.5rem;
+}
+
+.home-thai {
+  margin-top: 30px;
+  font-size: 2rem;
+}
+
+.home-thai span {
+  color: #5064f5;
+}
