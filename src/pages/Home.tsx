@@ -242,14 +242,14 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
 
-            <a
+            {/*<a
               href="https://sites.google.com/sci.tu.ac.th/cstuco-opstudyplan/job-offers?authuser=0#h.8irt0xkx73jp"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 ml-1 cursor-pointer transition"
             >
               ดูทั้งหมด <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            </a>*/}
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
@@ -260,7 +260,7 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
         {/* Last Updated */}
         <div className="pt-8 pb-4 text-center">
           <span className="text-xs text-slate-400 tracking-wide">
-            อัปเดตล่าสุด -/-/2569
+            อัปเดตล่าสุด 31/08/2569
           </span>
         </div>
       </div>
