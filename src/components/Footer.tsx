@@ -24,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
   return (
     <footer className="w-full bg-[#f8f9fc] border-t border-slate-200/70 pt-12 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 pb-12 items-start justify-between">
           {/* Column 1: Brand & Main Navigation */}
           <div className="flex flex-col space-y-3">
             <span className="text-2xl font-black tracking-wider text-blue-600 mb-2 select-none">
@@ -32,25 +32,26 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
             </span>
             <button
               onClick={() => onTabChange?.('home')}
-              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium"
+              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium cursor-pointer"
             >
               หน้าหลัก
             </button>
             <button
               onClick={() => onTabChange?.('requirements')}
-              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium"
+              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium cursor-pointer"
             >
               เกณฑ์สหกิจ
             </button>
             <button
               onClick={() => onTabChange?.('employers')}
-              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium"
+              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium cursor-pointer"
             >
               สถานประกอบการ
             </button>
           </div>
 
-          {/* Column 2: Schedule & Criteria */}
+          {/* Column 2: Schedule & Criteria (Hidden temporarily) */}
+          {/*
           <div className="flex flex-col space-y-3">
             <span className="text-sm font-semibold text-slate-900 mb-1">
               กำหนดการณสหกิจ
@@ -65,8 +66,10 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
               ข้อมูลปีก่อนหน้า
             </a>
           </div>
+          */}
 
-          {/* Column 3: Resources & Contact */}
+          {/* Column 3: Resources & Contact (Hidden temporarily) */}
+          {/*
           <div className="flex flex-col space-y-3">
             <span className="text-sm font-semibold text-slate-900 mb-1">
               แหล่งข้อมูล
@@ -81,12 +84,15 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
               แจ้งข้อมูลไม่ถูกต้อง
             </a>
           </div>
+          */}
 
           {/* Column 4: Notice & Newsletter Form */}
-          <div className="flex flex-col space-y-4">
+          <div className="flex flex-col space-y-4 max-w-sm md:ml-auto w-full">
+            {/*
             <p className="text-xs text-blue-600 leading-relaxed font-medium">
               ข้อมูลในระบบใช้เพื่อความสะดวกในการค้นหา โปรดตรวจสอบประกาศอย่างเป็นทางการก่อนการดำเนินการ
             </p>
+            */}
 
             <form onSubmit={handleSubmit} className="flex items-stretch shadow-xs rounded-lg overflow-hidden border border-slate-300/80 bg-white focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition">
               <input
