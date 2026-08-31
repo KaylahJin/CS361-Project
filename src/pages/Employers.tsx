@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 
 export interface Employer {
   id: string;
@@ -1015,11 +1016,24 @@ export const Employers: React.FC = () => {
         ))}
       </section>
 
-      {/* Last Updated Timestamp */}
-      <div className="mt-4 mb-12 text-center">
-        <span className="text-xs text-slate-400 tracking-wide">
-          อัปเดตล่าสุด -/-/2569
-        </span>
+      {/* Reference & Last Updated Timestamp */}
+      <div className="mt-6 mb-12 text-center space-y-2">
+        <div>
+          <a
+            href="https://docs.google.com/spreadsheets/d/1mrexRW94TkVQUK91wLhqQtbEBResL4OBc9BWzcsvOjE/edit?gid=0#gid=0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+          >
+            แหล่งข้อมูลอ้างอิง: ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา_2569 - Google ชีต
+            <ExternalLink className="w-3.5 h-3.5 inline" />
+          </a>
+        </div>
+        <div>
+          <span className="text-xs text-slate-400 tracking-wide">
+            อัปเดตล่าสุด -/-/2569
+          </span>
+        </div>
       </div>
     </main>
   );
