@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FileEdit, Building2, Flag, ArrowRight, Megaphone, ExternalLink, ArrowUpRight, FileSpreadsheet, FileText } from 'lucide-react';
+import type { TabType } from '../components/Navbar';
 
-export const Home: React.FC = () => {
-  const [selectedYear, setSelectedYear] = useState<string>('2568');
-  const years = ['2568', '2567', '2566', '2565'];
+interface HomeProps {
+  onTabChange?: (tab: TabType) => void;
+}
 
+export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
   return (
     <main className="w-full min-h-screen bg-white">
       {/* Hero Section */}
@@ -44,12 +46,18 @@ export const Home: React.FC = () => {
 
           {/* Announcement Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Card 1: เกณฑ์รับเข้าแผนสหกิจศึกษา */}
-            <a
-              href="https://sites.google.com/sci.tu.ac.th/computerscience-cstuco-opstudy/admission-criteria"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50/60 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+            {/* Card 1: เกณฑ์รับเข้าแผนสหกิจศึกษา (ไปหน้าเกณฑ์สหกิจ) */}
+            <div
+              onClick={() => onTabChange?.('requirements')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onTabChange?.('requirements');
+                }
+              }}
+              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50/60 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer text-left"
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-4">
@@ -61,7 +69,7 @@ export const Home: React.FC = () => {
                       เกณฑ์การรับเข้า
                     </span>
                     <span className="p-1 text-slate-400 group-hover:text-blue-600 transition-colors">
-                      <ArrowUpRight className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
                 </div>
@@ -75,12 +83,12 @@ export const Home: React.FC = () => {
               </div>
 
               <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span className="truncate max-w-[200px] text-slate-400">sites.google.com/sci.tu.ac.th</span>
+                <span className="text-slate-400">หน้าเกณฑ์และคุณสมบัติ</span>
                 <span className="font-medium text-blue-600 group-hover:underline flex items-center gap-1">
-                  เปิดเอกสาร <ExternalLink className="w-3 h-3" />
+                  ดูเกณฑ์สหกิจ <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>
-            </a>
+            </div>
 
             {/* Card 2: ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา_2569 */}
             <a
@@ -224,30 +232,28 @@ export const Home: React.FC = () => {
               ปีการศึกษา:
             </span>
 
-            {years.map((year) => (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`px-3 py-1 text-xs sm:text-sm rounded-md border transition-all duration-150 cursor-pointer font-medium ${
-                  selectedYear === year
-                    ? 'border-blue-300 text-blue-700 bg-blue-50/70 shadow-2xs'
-                    : 'border-slate-200 text-slate-700 hover:border-blue-200 hover:bg-slate-50'
-                }`}
-              >
-                {year}
-              </button>
-            ))}
+            <a
+              href="https://sites.google.com/sci.tu.ac.th/cstuco-opstudyplan/job-offers?authuser=0#h.8irt0xkx73jp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm rounded-md border border-blue-300 text-blue-700 bg-blue-50/70 hover:bg-blue-100/80 shadow-2xs font-medium transition-all duration-150 cursor-pointer"
+            >
+              2568 (2025)
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
 
-            <button
-              onClick={() => {}}
+            <a
+              href="https://sites.google.com/sci.tu.ac.th/cstuco-opstudyplan/job-offers?authuser=0#h.8irt0xkx73jp"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 ml-1 cursor-pointer transition"
             >
               ดูทั้งหมด <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </a>
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
-            ใช้สำหรับตรวจสอบเกณฑ์ในปีก่อนหน้าเท่านั้น ไม่ควรใช้แทนข้อมูลของปีการศึกษาปัจจุบัน
+            ใช้สำหรับตรวจสอบเกณฑ์และตำแหน่งงานในปีก่อนหน้าเท่านั้น ไม่ควรใช้แทนข้อมูลของปีการศึกษาปัจจุบัน
           </p>
         </section>
 
