@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileEdit, Building2, Flag, ArrowRight } from 'lucide-react';
+import { FileEdit, Building2, Flag, ArrowRight, Megaphone, ExternalLink, ArrowUpRight, FileSpreadsheet, FileText } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>('2568');
@@ -21,9 +21,109 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Main Content Container */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-16">
+        
+        {/* Announcements & Updates Section */}
+        <section className="mt-4">
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                  <Megaphone className="w-4 h-4" />
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                  ประกาศและอัปเดต
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                ข้อมูลข่าวสาร เอกสาร และเกณฑ์การดำเนินงานสหกิจศึกษาล่าสุด
+              </p>
+            </div>
+          </div>
+
+          {/* Announcement Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {/* Card 1: เกณฑ์รับเข้าแผนสหกิจศึกษา */}
+            <a
+              href="https://sites.google.com/sci.tu.ac.th/computerscience-cstuco-opstudy/admission-criteria"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50/60 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full">
+                      เกณฑ์การรับเข้า
+                    </span>
+                    <span className="p-1 text-slate-400 group-hover:text-blue-600 transition-colors">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </div>
+
+                <h4 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  เกณฑ์รับเข้าแผนสหกิจศึกษา
+                </h4>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  ข้อกำหนด คุณสมบัติผู้สมัคร และเงื่อนไขการคัดเลือกนักศึกษาเข้าสู่โครงการสหกิจศึกษา สาขาวิชาวิทยาการคอมพิวเตอร์
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="truncate max-w-[200px] text-slate-400">sites.google.com/sci.tu.ac.th</span>
+                <span className="font-medium text-blue-600 group-hover:underline flex items-center gap-1">
+                  เปิดเอกสาร <ExternalLink className="w-3 h-3" />
+                </span>
+              </div>
+            </a>
+
+            {/* Card 2: ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา_2569 */}
+            <a
+              href="https://docs.google.com/spreadsheets/d/1mrexRW94TkVQUK91wLhqQtbEBResL4OBc9BWzcsvOjE/edit?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-emerald-50/20 border border-slate-200/90 hover:border-emerald-300 hover:shadow-md transition-all duration-200"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full">
+                      ปี 2569
+                    </span>
+                    <span className="p-1 text-slate-400 group-hover:text-emerald-600 transition-colors">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </div>
+
+                <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา 2569
+                </h4>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  ตารางรวบรวมรายชื่อสถานประกอบการ ตำแหน่งงานที่เปิดรับ และรายละเอียดเงื่อนไขการรับสมัครสหกิจศึกษา ประจำปีการศึกษา 2569
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="text-slate-400">Google Sheets</span>
+                <span className="font-medium text-emerald-600 group-hover:underline flex items-center gap-1">
+                  เปิดตารางข้อมูล <ExternalLink className="w-3 h-3" />
+                </span>
+              </div>
+            </a>
+          </div>
+        </section>
+
         {/* Timeline Section */}
-        <section className="mt-8">
+        <section>
           {/* Section Header */}
           <div className="mb-10 sm:mb-12">
             <h3 className="text-base sm:text-lg font-bold text-slate-900">
@@ -152,7 +252,7 @@ export const Home: React.FC = () => {
         </section>
 
         {/* Last Updated */}
-        <div className="mt-24 mb-10 text-center">
+        <div className="pt-8 pb-4 text-center">
           <span className="text-xs text-slate-400 tracking-wide">
             อัปเดตล่าสุด -/-/2569
           </span>
