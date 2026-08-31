@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Mail } from 'lucide-react';
+import React from 'react';
 import type { TabType } from './Navbar';
 
 interface FooterProps {
@@ -7,6 +6,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
+  /*
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -20,6 +20,7 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
       }, 3000);
     }
   };
+  */
 
   return (
     <footer className="w-full bg-[#f8f9fc] border-t border-slate-200/70 pt-12 pb-8">
@@ -86,13 +87,12 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
           </div>
           */}
 
-          {/* Column 4: Notice & Newsletter Form */}
+          {/* Column 4: Notice & Newsletter Form (Hidden temporarily) */}
+          {/*
           <div className="flex flex-col space-y-4 max-w-sm md:ml-auto w-full">
-            {/*
             <p className="text-xs text-blue-600 leading-relaxed font-medium">
               ข้อมูลในระบบใช้เพื่อความสะดวกในการค้นหา โปรดตรวจสอบประกาศอย่างเป็นทางการก่อนการดำเนินการ
             </p>
-            */}
 
             <form onSubmit={handleSubmit} className="flex items-stretch shadow-xs rounded-lg overflow-hidden border border-slate-300/80 bg-white focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition">
               <input
@@ -116,6 +116,7 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
               </button>
             </form>
           </div>
+          */}
         </div>
 
         {/* Bottom Copyright */}
