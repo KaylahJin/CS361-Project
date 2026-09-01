@@ -1,0 +1,1042 @@
+import React, { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
+
+export interface Employer {
+  id: string;
+  code: string;
+  name: string;
+  shortName?: string;
+  address: string;
+  logoFilename: string;
+  url: string;
+}
+
+export const EMPLOYERS_DATA: Employer[] = [
+  {
+    id: 'C01',
+    code: 'C01',
+    name: 'บริษัท ซีดีจี กรุ๊ป จำกัด',
+    shortName: 'CDG Group',
+    address: '202 ถนนนางลิ้นจี่ แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'cdg.png',
+    url: 'https://www.cdg.co.th/join-us/',
+  },
+  {
+    id: 'C02',
+    code: 'C02',
+    name: 'ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ (NECTEC)',
+    shortName: 'NECTEC',
+    address: 'ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ (NECTEC) 112 ถนนพหลโยธิน',
+    logoFilename: 'nectec.png',
+    url: 'https://www.nectec.or.th/',
+  },
+  {
+    id: 'C03',
+    code: 'C03',
+    name: 'ตลาดหลักทรัพย์แห่งประเทศไทย (SET)',
+    shortName: 'SET',
+    address: 'เลขที่ 93 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400',
+    logoFilename: 'set.png',
+    url: 'https://www.set.or.th/',
+  },
+  {
+    id: 'C04',
+    code: 'C04',
+    name: 'ธนาคารกรุงเทพ จำกัด (มหาชน)',
+    shortName: 'Bangkok Bank',
+    address: '333 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'bangkokbank.png',
+    url: 'https://www.bangkokbank.com/th-TH/About-Us/Career',
+  },
+  {
+    id: 'C05',
+    code: 'C05',
+    name: 'ธนาคารทหารไทยธนชาต จำกัด (มหาชน)',
+    shortName: 'ttb',
+    address: 'ทีทีบี สำนักงานใหญ่ 3000 ถนนพหลโยธิน แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'ttb.png',
+    url: 'https://www.ttbbank.com/th/career',
+  },
+  {
+    id: 'C06',
+    code: 'C06',
+    name: 'ธนาคารไทยพาณิชย์ จำกัด (มหาชน)',
+    shortName: 'SCB',
+    address: 'ธนาคารไทยพาณิชย์ จำกัด (มหาชน) สำนักงานใหญ่ 9 ถ.รัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900',
+    logoFilename: 'scb.png',
+    url: 'https://careers.scb.co.th/',
+  },
+  {
+    id: 'C09',
+    code: 'C09',
+    name: 'บริษัท เงินเทอร์โบ จำกัด (มหาชน)',
+    shortName: 'เงินเทอร์โบ',
+    address: '500 หมู่ 3 ถนนติวานนท์ ตำบลบ้านใหม่ อำเภอปากเกร็ด จังหวัดนนทบุรี 11120',
+    logoFilename: 'turbo.png',
+    url: 'https://www.ntb.co.th/',
+  },
+  {
+    id: 'C10',
+    code: 'C10',
+    name: 'บริษัท จีเอเบิล จำกัด (มหาชน)',
+    shortName: 'G-Able',
+    address: '127/30 อาคารปัญจธานี ชั้น 25 ถนนนนทรี แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'gable.png',
+    url: 'https://www.g-able.com/',
+  },
+  {
+    id: 'C11',
+    code: 'C11',
+    name: 'บริษัท เจริญโภคภัณฑ์อาหาร จำกัด (มหาชน)',
+    shortName: 'CPF',
+    address: '313 อาคารซี.พี. ทาวเวอร์ ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'cpf.png',
+    url: 'https://www.cpfworldwide.com/th/career',
+  },
+  {
+    id: 'C12',
+    code: 'C12',
+    name: 'บริษัท ซี.เจ. เอ็กซ์เพรส กรุ๊ป จำกัด',
+    shortName: 'CJ Express',
+    address: '393 อาคาร 393 สีลม ชั้น 2, 4 และ 5 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'cjexpress.png',
+    url: 'https://www.cjexpress.net/',
+  },
+  {
+    id: 'C13',
+    code: 'C13',
+    name: 'บริษัท ที.ซี.ซี. เทคโนโลยี จำกัด',
+    shortName: 'TCC Technology',
+    address: '2 ห้องเลขที่ 1501-1504 ชั้น 15 อาคารสีลมเอจ ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'tcctechnology.png',
+    url: 'https://www.tcc-technology.com/',
+  },
+  {
+    id: 'C14',
+    code: 'C14',
+    name: 'บริษัท ไทยประกันชีวิต จำกัด (มหาชน)',
+    shortName: 'ไทยประกันชีวิต',
+    address: '123 อาคารไทยประกันชีวิต 1 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400',
+    logoFilename: 'thailife.png',
+    url: 'https://www.thailife.com/',
+  },
+  {
+    id: 'C16',
+    code: 'C16',
+    name: 'บริษัท บีอีซี เวิลด์ จำกัด (มหาชน)',
+    shortName: 'BEC World',
+    address: '3199 อาคาร มาลีนนท์ ทาวเวอร์ ชั้น 2, 3, 4, 7, 9, 10, 30-34 ถนน พระราม 4 แขวงคลองตัน เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'becworld.png',
+    url: 'https://www.ch3plus.com/',
+  },
+  {
+    id: 'C17',
+    code: 'C17',
+    name: 'บริษัท เบทาโกร จำกัด (มหาชน)',
+    shortName: 'BETAGRO',
+    address: '323 หมู่ที่ 6 แขวงทุ่งสองห้อง เขตหลักสี่ กรุงเทพมหานคร 10210',
+    logoFilename: 'betagro.png',
+    url: 'https://www.betagro.com/th/career',
+  },
+  {
+    id: 'C18',
+    code: 'C18',
+    name: 'บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)',
+    shortName: 'SCG',
+    address: '1 ถนนปูนซิเมนต์ไทย แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800',
+    logoFilename: 'scg.png',
+    url: 'https://careers.scg.com/',
+  },
+  {
+    id: 'C24',
+    code: 'C24',
+    name: 'บริษัท อยุธยา แคปปิตอล ออโต้ ลีส จำกัด (มหาชน)',
+    shortName: 'Krungsri Auto',
+    address: '131 อาคารกลุ่มนวัตกรรม 1 ชั้นที่ 2 ห้องเลขที่ ไอเอ็นซี 1-201 หมู่ที่ 9 ตำบลคลองหนึ่ง อำเภอคลองหลวง จ.ปทุมธานี',
+    logoFilename: 'ayudhya.png',
+    url: 'https://www.krungsriauto.com/',
+  },
+  {
+    id: 'C25',
+    code: 'C25',
+    name: 'บริษัท อะไรส์ บาย อินฟินิทัส จำกัด',
+    shortName: 'Arise by Infinitas',
+    address: '88 อาคารเดอะ ปาร์ค ชั้น 5, 9-10 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'arise.png',
+    url: 'https://www.arise.tech/',
+  },
+  {
+    id: 'C26',
+    code: 'C26',
+    name: 'บริษัท เอ็ม 365 (ประเทศไทย) จำกัด',
+    shortName: 'M 365',
+    address: '287 อาคารลิเบอร์ตี้ สแควร์ ห้องเลขที่ 1804 ชั้นที่ 18 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'm365.png',
+    url: 'https://m365.co.th/',
+  },
+  {
+    id: 'C27',
+    code: 'C27',
+    name: 'บริษัท ไอทีวัน จำกัด',
+    shortName: 'IT One',
+    address: '118/1 อาคารทิปโก้ ชั้น 21-22 ถนนพระราม 6 แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400',
+    logoFilename: 'itone.png',
+    url: 'https://www.it-one.co.th/',
+  },
+  {
+    id: 'C28',
+    code: 'C28',
+    name: 'บริษัท ไอบอทน้อย จำกัด',
+    shortName: 'BOTNOI',
+    address: '30 หมู่บ้านเศรษฐสิริ ราชพฤกษ์ จรัญฯ ซอยปากน้ำฝั่งเหนือ 11 แขวงคลองชักพระ เขตตลิ่งชัน กรุงเทพมหานคร 10170',
+    logoFilename: 'botnoi.png',
+    url: 'https://botnoi.ai/',
+  },
+  {
+    id: 'C29',
+    code: 'C29',
+    name: 'บริษัท กสิกร บิซิเนส-เทคโนโลยี กรุ๊ป (KBTG)',
+    shortName: 'KBTG',
+    address: '46/6 ถนนป๊อปปูล่า ตำบลบ้านใหม่ อำเภอปากเกร็ด จ.นนทบุรี 11120',
+    logoFilename: 'kbtg.png',
+    url: 'https://www.kbtg.tech/',
+  },
+  {
+    id: 'C30',
+    code: 'C30',
+    name: 'บริษัท หลักทรัพย์ หยวนต้า (ประเทศไทย) จำกัด',
+    shortName: 'Yuanta',
+    address: '127 อาคารเกษร ทาวเวอร์ ชั้น 14-16 ถนนราชดำริ แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+    logoFilename: 'yuanta.png',
+    url: 'https://www.yuanta.co.th/',
+  },
+  {
+    id: 'C31',
+    code: 'C31',
+    name: 'สำนักงานพัฒนาธุรกรรมทางอิเล็กทรอนิกส์ (สพธอ.)',
+    shortName: 'ETDA',
+    address: 'ศูนย์ราชการเฉลิมพระเกียรติ 80 พรรษา (อาคารบี) ชั้นที่ 6 เลขที่ 120 หมู่ที่ 3 ถนนแจ้งวัฒนะ',
+    logoFilename: 'etda.png',
+    url: 'https://www.etda.or.th/',
+  },
+  {
+    id: 'C32',
+    code: 'C32',
+    name: 'บริษัท โกซอฟท์ (ประเทศไทย) จำกัด',
+    shortName: 'GOSOFT',
+    address: 'อาคาร THE TARA เลขที่ 58/28 หมู่ 2 ถนนแจ้งวัฒนะ ตำบลบางตลาด อำเภอปากเกร็ด จังหวัดนนทบุรี 11120',
+    logoFilename: 'gosoft.png',
+    url: 'https://www.gosoft.co.th/',
+  },
+  {
+    id: 'C33',
+    code: 'C33',
+    name: 'บริษัท เอสซีบี เทคเอกซ์ จำกัด',
+    shortName: 'SCB TechX',
+    address: '19 อาคารไทยพาณิชย์ ปาร์ค พลาซ่า เวสท์ บี ชั้นที่ 21 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'scbtechx.png',
+    url: 'https://scbtechx.io/',
+  },
+  {
+    id: 'C34',
+    code: 'C34',
+    name: 'บริษัท พีทีที ดิจิตอล โซลูชั่น จำกัด',
+    shortName: 'PTT Digital',
+    address: 'เลขที่ 59 ถนนราษฎร์นิยม ตำบลเนินพระ อำเภอเมืองระยอง จังหวัดระยอง 21150',
+    logoFilename: 'pttdigital.png',
+    url: 'https://www.pttdigital.com/',
+  },
+  {
+    id: 'C35',
+    code: 'C35',
+    name: 'บริษัท อินฟินิตี้ จำกัด',
+    shortName: 'Infinity',
+    address: '99/207 หมู่บ้าน นนทรี รีเจ้นท์ หมู่ที่ 4 ถนนราชพฤกษ์ ตำบลบางขนุน อำเภอบางกรวย จ.นนทบุรี',
+    logoFilename: 'infinity.png',
+    url: 'https://www.google.com/search?q=Infinity+Co+Ltd',
+  },
+  {
+    id: 'C36',
+    code: 'C36',
+    name: 'บริษัท ไลน์แมน วงใน จำกัด',
+    shortName: 'LINE MAN Wongnai',
+    address: '195 อาคารวัน แบงค็อก ทาวเวอร์ 4 ชั้นที่ 24 ห้องเลขที่ 2411-2412 และชั้นที่ 25 ห้องเลขที่ 2501-2514 ถนนวิทยุ แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+    logoFilename: 'lmwn.png',
+    url: 'https://careers.lmwn.com/',
+  },
+  {
+    id: 'C37',
+    code: 'C37',
+    name: 'บริษัท เอไอไนน์ จำกัด',
+    shortName: 'AI9',
+    address: '131 อาคารกลุ่มนวัตกรรม 1 ชั้นที่ 2 ห้องเลขที่ ไอเอ็นซี 1-201 หมู่ที่ 9 ตำบลคลองหนึ่ง อำเภอคลองหลวง จ.ปทุมธานี',
+    logoFilename: 'ai9.png',
+    url: 'https://ai9.co.th/',
+  },
+  {
+    id: 'C38',
+    code: 'C38',
+    name: 'บริษัท เอสซีจี เคมิคอลส์ จำกัด (มหาชน)',
+    shortName: 'SCGC',
+    address: '1 ถนนปูนซิเมนต์ไทย บางซื่อ กรุงเทพฯ 10800',
+    logoFilename: 'scgchem.png',
+    url: 'https://www.scgchemicals.com/',
+  },
+  {
+    id: 'C39',
+    code: 'C39',
+    name: 'บริษัท สยามคูโบต้าคอร์ปอเรชั่น จำกัด',
+    shortName: 'SIAM KUBOTA',
+    address: 'สำนักงานใหญ่ 101/19-24 หมู่ที่ 20 นิคมอุตสาหกรรมนวนคร ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120',
+    logoFilename: 'siamkubota.png',
+    url: 'https://www.siamkubota.co.th/',
+  },
+  {
+    id: 'C40',
+    code: 'C40',
+    name: 'บริษัท ทิสโก้ อินฟอร์เมชั่นเทคโนโลยี จำกัด',
+    shortName: 'TISCO IT',
+    address: '48/12 อาคารทิสโก้ทาวเวอร์ ชั้น 6 ถนนสาทรเหนือ แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'tisco.png',
+    url: 'https://www.tisco.co.th/',
+  },
+  {
+    id: 'C41',
+    code: 'C41',
+    name: 'กองออกแบบและพัฒนาผลิตภัณฑ์ดิจิทัล สำนักดิจิทัล การไฟฟ้าส่วนภูมิภาค',
+    shortName: 'PEA Digital',
+    address: '121/1-2 ถนนเพชรบุรี แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพฯ 10400',
+    logoFilename: 'pea.png',
+    url: 'https://www.pea.co.th/',
+  },
+  {
+    id: 'C42',
+    code: 'C42',
+    name: 'ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ (NECTEC)',
+    shortName: 'NECTEC Pathumthani',
+    address: '112 Phahonyothin Road, Khlong Nueng, Khlong Luang District, Pathumthani 12120, Thailand',
+    logoFilename: 'nectec.png',
+    url: 'https://www.nectec.or.th/',
+  },
+  {
+    id: 'C43',
+    code: 'C43',
+    name: 'บริษัท อโกด้า เซอร์วิสเซส จำกัด',
+    shortName: 'Agoda',
+    address: '999/9 อาคารดิออฟฟิศเศส แอท เซ็นทรัลเวิลด์ ชั้น 6-9, 11-12, 16, 22, 27, 36 และ 44 ถนนพระราม 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330',
+    logoFilename: 'agoda.png',
+    url: 'https://careersatagoda.com/',
+  },
+  {
+    id: 'C44',
+    code: 'C44',
+    name: 'กลุ่มบริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด (มหาชน)',
+    shortName: 'AIS',
+    address: 'เลขที่ 414 อาคาร เอไอเอส 1 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400',
+    logoFilename: 'ais.png',
+    url: 'https://www.ais.th/about-us/career',
+  },
+  {
+    id: 'C45',
+    code: 'C45',
+    name: 'บริษัท บางจาก คอร์ปอเรชั่น จำกัด (มหาชน)',
+    shortName: 'Bangchak',
+    address: '2098 อาคารเอ็ม ทาวเวอร์ ชั้นที่ 8 ถนนสุขุมวิท แขวงพระโขนงใต้ เขตพระโขนง กรุงเทพมหานคร 10260',
+    logoFilename: 'bangchak.png',
+    url: 'https://www.bangchak.co.th/th/career',
+  },
+  {
+    id: 'C46',
+    code: 'C46',
+    name: 'บริษัท เบลนเดต้า จำกัด',
+    shortName: 'Blendata',
+    address: '110/1 ถนนกรุงธนบุรี แขวงบางลำภูล่าง เขตคลองสาน กรุงเทพมหานคร 10600',
+    logoFilename: 'blendata.png',
+    url: 'https://blendata.co/',
+  },
+  {
+    id: 'C47',
+    code: 'C47',
+    name: 'บริษัท เซ็นทรัล รีเทล คอร์ปอเรชั่น จำกัด (มหาชน)',
+    shortName: 'Central Retail',
+    address: '22 ซอยสมคิด ถนนเพลินจิต แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+    logoFilename: 'centralretail.png',
+    url: 'https://www.centralretail.com/',
+  },
+  {
+    id: 'C48',
+    code: 'C48',
+    name: 'บริษัท คลาวด์ เอชเอ็ม จำกัด',
+    shortName: 'Cloud HM',
+    address: '499 ถนนกำแพงเพชร 6 แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'cloud.png',
+    url: 'https://www.cloudhm.co.th/',
+  },
+  {
+    id: 'C49',
+    code: 'C49',
+    name: 'บริษัท เดลิเทค จำกัด',
+    shortName: 'Delitech',
+    address: '171 ซอยพระรามที่ 3 ซ.77 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'delitech.png',
+    url: 'https://www.delitech.co.th/',
+  },
+  {
+    id: 'C50',
+    code: 'C50',
+    name: 'บริษัท เอ็กซอนโมบิล จำกัด',
+    shortName: 'ExxonMobil',
+    address: '3195/17-29 ถนนพระราม 4 แขวงคลองตัน เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'exxonmobil.png',
+    url: 'https://jobs.exxonmobil.com/',
+  },
+  {
+    id: 'C51',
+    code: 'C51',
+    name: 'บริษัท หัวเว่ย เทคโนโลยี (ประเทศไทย) จำกัด',
+    shortName: 'Huawei',
+    address: '9 อาคารจี ทาวเวอร์ แกรนด์ พระราม 9 ห้องเลขที่ จีเอ็น 01-04 ชั้น 34-39 ถนนพระราม 9 แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310',
+    logoFilename: 'huawei.png',
+    url: 'https://www.huawei.com/th/',
+  },
+  {
+    id: 'C52',
+    code: 'C52',
+    name: 'บริษัท อินโนเวทีฟ เอ็กซ์ตรีมิสต์ จำกัด',
+    shortName: 'Innovative Extremist',
+    address: '3 อาคารพร้อมพันธุ์ 3 ชั้นที่ 16 ห้องเลขที่ 1608-1614 ซอยลาดพร้าว 3 ถนนลาดพร้าว แขวงจอมพล เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'innovative.png',
+    url: 'https://www.inextremist.co.th/',
+  },
+  {
+    id: 'C53',
+    code: 'C53',
+    name: 'บริษัท คิง เพาเวอร์ คลิก จำกัด',
+    shortName: 'King Power Click',
+    address: '8 ถนนรางน้ำ แขวงถนนพญาไท เขตราชเทวี กรุงเทพมหานคร 10400',
+    logoFilename: 'kingpower.png',
+    url: 'https://www.kingpower.com/',
+  },
+  {
+    id: 'C54',
+    code: 'C54',
+    name: 'ตลาดหลักทรัพย์ลอนดอน (LSEG)',
+    shortName: 'LSEG',
+    address: '968 U Chu Liang Building, 34th Floor, Silom, Bang Rak, Bangkok 10500, Thailand',
+    logoFilename: 'lseg.png',
+    url: 'https://www.lseg.com/',
+  },
+  {
+    id: 'C55',
+    code: 'C55',
+    name: 'บริษัท กรุ๊ป-ไอพี เอสอีเอ จำกัด',
+    shortName: 'Group-IB',
+    address: '77/77 หมู่ที่ 5 ตำบลรัษฎา อำเภอเมืองภูเก็ต จ.ภูเก็ต 83000',
+    logoFilename: 'groupib.png',
+    url: 'https://www.group-ib.com/',
+  },
+  {
+    id: 'C56',
+    code: 'C56',
+    name: 'บริษัท ไทยสมุทรประกันชีวิต จำกัด (มหาชน)',
+    shortName: 'Ocean Life',
+    address: '170/74-83 อาคารโอเชี่ยนทาวเวอร์ 1 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'oceanlife.png',
+    url: 'https://www.ocean.co.th/',
+  },
+  {
+    id: 'C57',
+    code: 'C57',
+    name: 'บริษัท ไอเดียแล็บ จำกัด',
+    shortName: 'Idealab',
+    address: '999/9 อาคารดิ ออฟฟิศเศส แอท เซ็นทรัลเวิลด์ ชั้น 16 ห้อง OFML1605-6 ถนนพระราม 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330',
+    logoFilename: 'idealab.png',
+    url: 'https://www.idealab.co.th/',
+  },
+  {
+    id: 'C58',
+    code: 'C58',
+    name: 'บริษัท บีทรี เทคโนโลยี จำกัด',
+    shortName: 'B3 Technology',
+    address: '1/7 ซอยลาดพร้าว 64 แยก 4 แขวงวังทองหลาง เขตวังทองหลาง กรุงเทพมหานคร 10310',
+    logoFilename: 'b3tech.png',
+    url: 'https://www.b3technology.co.th/',
+  },
+  {
+    id: 'C59',
+    code: 'C59',
+    name: 'ธนาคารเกียรตินาคินภัทร จำกัด (มหาชน)',
+    shortName: 'KKP',
+    address: '209 อาคารเคเคพี ทาวเวอร์ ถนนสุขุมวิท 21 (อโศก) แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพมหานคร 10110',
+    logoFilename: 'kkp.png',
+    url: 'https://bank.kkpfg.com/',
+  },
+  {
+    id: 'C60',
+    code: 'C60',
+    name: 'บริษัท ดูโฮม จำกัด (มหาชน)',
+    shortName: 'Dohome',
+    address: '88/111 ต.บางพูน อ.เมือง จ.ปทุมธานี',
+    logoFilename: 'dohome.png',
+    url: 'https://www.dohome.co.th/',
+  },
+  {
+    id: 'C61',
+    code: 'C61',
+    name: 'บริษัท สกิลเลน เทคโนโลยี จำกัด (มหาชน)',
+    shortName: 'SkillLane',
+    address: '1 อาคารเอ็มไพร์ทาวเวอร์ ชั้นที่ 35 ห้องเลขที่ 3510, 3511 ถนนสาทรใต้ แขวงยานนาวา เขตสาทร กรุงเทพมหานคร 10120',
+    logoFilename: 'skilllane.png',
+    url: 'https://www.skilllane.com/',
+  },
+  {
+    id: 'C62',
+    code: 'C62',
+    name: 'บริษัท เก็ต ออน เทคโนโลยี จำกัด',
+    shortName: 'Get On Technology',
+    address: '9/196 ซอยรัชประชา 4 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'got.png',
+    url: 'https://www.got.co.th/',
+  },
+  {
+    id: 'C63',
+    code: 'C63',
+    name: 'บริษัท ดาต้าฟาร์ม จำกัด',
+    shortName: 'Datafarm',
+    address: '3 อาคารซี.พี.ทาวเวอร์ 2 (ฟอร์จูนทาวน์) ชั้น 21 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400',
+    logoFilename: 'datafarm.png',
+    url: 'https://www.datafarm.co.th/',
+  },
+  {
+    id: 'C64',
+    code: 'C64',
+    name: 'บริษัท เอ็ดไวซอรี่ จำกัด (สำนักงานใหญ่)',
+    shortName: 'Edvisory',
+    address: '111 ทรูดิจิทัล พาร์ค เวสต์ อาคารยูนิคอร์น ชั้น 5 ห้อง SH561 และ SH564 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260',
+    logoFilename: 'edvisory.png',
+    url: 'https://www.edvisory.co.th/',
+  },
+  {
+    id: 'C65',
+    code: 'C65',
+    name: 'บริษัท กรุงศรี นิมเบิล จำกัด',
+    shortName: 'Krungsri Nimble',
+    address: '1222 อาคารธนาคารกรุงศรีอยุธยา จำกัด (มหาชน) สำนักงานใหญ่ ชั้นที่ 21 ถนนพระรามที่ 3 แขวงบางโพงพาง เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'nimble.png',
+    url: 'https://www.krungsrinimble.com/',
+  },
+  {
+    id: 'C66',
+    code: 'C66',
+    name: 'โรงพยาบาลสินแพทย์ ลำลูกกา',
+    shortName: 'สินแพทย์',
+    address: '37/29 หมู่ที่ 3 ตำบลคูคต อำเภอลำลูกกา จ.ปทุมธานี 12130',
+    logoFilename: 'synphaet.png',
+    url: 'https://www.synphaet.co.th/lamlukka/',
+  },
+  {
+    id: 'C67',
+    code: 'C67',
+    name: 'บริษัท ไอ.แอล.เอส จำกัด',
+    shortName: 'ILS',
+    address: 'เลขที่ 71 หมู่ 3 ถนนตัดใหม่ ต. บ้านใหม่ ปากเกร็ด นนทบุรี ประเทศไทย 11120',
+    logoFilename: 'ils.png',
+    url: 'https://www.ils.co.th/',
+  },
+  {
+    id: 'C68',
+    code: 'C68',
+    name: 'บริษัท ศุภาลัย จำกัด (มหาชน)',
+    shortName: 'Supalai',
+    address: '1011 ถนนพระราม 3 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'supalai.png',
+    url: 'https://www.supalai.com/',
+  },
+  {
+    id: 'C69',
+    code: 'C69',
+    name: 'บริษัท หัวเว่ย เทคโนโลยี (ประเทศไทย) จำกัด',
+    shortName: 'Huawei G Tower',
+    address: '9 อาคารจีทาวเวอร์แกรนด์พระราม 9 ห้องเลขที่ จีเอ็น 01-04 ชั้น 34-39 ถนนพระราม 9 แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310',
+    logoFilename: 'huawei.png',
+    url: 'https://www.huawei.com/th/',
+  },
+  {
+    id: 'C70',
+    code: 'C70',
+    name: 'บริษัท คิวบ์ซอฟท์เทค จำกัด',
+    shortName: 'Cube SoftTech',
+    address: '160/170-2 อาคารไอทีเอฟ-สีลมพาเลส ชั้น 13 ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'cubesofttech.png',
+    url: 'https://www.cubesofttech.com/',
+  },
+  {
+    id: 'C71',
+    code: 'C71',
+    name: 'บริษัท ซีพี ออลล์ จำกัด (มหาชน)',
+    shortName: 'CP ALL',
+    address: '313 อาคารซี.พี.ทาวเวอร์ ชั้นที่ 24 ถนนสีลม แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'cpall.png',
+    url: 'https://www.cpall.co.th/',
+  },
+  {
+    id: 'C72',
+    code: 'C72',
+    name: 'บริษัท บิ๊กซี ซูเปอร์เซ็นเตอร์ จำกัด (มหาชน)',
+    shortName: 'Big C',
+    address: '88/9 ซอยสมานฉันท์ - บาร์โบส แขวงพระโขนง เขตคลองเตย กรุงเทพมหานคร',
+    logoFilename: 'bigc.png',
+    url: 'https://www.bigc.co.th/',
+  },
+  {
+    id: 'C73',
+    code: 'C73',
+    name: 'บริษัท เมอร์ซิล โซลูชั่นส์ จำกัด',
+    shortName: 'Mercil',
+    address: '1371 อาคารแคปปิตอลแมนชั่น แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400',
+    logoFilename: 'mercil.png',
+    url: 'https://www.mercil.co.th/',
+  },
+  {
+    id: 'C74',
+    code: 'C74',
+    name: 'บริษัท โกไฟว์ จำกัด',
+    shortName: 'Gofive',
+    address: '30/88 หมู่ที่ 1 ถนนเจษฎาวิถี ตำบลโคกขาม อำเภอเมืองสมุทรสาคร จ.สมุทรสาคร 74000',
+    logoFilename: 'gofive.png',
+    url: 'https://www.gofive.co.th/',
+  },
+  {
+    id: 'C75',
+    code: 'C75',
+    name: 'บริษัท แอสเซนด์ กรุ๊ป จำกัด',
+    shortName: 'Ascend Group',
+    address: '101 ทรูดิจิทัล พาร์ค อาคารฟีนิกซ์ ชั้น 9-10 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260',
+    logoFilename: 'ascend.png',
+    url: 'https://www.ascendcorp.com/',
+  },
+  {
+    id: 'C76',
+    code: 'C76',
+    name: 'บริษัท บีทามส์ โซลูชั่น จำกัด',
+    shortName: 'B-Times',
+    address: '84/4 ซอยสุขุมวิท 62 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260',
+    logoFilename: 'btimes.png',
+    url: 'https://www.btimes.co.th/',
+  },
+  {
+    id: 'C77',
+    code: 'C77',
+    name: 'บริษัท ลูลู่ เทคโนโลยี จำกัด',
+    shortName: 'Lulu Tech',
+    address: '110/1 อาคารเคเอกซ์ ชั้นที่ 18 ถนนกรุงธนบุรี แขวงบางลำภูล่าง เขตคลองสาน กรุงเทพมหานคร 10600',
+    logoFilename: 'lulu.png',
+    url: 'https://www.google.com/search?q=Lulu+Technology+Thailand',
+  },
+  {
+    id: 'C78',
+    code: 'C78',
+    name: 'บริษัท เฮาส์ออฟเดฟ เทคโนโลยี จำกัด',
+    shortName: 'House of Dev',
+    address: '15 อาคารรัจนาการ ชั้น 12บี ซอยประดิพัทธ์ 17 ถนนประดิพัทธ์ แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400',
+    logoFilename: 'houseofdev.png',
+    url: 'https://houseofdev.tech/',
+  },
+  {
+    id: 'C79',
+    code: 'C79',
+    name: 'บริษัท ยิบอินซอย จำกัด',
+    shortName: 'Yip In Tsoi',
+    address: '523 ถนนมหาพฤฒาราม แขวงมหาพฤฒาราม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'yipintsoi.png',
+    url: 'https://www.yipintsoi.com/',
+  },
+  {
+    id: 'C80',
+    code: 'C80',
+    name: 'บริษัท จัดหางาน จ๊อบบีเคเค ดอท คอม จำกัด',
+    shortName: 'JOBBKK',
+    address: '625 อาคารทัศนียา ห้องเลขที่ ยูนิตดี ชั้นที่ 5 ซอยรามคำแหง 39 ถนนประชาอุทิศ แขวงวังทองหลาง เขตวังทองหลาง กรุงเทพมหานคร 10310',
+    logoFilename: 'jobbkk.png',
+    url: 'https://www.jobbkk.com/',
+  },
+  {
+    id: 'C81',
+    code: 'C81',
+    name: 'บริษัท ล็อกซเล่ย์ จำกัด (มหาชน)',
+    shortName: 'Loxley',
+    address: '102 ถนน ณ ระนอง แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'loxley.png',
+    url: 'https://www.loxley.co.th/',
+  },
+  {
+    id: 'C82',
+    code: 'C82',
+    name: 'บริษัท โมบาย คอนเน็ค จำกัด',
+    shortName: 'Mobile Connect',
+    address: '1111/84 ถนนลาดพร้าว แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'mobileconnect.png',
+    url: 'https://www.mobileconnect.co.th/',
+  },
+  {
+    id: 'C83',
+    code: 'C83',
+    name: 'อีวาย คอร์ปอเรท เซอร์วิสเซส',
+    shortName: 'EY Thailand',
+    address: '193/136-137 อาคารเลครัชดา ชั้น 33 ถนนรัชดาภิเษก แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
+    logoFilename: 'ey.png',
+    url: 'https://www.ey.com/th_th',
+  },
+  {
+    id: 'C84',
+    code: 'C84',
+    name: 'บริษัท เอสซีจีซี ไอโค พอลิเมอร์ จำกัด',
+    shortName: 'SCGC ICO',
+    address: '1 ถนนปูนซิเมนต์ไทย แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800',
+    logoFilename: 'scgc.png',
+    url: 'https://www.scgchemicals.com/',
+  },
+  {
+    id: 'C85',
+    code: 'C85',
+    name: 'บริษัท วีคาโบ้ จำกัด',
+    shortName: 'Wecabo',
+    address: '11/1 ซอยประชาราษฎร์ 14 แยก 1 ตำบลตลาดขวัญ อำเภอเมืองนนทบุรี จ.นนทบุรี 11000',
+    logoFilename: 'wecabo.png',
+    url: 'https://www.google.com/search?q=Wecabo+Company+Thailand',
+  },
+  {
+    id: 'C86',
+    code: 'C86',
+    name: 'บริษัท ยูนิซีเคียวริตี้ จำกัด',
+    shortName: 'Uni Security',
+    address: '198/426 หมู่ที่ 7 ซอย 2 ตำบลมหาสวัสดิ์ อำเภอบางกรวย จ.นนทบุรี 11130',
+    logoFilename: 'unisecurity.png',
+    url: 'https://www.unisecurity.co.th/',
+  },
+  {
+    id: 'C87',
+    code: 'C87',
+    name: 'บริษัท แคนนอน ไฮ-เทค (ประเทศไทย) จำกัด',
+    shortName: 'Canon Hi-Tech',
+    address: '89 หมู่ที่ 1 ตำบลบ้านเลน อำเภอบางปะอิน จ.พระนครศรีอยุธยา 13160',
+    logoFilename: 'canon.png',
+    url: 'https://th.canon/',
+  },
+  {
+    id: 'C89',
+    code: 'C89',
+    name: 'บริษัท เวอร์นิตี้ จำกัด',
+    shortName: 'Vernity',
+    address: '111/151 หมู่ที่ 9 ตำบลบางพูด อำเภอปากเกร็ด จ.นนทบุรี 11120',
+    logoFilename: 'vernity.png',
+    url: 'https://www.vernity.com/',
+  },
+  {
+    id: 'C90',
+    code: 'C90',
+    name: 'บริษัท จิตตะ ดอท คอม จำกัด',
+    shortName: 'Jitta',
+    address: '1111/127 ถนนลาดพร้าว แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'jitta.png',
+    url: 'https://www.jitta.com/',
+  },
+  {
+    id: 'C91',
+    code: 'C91',
+    name: 'บริษัท เน็ตเบย์ จำกัด (มหาชน)',
+    shortName: 'Netbay',
+    address: '719/5, 8-9 ถนนพระรามที่ 6 แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร',
+    logoFilename: 'netbay.png',
+    url: 'https://www.netbay.co.th/',
+  },
+  {
+    id: 'C92',
+    code: 'C92',
+    name: 'บริษัท ทีลีสซิ่ง จำกัด',
+    shortName: 'T Leasing',
+    address: 'อาคารพาราไดซ์เพลส ห้องเลขที่ 3801 ชั้น 3 เลขที่ 59/5 ถ.ศรีนครินทร์ แขวงหนองบอน เขตประเวศ กรุงเทพฯ 10250',
+    logoFilename: 'tleasing.png',
+    url: 'https://www.tleasing.co.th/',
+  },
+  {
+    id: 'C93',
+    code: 'C93',
+    name: 'ธนาคารกรุงศรีอยุธยา จำกัด (มหาชน)',
+    shortName: 'Krungsri Bank',
+    address: '1222 ถนนพระรามที่ 3 แขวงบางโพงพาง เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'krungsri.png',
+    url: 'https://www.krungsri.com/th/careers',
+  },
+  {
+    id: 'C94',
+    code: 'C94',
+    name: 'บริษัท นิภา เทคโนโลยี จำกัด',
+    shortName: 'NIPA Cloud',
+    address: 'บริษัท นิภา เทคโนโลยี จำกัด (สำนักงานใหญ่) 72 อาคารโทรคมนาคม บางรัก ชั้น 4 ห้อง 401-402 ถนนเจริญกรุง แขวงบางรัก เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'nipa.png',
+    url: 'https://www.nipa.co.th/',
+  },
+  {
+    id: 'C95',
+    code: 'C95',
+    name: 'บริษัท ดีไอทีซี จำกัด',
+    shortName: 'DIT C',
+    address: '178 อาคารธรรมนิติ ชั้น 4 ซอยเพิ่มทรัพย์ (ประชาชื่น20) ถนนประชาชื่น แขวงบางซื่อ เขตบางซื่อ กรุงเทพฯ 10800',
+    logoFilename: 'ditc.png',
+    url: 'https://www.ditc.co.th/',
+  },
+  {
+    id: 'C96',
+    code: 'C96',
+    name: 'บริษัท โตโยต้า มอเตอร์ ประเทศไทย จำกัด',
+    shortName: 'Toyota Motor Thailand',
+    address: '186/1 หมู่ 1 ถ.ทางรถไฟเก่า ต.สำโรงใต้ อ.พระประแดง จ.สมุทรปราการ 10130',
+    logoFilename: 'toyota.png',
+    url: 'https://www.toyota.co.th/',
+  },
+  {
+    id: 'C97',
+    code: 'C97',
+    name: 'บริษัท ทรีนิตี้ รูทส์ จำกัด',
+    shortName: 'Trinity Roots',
+    address: '990 อาคารอับดุลราฮิม เพลส ห้องเลขที่ 2110 ชั้น 21 ถนนพระรามที่ 4 แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'trinityroots.png',
+    url: 'https://www.trinityroots.com/',
+  },
+  {
+    id: 'C98',
+    code: 'C98',
+    name: 'สถาบันวิจัยดาราศาสตร์แห่งชาติ (องค์การมหาชน)',
+    shortName: 'NARIT',
+    address: '260 หมู่ 4 ต. ดอนแก้ว อ. แม่ริม จ. เชียงใหม่ 50180',
+    logoFilename: 'narit.png',
+    url: 'https://www.narit.or.th/',
+  },
+  {
+    id: 'C99',
+    code: 'C99',
+    name: 'บริษัท ไอ แอม คอนซัลติ้ง จำกัด',
+    shortName: 'I AM Consulting',
+    address: '252/69 อาคารเมืองไทย-ภัทร คอมเพล็กซ์ อาคารบี ชั้น 2 ถนนรัชดาภิเษก แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310',
+    logoFilename: 'iam.png',
+    url: 'https://www.iam-consulting.com/',
+  },
+  {
+    id: 'C100',
+    code: 'C100',
+    name: 'บริษัท ทิพยประกันภัย จำกัด',
+    shortName: 'ทิพยประกันภัย',
+    address: '1115 ถนนพระราม 3 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120',
+    logoFilename: 'dhipaya.png',
+    url: 'https://www.dhipaya.co.th/',
+  },
+  {
+    id: 'C101',
+    code: 'C101',
+    name: 'ธนาคารกรุงไทย จำกัด',
+    shortName: 'Krungthai Bank',
+    address: '35 ถนนสุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพมหานคร 10110',
+    logoFilename: 'krungthai.png',
+    url: 'https://krungthai.com/th/career',
+  },
+  {
+    id: 'C102',
+    code: 'C102',
+    name: 'บริษัท แวนเนส พลัส คอนซัลติ้ง จำกัด',
+    shortName: 'Vanness Plus',
+    address: '98 อาคารสาทรสแควร์ ออฟฟิศ ทาวเวอร์ ชั้น 37 ถนนสาทรเหนือ แขวงสีลม เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'vannessplus.png',
+    url: 'https://www.vannessplus.com/',
+  },
+  {
+    id: 'C103',
+    code: 'C103',
+    name: 'บริษัท ไอแอพพ์เทคโนโลยี จำกัด',
+    shortName: 'iApp Technology',
+    address: '80/359 หมู่ที่ 3 ซ. คลองหลวง 26 ถ. พหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง ปทุมธานี 12120 ประเทศไทย',
+    logoFilename: 'iapp.png',
+    url: 'https://iapp.co.th/',
+  },
+  {
+    id: 'C104',
+    code: 'C104',
+    name: 'บริษัท เอดไวซอรี่ เทค จำกัด',
+    shortName: 'Edvisory Tech',
+    address: '111 ทรูดิจิทัล พาร์ค เวสต์ อาคารยูนิคอร์น ชั้น 5 ห้อง SH554 ถนนสุขุมวิท แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260',
+    logoFilename: 'edvisorytech.png',
+    url: 'https://www.edvisory.co.th/',
+  },
+  {
+    id: 'C105',
+    code: 'C105',
+    name: 'บริษัทหลักทรัพย์ อินโนเวสท์ เอกซ์ จำกัด',
+    shortName: 'InnovestX',
+    address: 'ไทยพาณิชย์ ปาร์ค พลาซ่า เลขที่ 18 อาคาร 1 ชั้น 2, 4 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'innovestx.png',
+    url: 'https://www.innovestx.co.th/',
+  },
+  {
+    id: 'C106',
+    code: 'C106',
+    name: 'บริษัท เอสซีบีเดต้า เอกซ์ จำกัด',
+    shortName: 'SCB DataX',
+    address: '18 อาคารไทยพาณิชย์ ปาร์ค พลาซ่า เวสท์ บี ชั้นที่ 7 ถนนรัชดาภิเษก แขวงจตุจักร เขตจตุจักร กรุงเทพมหานคร 10900',
+    logoFilename: 'datax.png',
+    url: 'https://datax.scb/',
+  },
+  {
+    id: 'C107',
+    code: 'C107',
+    name: 'บริษัท เอวิชั่น จำกัด',
+    shortName: 'Avision',
+    address: '979/49-50 อาคารเอส เอ็ม ทาวเวอร์ ชั้นที่ 20 ถนนพหลโยธิน แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400',
+    logoFilename: 'avision.png',
+    url: 'https://www.avision.co.th/',
+  },
+  {
+    id: 'C108',
+    code: 'C108',
+    name: 'บริษัท สิริซอฟต์ จำกัด (มหาชน)',
+    shortName: 'Sirisoft',
+    address: '89 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ ชั้นที่ 15 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400',
+    logoFilename: 'sirisoft.png',
+    url: 'https://www.sirisoft.co.th/',
+  },
+  {
+    id: 'C109',
+    code: 'C109',
+    name: 'กองออกแบบและพัฒนาผลิตภัณฑ์ดิจิทัล สำนักดิจิทัล การไฟฟ้าส่วนภูมิภาค',
+    shortName: 'PEA Logistics',
+    address: '60 หมู่ 6 ตำบลคลองหนึ่ง อำเภอคลองหลวง จังหวัดปทุมธานี 12120',
+    logoFilename: 'pea.png',
+    url: 'https://www.pea.co.th/',
+  },
+  {
+    id: 'C110',
+    code: 'C110',
+    name: 'บริษัท สยามมิชลิน จำกัด',
+    shortName: 'Siam Michelin',
+    address: 'เลขที่ 32 หมู่ 2 ถนนปู่เจ้าสมิงพราย ตำบลสำโรงกลาง อำเภอพระประแดง จังหวัดสมุทรปราการ 10130',
+    logoFilename: 'michelin.png',
+    url: 'https://www.michelin.co.th/',
+  },
+  {
+    id: 'C111',
+    code: 'C111',
+    name: 'บริษัท แอสเซนด์ มันนี่ จำกัด',
+    shortName: 'Ascend Money',
+    address: 'อาคารทรูดิจิทัล พาร์ค อาคารฟีนิกซ์ ชั้น 7-8 ถนนสุขุมวิท เขตพระโขนง กรุงเทพฯ 10260',
+    logoFilename: 'ascendmoney.png',
+    url: 'https://www.ascendmoneygroup.com/',
+  },
+  {
+    id: 'C112',
+    code: 'C112',
+    name: 'บริษัท เซ็นทรัล เรสตอรองส์ กรุ๊ป จำกัด',
+    shortName: 'CRG',
+    address: '306 เซ็นทรัลสีลมทาวเวอร์ ชั้น 5, 6, 7, 8 ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500',
+    logoFilename: 'crg.png',
+    url: 'https://www.crg.co.th/',
+  },
+];
+
+const EmployerCard: React.FC<{ employer: Employer; index: number }> = ({ employer, index }) => {
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className="flex items-center gap-3 sm:gap-4">
+      {/* Count Number Outside Card */}
+      <span className="w-5 sm:w-7 text-right font-bold text-xs sm:text-sm text-slate-400 shrink-0 select-none">
+        {index + 1}
+      </span>
+
+      {/* Card Link */}
+      <a
+        href={employer.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex-1 block border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-white shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer"
+      >
+        <div className="flex items-center gap-5 sm:gap-8">
+          {/* Logo Container */}
+          <div className="w-24 sm:w-36 h-12 sm:h-14 flex items-center justify-center shrink-0">
+            {!hasError ? (
+              <img
+                src={`/images/logos/${employer.logoFilename}`}
+                alt={employer.name}
+                onError={() => setHasError(true)}
+                className="max-h-10 sm:max-h-12 max-w-full object-contain filter group-hover:scale-105 transition-transform duration-200"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-slate-50 border border-slate-200/70 rounded-xl px-2 text-center text-xs font-bold text-slate-700 select-none">
+                {employer.shortName || employer.code}
+              </div>
+            )}
+          </div>
+
+          {/* Company Info */}
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-blue-600 transition-colors leading-snug">
+              {employer.name}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
+              {employer.address}
+            </p>
+          </div>
+        </div>
+      </a>
+    </div>
+  );
+};
+
+export const Employers: React.FC = () => {
+  return (
+    <main className="w-full min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="pt-16 pb-6 sm:pt-20 sm:pb-8 text-center px-4">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+          <span className="text-blue-600">Co-op </span>
+          <span className="text-slate-950">Opportunities</span>
+        </h1>
+        <p className="mt-3 text-xl sm:text-2xl font-bold text-slate-900">
+          สถานประกอบการและตำแหน่ง<span className="text-blue-600">สหกิจ</span>
+        </p>
+
+        {/* Partner Count Slogan */}
+        <p className="mt-8 text-xs sm:text-sm font-semibold text-blue-600 tracking-wide">
+          Over 100 companies partner with us for cooperative education!
+        </p>
+      </section>
+
+      {/* Employers Card List Container */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">
+        {EMPLOYERS_DATA.map((employer, index) => (
+          <EmployerCard key={employer.id} employer={employer} index={index} />
+        ))}
+      </section>
+
+      {/* Reference & Last Updated Timestamp */}
+      <div className="mt-6 mb-12 text-center space-y-2">
+        <div>
+          <a
+            href="https://docs.google.com/spreadsheets/d/1mrexRW94TkVQUK91wLhqQtbEBResL4OBc9BWzcsvOjE/edit?gid=0#gid=0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+          >
+            แหล่งข้อมูลอ้างอิง: ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา_2569 - Google ชีต
+            <ExternalLink className="w-3.5 h-3.5 inline" />
+          </a>
+        </div>
+        <div>
+          <span className="text-xs text-slate-400 tracking-wide">
+            อัปเดตล่าสุด 01/09/2569
+          </span>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+export default Employers;

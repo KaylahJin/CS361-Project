@@ -3,18 +3,21 @@ import Navbar, { type TabType } from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Requirements from './pages/Requirements';
+import Employers from './pages/Employers';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('requirements');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
 
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return <Home />;
+        return <Home onTabChange={setActiveTab} />;
       case 'requirements':
         return <Requirements />;
+      case 'employers':
+        return <Employers />;
       default:
-        return <Home />;
+        return <Home onTabChange={setActiveTab} />;
     }
   };
 
@@ -29,4 +32,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;
