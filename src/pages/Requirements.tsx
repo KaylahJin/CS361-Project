@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ExternalLink  } from 'lucide-react';
 import HistoricalSection from '../components/HistoricalSection';
 
 export const Requirements: React.FC = () => {
@@ -25,16 +25,25 @@ export const Requirements: React.FC = () => {
             ข้อมูลเกณฑ์และคุณสมบัติสำหรับนักศึกษาที่ประสงค์เข้าร่วมสหกิจศึกษา
           </p>
           <p>
-            <span className="font-semibold text-slate-800">ปีการศึกษา:</span> [2569]
+            <span className="font-semibold text-slate-800">ปีการศึกษา:</span> 2568
           </p>
           <p>
-            <span className="font-semibold text-slate-800">มีผลตั้งแต่:</span> [วันที่ / ภาคการศึกษา]
+            <span className="font-semibold text-slate-800">มีผลตั้งแต่:</span> ภาคการศึกษาที่ 1
           </p>
           <p>
-            <span className="font-semibold text-slate-800">อัปเดตล่าสุด:</span> [วันที่]
+            <span className="font-semibold text-slate-800">อัปเดตล่าสุด:</span> 01/09/2569
           </p>
           <p>
-            <span className="font-semibold text-slate-800">แหล่งข้อมูล:</span> [สาขาวิชา / ประกาศ / เอกสารต้นทาง]
+            <span className="font-semibold text-slate-800">แหล่งข้อมูล: </span> 
+              <a
+                href="https://sites.google.com/sci.tu.ac.th/computerscience-cstuco-opstudy/admission-criteria"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+              >
+                เกณฑ์รับสมัครเข้าแผนสหกิจศึกษา
+                <ExternalLink className="w-3.5 h-3.5 inline" />
+              </a>
           </p>
         </div>
 
@@ -54,23 +63,15 @@ export const Requirements: React.FC = () => {
           <ul className="text-xs sm:text-sm text-slate-600 space-y-2">
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>เป็นผู้ที่กำลังศึกษาอยู่ในชั้นปีที่ […] ขึ้นไป</span>
+              <span>มีสถานภาพเป็นนักศึกษาปัจจุบันของสาขาวิชาวิทยาการคอมพิวเตอร์ คณะวิทยาศาสตร์ฯ ม.ธรรมศาสตร์</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>มีผลการเรียนเฉลี่ยสะสม (GPA) ไม่ต่ำกว่า […]</span>
+              <span>เป็นผู้ที่กำลังศึกษาอยู่ในชั้นปีที่ 3 ขึ้นไป</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>มีหน่วยกิตสะสมไม่น้อยกว่า […] หน่วยกิต</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2 text-slate-400">•</span>
-              <span>มีสถานภาพเป็นนักศึกษาปัจจุบันของ […]</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2 text-slate-400">•</span>
-              <span>เงื่อนไขทางการศึกษาอื่น ๆ: […]</span>
+              <span>มีผลการเรียนเฉลี่ยสะสม (GPA) ไม่ต่ำกว่า 2.75</span>
             </li>
           </ul>
         </section>
@@ -90,22 +91,41 @@ export const Requirements: React.FC = () => {
           </p>
 
           <div className="border border-slate-200 rounded-lg overflow-hidden text-xs sm:text-sm">
-            <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-bold text-slate-900">
+            <div className="grid grid-cols-[80px_1fr_1fr] bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-bold text-slate-900">
+              <div>หลักสูตร</div>
               <div>รายการ</div>
               <div>เงื่อนไข</div>
             </div>
             <div className="divide-y divide-slate-100 bg-white">
-              <div className="grid grid-cols-2 px-4 py-2.5 text-slate-600">
-                <div>[รายวิชา / กลุ่มวิชา]</div>
-                <div>[ต้องผ่าน / กำลังศึกษาได้ / เงื่อนไขอื่น]</div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div>61</div>
+                <div><b>เคยศึกษา</b> วิชา คพ.101, คพ.102, คพ.111, (คพ.213 หรือ 216), คพ.251 และ คพ.264</div>
+                <div>เกรดเฉลี่ยรวมไม่ต่ำกว่า 2.5</div>
               </div>
-              <div className="grid grid-cols-2 px-4 py-2.5 text-slate-600">
-                <div>[รายวิชา / กลุ่มวิชา]</div>
-                <div>[…]</div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div></div>
+                <div><b>กำลังศึกษาหรือเคยศึกษา</b> วิชา คพ.384 และ วิชา (คพ.266 หรือ 322 หรือ 348)</div>
+                <div></div>
               </div>
-              <div className="grid grid-cols-2 px-4 py-2.5 text-slate-600">
-                <div>[หน่วยกิตหรือเงื่อนไขหลักสูตร]</div>
-                <div>[…]</div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div></div>
+                <div>ก่อนออกไปปฏิบัติงานจริงจะต้องสอบได้วิชา คพ.302</div>
+                <div></div>
+              </div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div>66</div>
+                <div><b>เคยศึกษา</b> วิชา คพ.100, คพ.101, คพ.102, คพ.111, (คพ.213 หรือ 216), คพ.251 และ คพ.261</div>
+                <div>เกรดเฉลี่ยรวมไม่ต่ำกว่า 2.5</div>
+              </div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div></div>
+                <div><b>กำลังศึกษาหรือเคยศึกษา</b> วิชา คพ.180 และ วิชา (คพ.262 หรือ 331 หรือ 240)</div>
+                <div></div>
+              </div>
+              <div className="grid grid-cols-[80px_1fr_1fr] px-4 py-2.5 text-slate-600">
+                <div></div>
+                <div>ก่อนออกไปปฏิบัติงานจริงจะต้องสอบได้วิชา คพ.301</div>
+                <div></div>
               </div>
             </div>
           </div>
@@ -127,28 +147,47 @@ export const Requirements: React.FC = () => {
           <ul className="text-xs sm:text-sm text-slate-600 space-y-2">
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[กิจกรรม / การอบรม]</span>
+              <span>เข้าร่วมช่องทางสื่อสารในการดำเนินการสหกิจศึกษา</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[การเตรียม Resume / Portfolio]</span>
+              <span>ลงทะเบียนและสอบผ่านวิชา คพ.302 เตรียมสหกิจศึกษา</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[การเข้าร่วมปฐมนิเทศ]</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2 text-slate-400">•</span>
-              <span>[เอกสารที่ต้องเตรียม]</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2 text-slate-400">•</span>
-              <span>[เงื่อนไขอื่น]</span>
+              <div>
+                <span>เอกสารต่าง ๆ ที่ต้องเตรียม มีดังนี้</span>
+                <ul className="mt-2 ml-4 space-y-2">
+                  <li className="flex items-start">
+                    <span className="mr-2 text-slate-400">•</span>
+                    <span>
+                      <b>รูปถ่ายนักศึกษาในชุดสุภาพ</b> หน้าตรง เห็นใบหน้าชัดเจนจนถึงหน้าอกช่วงบน
+                      (ตั้งชื่อ xxxxxxxxxx_photo.jpg โดย xxxxxxxxxxx คือรหัสนักศึกษา)
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 text-slate-400">•</span>
+                    <span>
+                      <b>ทรานสคริปต์แสดงประวัติการลงทะเบียน</b> และผลการศึกษาตั้งแต่ภาคการเรียนแรกที่เข้าศึกษา
+                      จนถึงภาคเรียนที่สมัครเข้าแผนสหกิจศึกษา
+                      (สามารถ save ไฟล์ PDF จากหน้าเว็บในระบบสำนักทะเบียน reg.tu.ac.th ได้
+                      ตั้งชื่อ xxxxxxxxxx_transcript.pdf)
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 text-slate-400">•</span>
+                    <span>
+                      <b>Resume หรือ Curriculum Vitae (CV)</b> แสดงประวัติและประสบการณ์ย่อของนักศึกษา
+                      (ตั้งชื่อ xxxxxxxxxx_resume.pdf หรือ xxxxxxxxxx_cv.pdf)
+                    </span>
+                  </li>
+                </ul>
+              </div>
             </li>
           </ul>
         </section>
 
-        {/* Section 4: Employer Requirements */}
+        {/* Section 4: Employer Requirements
         <section className="mb-12">
           <div className="border-b border-slate-200 pb-2 mb-3">
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
@@ -186,7 +225,7 @@ export const Requirements: React.FC = () => {
           <p className="text-xs text-slate-400 mt-3">
             หากสถานประกอบการที่สนใจยังไม่มีอยู่ในข้อมูลของสาขา อาจต้องดำเนินการเสนอหรือขอพิจารณาตามขั้นตอนที่กำหนด
           </p>
-        </section>
+        </section> */}
 
         {/* Section 5: Required Documents */}
         <section className="mb-12">
@@ -201,19 +240,19 @@ export const Requirements: React.FC = () => {
           <ul className="text-xs sm:text-sm text-slate-600 space-y-2">
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[ชื่อเอกสารที่ 1]</span>
+              <span>แบบคำร้องขอสมัครเข้าแผนสหกิจศึกษา</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[ชื่อเอกสารที่ 2]</span>
+              <span>แบบฟอร์มนักศึกษาแจ้งข้อมูลสถานประกอบการเพื่อพิจารณาขึ้นทะเบียน</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[ชื่อเอกสารที่ 3]</span>
+              <span>แบบฟอร์มนักศึกษาแจ้งข้อมูลผลการสมัครเข้าปฏิบัติงานสหกิจศึกษา</span>
             </li>
             <li className="flex items-start">
               <span className="mr-2 text-slate-400">•</span>
-              <span>[เอกสารอื่น ๆ]</span>
+              <span>แบบฟอร์มนักศึกษาแจ้งสถานะการสมัครเข้าปฏิบัติงานสหกิจศึกษา </span>
             </li>
           </ul>
           <div className="mt-3">

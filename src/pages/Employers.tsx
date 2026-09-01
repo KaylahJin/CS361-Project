@@ -1031,7 +1031,7 @@ export const Employers: React.FC = () => {
         </div>
         <div>
           <span className="text-xs text-slate-400 tracking-wide">
-            อัปเดตล่าสุด -/-/2569
+            อัปเดตล่าสุด 01/09/2569
           </span>
         </div>
       </div>
