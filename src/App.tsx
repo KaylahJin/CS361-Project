@@ -1,15 +1,30 @@
-import Navbar from './components/Navbar';
+import { useState } from 'react';
+import Navbar, { type TabType } from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import Requirements from './pages/Requirements';
 
 function App() {
+  const [activeTab, setActiveTab] = useState<TabType>('requirements');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return <Home />;
+      case 'requirements':
+        return <Requirements />;
+      default:
+        return <Home />;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-white text-slate-900">
-      <Navbar activeTab="home" onTabChange={() => {}} />
+      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-grow">
-        <Home />
+        {renderContent()}
       </div>
-      <Footer onTabChange={() => {}} />
+      <Footer onTabChange={setActiveTab} />
     </div>
   );
 }
