@@ -1,5 +1,14 @@
 # Project Setup — Full Stack (Local + AWS)
 
+> **Deploying? Use [`terraform-setup-guide.md`](terraform-setup-guide.md) instead.** The whole backend
+> below is now Terraform, and `terraform apply` builds it in one command
+> without any of the console clicking or any of the traps flagged here.
+>
+> Keep reading this file to understand *what* a resource is for and *why* it is
+> configured that way, to debug a stack someone else built by hand, or if
+> Terraform is unavailable to you. Resource-by-resource, it matches what
+> Terraform creates — only the names differ (see step 1).
+
 Copy-paste friendly. Every AWS step says exactly which console and where to click first.
 Every step below was verified end-to-end against a real deployment — the gotchas called
 out in bold are things that silently broke a working-looking setup before.
@@ -12,8 +21,14 @@ out in bold are things that silently broke a working-looking setup before.
 - `psql` — Windows: `winget install -e --id PostgreSQL.PostgreSQL.16`, then add `C:\Program Files\PostgreSQL\16\bin` to PATH
 - AWS CLI configured (`aws configure`)
 - **Windows users**: do the Lambda zip packaging (step 6) from Git Bash, not PowerShell — see the warning in that step.
+- Terraform >= 1.5 if you are deploying rather than reading — `winget install -e --id Hashicorp.Terraform`
 
 ## 1. Naming
+
+These are the hand-built console names. Terraform instead prefixes every
+resource with your `name_prefix`, so `coop-db-dev` becomes `pawit-coop-db-dev`
+and `cs361-rds-proxy` becomes `pawit-rds-proxy`. Same resources, same wiring —
+one stack per person, so nobody's names collide.
 
 | Resource | Name |
 |---|---|
@@ -62,7 +77,12 @@ Create → wait for "Available" (5-10 min).
 **Go to: RDS console → Databases → `coop-db-dev` → Connectivity & security tab → click the security group link → Edit inbound rules.**
 Add: Type `PostgreSQL`, Source `My IP`. Save.
 
-**Fix a known bug before loading**: open `infra/schema.sql`, move the line `CREATE EXTENSION IF NOT EXISTS pg_trgm;` from the bottom to the very top, above `CREATE TABLE companies`.
+**Already fixed, do not re-apply**: `infra/schema.sql` used to declare
+`CREATE EXTENSION IF NOT EXISTS pg_trgm;` at the *bottom* of the file, after the
+`gin_trgm_ops` indexes that depend on it. Because `psql -f` does not stop on
+error by default, those two `CREATE INDEX` statements failed silently and the
+load still exited 0. The extension now sits at the top of the file where it
+belongs — leave it there.
 
 **Load (from `CS361-Project/`, bash):**
 ```bash
@@ -290,10 +310,24 @@ If you get `{"message":"Internal Server Error"}` (note: `message` key, not `erro
 
 ## 10. Wire frontend to the live API
 
-`CS361-Project/.env` (gitignored):
+`CS361-Project/.env` (gitignored — copy `.env.example` as a starting point):
 ```
 VITE_API_URL=https://<api-id>.execute-api.<region>.amazonaws.com
 ```
+
+On a Terraform stack, skip the hand-editing: `npm run env:sync` reads the URL
+straight from `terraform output` and rewrites that one line. Re-run it after any
+`apply` that recreated the API — the API Gateway ID changes, and a stale URL
+gives the browser a bare network error with no HTTP status to look up, because
+the old hostname stops resolving entirely.
+
+Vite reads `.env` only at startup, so restart `npm run dev` afterwards.
+
+**Watch the port Vite prints.** CORS is allowed for exactly one origin,
+`http://localhost:5173`. If 5173 is already taken, Vite silently starts on 5174
+and every browser request fails CORS while `curl` keeps working — the most
+confusing possible version of this bug. Free up 5173, or add the real origin to
+the API's allowed origins.
 
 ## 11. Cleanup
 
@@ -326,4 +360,27 @@ Disable + delete CloudFront (if any) before deleting anything it points to. Then
 
 ## 13. What's manual vs automated
 
-No IaC — every AWS step above is console click-through (or the equivalent `aws` CLI call) by design, done manually once per environment. `npm run migrate:build-seed` is the one scripted/repeatable piece — it regenerates `infra/seed.sql` from the source registry CSV so re-seeding the database never requires hand-editing SQL.
+Everything above is now automated. `infra/terraform/` builds the entire
+backend — RDS, the secret, the proxy and its target, all three security groups,
+the Lambda, and the API Gateway with CORS — from one `terraform apply`. See
+[`terraform-setup-guide.md`](terraform-setup-guide.md).
+
+| Piece | Command |
+|---|---|
+| All AWS infrastructure | `terraform apply` (in `infra/terraform/`) |
+| Schema + seed into the DB | `npm run db:load` |
+| Frontend's `VITE_API_URL` | `npm run env:sync` |
+| Regenerate `infra/seed.sql` from the registry CSV | `npm run migrate:build-seed` |
+| Tear it all down | `terraform destroy` |
+
+Two things Terraform deliberately does **not** do:
+
+- **Run SQL.** It creates an empty database; `npm run db:load` fills it. A
+  stack that is fully healthy but never loaded returns `[]` from
+  `GET /companies`, which reads like a broken API but isn't.
+- **Create IAM roles.** Learner Lab accounts block `iam:CreateRole`, so the
+  pre-existing `LabRole` is looked up and reused for both the Lambda execution
+  role and the RDS Proxy role.
+
+This document stays as the explanation of what each resource is for, and as the
+fallback if you ever have to build or debug the stack by hand.
