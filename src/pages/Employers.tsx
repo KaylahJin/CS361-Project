@@ -62,17 +62,21 @@ export const Employers: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
   const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(searchTerm.trim()), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  // One-time, unfiltered fetch to build the province dropdown from real
-  // company data rather than a hardcoded province list.
+  // One-time, unfiltered fetch to build the province dropdown and the
+  // hero's partner count from real company data, rather than a hardcoded
+  // province list or a stale hand-written number.
   useEffect(() => {
     getCompanies()
       .then((data) => {
+        setTotalCount(data.length);
+
         const counts = new Map<string, number>();
         for (const c of data) {
           counts.set(c.province, (counts.get(c.province) ?? 0) + 1);
@@ -83,7 +87,7 @@ export const Employers: React.FC = () => {
         setProvinceOptions(provinces);
       })
       .catch(() => {
-        // Non-fatal — the dropdown just stays empty, search/list still work.
+        // Non-fatal — the dropdown/count just stay empty, search/list still work.
       });
   }, []);
 
@@ -139,9 +143,11 @@ export const Employers: React.FC = () => {
         </p>
 
         {/* Partner Count Slogan */}
-        <p className="mt-8 text-xs sm:text-sm font-semibold text-blue-600 tracking-wide">
-          Over 100 companies partner with us for cooperative education!
-        </p>
+        {totalCount !== null && (
+          <p className="mt-8 text-xs sm:text-sm font-semibold text-blue-600 tracking-wide">
+            {totalCount} companies partner with us for cooperative education!
+          </p>
+        )}
       </section>
 
       {/* Search + Province Filter */}
