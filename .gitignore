@@ -11,6 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+*.zip
+
+# Local editor/assistant tooling (not part of the app)
+.claude/
 
 # Editor directories and files
 .vscode/*
