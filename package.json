@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "migrate:build-seed": "node infra/migrate/build-seed.mjs",
+    "db:load": "bash infra/load-db.sh",
+    "env:sync": "bash infra/sync-env.sh",
     "test": "vitest run"
   },
   "dependencies": {
