@@ -160,3 +160,4 @@ CREATE INDEX idx_coop_plans_student  ON coop_plans(student_id);
 CREATE INDEX idx_coop_plans_position ON coop_plans(position_id);
 CREATE INDEX idx_coop_plans_period   ON coop_plans(period_id);
 
+CREATE INDEX idx_schedules_type   ON coop_schedules(activity_type);
