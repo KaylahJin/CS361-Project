@@ -1,3 +1,8 @@
+-- Extension สำหรับ search ชื่อบริษัท — must come before any index that uses
+-- gin_trgm_ops, or that CREATE INDEX silently fails (psql -f doesn't stop on
+-- error by default) and the index just never gets created.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- 1. companies — สถานประกอบการ
 CREATE TABLE companies (
     company_id    VARCHAR(10) PRIMARY KEY,
@@ -78,6 +83,3 @@ CREATE TABLE coop_plans (
 CREATE INDEX idx_coop_plans_student  ON coop_plans(student_id);
 CREATE INDEX idx_coop_plans_position ON coop_plans(position_id);
 CREATE INDEX idx_coop_plans_period   ON coop_plans(period_id);
-
--- Extension สำหรับ search ชื่อบริษัท
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
