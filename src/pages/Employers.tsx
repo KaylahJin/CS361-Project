@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Search, X } from 'lucide-react';
 import { getCompanies, CompanyApiError } from '../data/companyApi';
 import type { Company } from '../types/company';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const EmployerCard: React.FC<{ company: Company; index: number }> = ({ company, index }) => {
   const [hasError, setHasError] = useState(false);
@@ -56,11 +58,20 @@ export const Employers: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(searchTerm.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
-    getCompanies()
+    getCompanies({ search: debouncedSearch || undefined })
       .then((data) => {
         if (!cancelled) setCompanies(data);
       })
@@ -79,7 +90,7 @@ export const Employers: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [debouncedSearch]);
 
   return (
     <main className="w-full min-h-screen bg-white">
@@ -99,6 +110,31 @@ export const Employers: React.FC = () => {
         </p>
       </section>
 
+      {/* Search */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="ค้นหาด้วยชื่อสถานประกอบการ..."
+            aria-label="ค้นหาด้วยชื่อสถานประกอบการ"
+            className="w-full pl-11 pr-11 py-3 rounded-2xl border border-slate-200/90 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              aria-label="ล้างคำค้นหา"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* Employers Card List Container */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">
         {loading && (
@@ -106,6 +142,13 @@ export const Employers: React.FC = () => {
         )}
         {error && (
           <p className="text-center text-red-500 py-12">{error}</p>
+        )}
+        {!loading && !error && companies.length === 0 && (
+          <p className="text-center text-slate-400 py-12">
+            {debouncedSearch
+              ? `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}"`
+              : 'ไม่พบสถานประกอบการ'}
+          </p>
         )}
         {!loading && !error && companies.map((company, index) => (
           <EmployerCard key={company.company_id} company={company} index={index} />

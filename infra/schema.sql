@@ -11,8 +11,9 @@ CREATE TABLE companies (
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_companies_province ON companies(province);
-CREATE INDEX idx_companies_name     ON companies USING gin(name gin_trgm_ops);
+CREATE INDEX idx_companies_province   ON companies(province);
+CREATE INDEX idx_companies_name       ON companies USING gin(name gin_trgm_ops);
+CREATE INDEX idx_companies_short_name ON companies USING gin(short_name gin_trgm_ops);
 
 -- 2. coop_info — เกณฑ์/ข้อกำหนดสหกิจ
 CREATE TABLE coop_info (

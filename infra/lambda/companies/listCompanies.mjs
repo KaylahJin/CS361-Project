@@ -4,8 +4,11 @@
 // Issue: #26 — ทำการเรียกข้อมูลสถานประกอบการ
 //
 // Query params (both optional):
-//   search   -> ILIKE against companies.name, wrapped as '%' + term + '%'
-//               (uses the existing gin_trgm_ops index idx_companies_name)
+//   search   -> ILIKE against companies.name OR companies.short_name,
+//               wrapped as '%' + term + '%' (covers both the Thai legal
+//               name and the English short name shown on the card), uses
+//               the gin_trgm_ops indexes idx_companies_name /
+//               idx_companies_short_name
 //   province -> exact match against companies.province
 //               (uses btree index idx_companies_province)
 //
@@ -60,7 +63,7 @@ export async function listCompanies(event) {
 
     if (isProvided(search)) {
       values.push(`%${search}%`);
-      conditions.push(`name ILIKE $${values.length}`);
+      conditions.push(`(name ILIKE $${values.length} OR short_name ILIKE $${values.length})`);
     }
 
     if (isProvided(province)) {
