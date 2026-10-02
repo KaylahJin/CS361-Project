@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, Search, X } from 'lucide-react';
 import { getCompanies, CompanyApiError } from '../data/companyApi';
-import type { Company } from '../types/company';
+import type { Company, ProvinceOption } from '../types/company';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -60,18 +60,39 @@ export const Employers: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(searchTerm.trim()), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
+  // One-time, unfiltered fetch to build the province dropdown from real
+  // company data rather than a hardcoded province list.
+  useEffect(() => {
+    getCompanies()
+      .then((data) => {
+        const counts = new Map<string, number>();
+        for (const c of data) {
+          counts.set(c.province, (counts.get(c.province) ?? 0) + 1);
+        }
+        const provinces = Array.from(counts, ([province, count]) => ({ province, count })).sort(
+          (a, b) => a.province.localeCompare(b.province, 'th')
+        );
+        setProvinceOptions(provinces);
+      })
+      .catch(() => {
+        // Non-fatal — the dropdown just stays empty, search/list still work.
+      });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    getCompanies({ search: debouncedSearch || undefined })
+    getCompanies({ search: debouncedSearch || undefined, province: selectedProvince || undefined })
       .then((data) => {
         if (!cancelled) setCompanies(data);
       })
@@ -90,7 +111,20 @@ export const Employers: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch]);
+  }, [debouncedSearch, selectedProvince]);
+
+  const emptyMessage = (() => {
+    if (debouncedSearch && selectedProvince) {
+      return `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}" ในจังหวัด${selectedProvince}`;
+    }
+    if (debouncedSearch) {
+      return `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}"`;
+    }
+    if (selectedProvince) {
+      return `ไม่พบสถานประกอบการในจังหวัด${selectedProvince}`;
+    }
+    return 'ไม่พบสถานประกอบการ';
+  })();
 
   return (
     <main className="w-full min-h-screen bg-white">
@@ -110,9 +144,9 @@ export const Employers: React.FC = () => {
         </p>
       </section>
 
-      {/* Search */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative">
+      {/* Search + Province Filter */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -133,6 +167,20 @@ export const Employers: React.FC = () => {
             </button>
           )}
         </div>
+
+        <select
+          value={selectedProvince}
+          onChange={(e) => setSelectedProvince(e.target.value)}
+          aria-label="กรองตามจังหวัด"
+          className="py-3 px-4 rounded-2xl border border-slate-200/90 text-sm sm:text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 sm:w-56"
+        >
+          <option value="">ทุกจังหวัด</option>
+          {provinceOptions.map(({ province, count }) => (
+            <option key={province} value={province}>
+              {province} ({count})
+            </option>
+          ))}
+        </select>
       </section>
 
       {/* Employers Card List Container */}
@@ -144,11 +192,7 @@ export const Employers: React.FC = () => {
           <p className="text-center text-red-500 py-12">{error}</p>
         )}
         {!loading && !error && companies.length === 0 && (
-          <p className="text-center text-slate-400 py-12">
-            {debouncedSearch
-              ? `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}"`
-              : 'ไม่พบสถานประกอบการ'}
-          </p>
+          <p className="text-center text-slate-400 py-12">{emptyMessage}</p>
         )}
         {!loading && !error && companies.map((company, index) => (
           <EmployerCard key={company.company_id} company={company} index={index} />
