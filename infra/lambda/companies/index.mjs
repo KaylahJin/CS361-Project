@@ -23,11 +23,15 @@
 
 import { listCompanies } from './listCompanies.mjs';
 import { getCompanyById } from './getCompanyById.mjs';
+import { listPositions } from './listPositions.mjs';
+import { getPositionById } from './getPositionById.mjs';
 import { jsonResponse } from './response.mjs';
 
 const ROUTES = Object.assign(Object.create(null), {
   'GET /companies': listCompanies,
   'GET /companies/{companyId}': getCompanyById,
+  'GET /positions': listPositions,
+  'GET /positions/{positionId}': getPositionById,
 });
 
 /**
