@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Requirements from './pages/Requirements';
 import Employers from './pages/Employers';
+import Positions from './pages/Positions';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -16,6 +17,8 @@ function App() {
         return <Requirements />;
       case 'employers':
         return <Employers />;
+      case 'positions':
+        return <Positions />;
       default:
         return <Home onTabChange={setActiveTab} />;
     }
