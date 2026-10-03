@@ -16,3 +16,6 @@ data "aws_subnets" "default" {
 data "aws_iam_role" "lab_role" {
   name = var.lab_role_name
 }
+
+# Account ID for the globally-unique bucket name (see s3_web.tf).
+data "aws_caller_identity" "current" {}

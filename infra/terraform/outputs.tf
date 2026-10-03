@@ -32,3 +32,23 @@ output "db_name" {
 output "db_username" {
   value = var.db_username
 }
+
+# ---- Frontend hosting (s3_web.tf) ----
+
+# deploy-web.sh creates and configures this bucket; Terraform only computes
+# its name. See s3_web.tf.
+output "web_bucket_name" {
+  description = "S3 bucket serving the built frontend (created by npm run web:deploy)"
+  value       = local.web_bucket
+}
+
+output "web_url" {
+  description = "Public URL of the deployed site (HTTP only — S3 website endpoints do not do TLS)"
+  value       = local.web_url
+}
+
+# deploy-web.sh needs it: CreateBucket requires a LocationConstraint
+# everywhere except us-east-1, which rejects it.
+output "aws_region" {
+  value = var.aws_region
+}

@@ -11,6 +11,7 @@
     "migrate:build-seed": "node infra/migrate/build-seed.mjs",
     "db:load": "bash infra/load-db.sh",
     "env:sync": "bash infra/sync-env.sh",
+    "web:deploy": "bash infra/deploy-web.sh",
     "test": "vitest run"
   },
   "dependencies": {

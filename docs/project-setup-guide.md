@@ -26,9 +26,10 @@ out in bold are things that silently broke a working-looking setup before.
 ## 1. Naming
 
 These are the hand-built console names. Terraform instead prefixes every
-resource with your `name_prefix`, so `coop-db-dev` becomes `pawit-coop-db-dev`
-and `cs361-rds-proxy` becomes `pawit-rds-proxy`. Same resources, same wiring —
-one stack per person, so nobody's names collide.
+resource with your `name_prefix`, so `coop-db-dev` becomes
+`<prefix>-coop-db-dev` and `cs361-rds-proxy` becomes `<prefix>-rds-proxy`.
+Same resources, same wiring — one stack per person, so nobody's names
+collide.
 
 | Resource | Name |
 |---|---|

@@ -6,7 +6,12 @@ resource "aws_apigatewayv2_api" "companies" {
   # console-built version even though the setup doc said to configure it.
   # Declaring it here means `terraform plan` shows it; it can't be skipped.
   cors_configuration {
-    allow_origins = [var.cors_allow_origin]
+    # Dev server and deployed site. Browsers match Origin exactly, so the
+    # hosted site needs its own entry. local.web_url is built in s3_web.tf.
+    allow_origins = [
+      var.cors_allow_origin,
+      local.web_url,
+    ]
     allow_methods = ["GET", "OPTIONS"]
     allow_headers = ["content-type"]
   }

@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "name_prefix" {
   description = <<-EOT
     Prefix for every resource name this stack creates. REQUIRED, with no
-    default on purpose — use your own first name (e.g. "pawit", "mint").
+    default on purpose — pick your own (e.g. "dev1", "team-a").
 
     Why there is no default: AWS rejects duplicate security group, RDS
     instance, secret, and Lambda names within the same account/VPC, and

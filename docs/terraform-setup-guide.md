@@ -147,7 +147,62 @@ working fine. Either free up 5173, or set `cors_allow_origin` in
 
 ---
 
-## 6. Verify
+## 6. Publish the frontend to S3
+
+Step 5 runs the site on your laptop. This step puts it on the internet, so
+anyone with the URL can open it — no `npm run dev`, no Node.
+
+From the repo root:
+
+```bash
+npm run web:deploy
+```
+
+It reads the bucket name and API URL from Terraform, creates the bucket if it
+does not exist, configures it for public website hosting, runs `npm run build`
+with `VITE_API_URL` set to the live API, uploads `dist/`, checks the site
+returns HTTP 200, and prints the URL:
+
+```
+deployed: http://<prefix>-coop-web-<account-id>.s3-website-us-east-1.amazonaws.com
+```
+
+Re-run it after every frontend change, and after any `terraform apply` that
+recreated the API — `VITE_API_URL` is compiled into the JS bundle at build
+time, not read from `.env` in the browser, so a new API URL needs a new build.
+
+Four things worth knowing:
+
+- **The site is HTTP, not HTTPS.** S3 website endpoints don't serve TLS. The
+  API is still HTTPS and that mix is fine: browsers only block an HTTPS page
+  calling an HTTP endpoint, not the other way round.
+- **The bucket is public on purpose.** A bucket policy grants `s3:GetObject`
+  to everyone, which is what static hosting means. Nothing secret belongs in
+  `dist/` — anything in the bundle is readable by anyone, `VITE_API_URL`
+  included. Never put the DB password in a `VITE_` variable.
+- **CORS is already handled.** `apigateway.tf` allows both `localhost:5173`
+  and the site origin, which `s3_web.tf` computes from your `name_prefix`,
+  the account ID, and the region.
+- **This script owns the bucket, not Terraform.** `terraform destroy` leaves
+  it behind on purpose; delete it with `npm run web:deploy -- --destroy`.
+  The reason is a Learner Lab service control policy:
+
+  ```
+  Error: reading S3 Bucket (...) object lock configuration:
+  api error AccessDenied: ... not authorized to perform:
+  s3:GetBucketObjectLockConfiguration ... with an explicit deny in a
+  service control policy
+  ```
+
+  The AWS provider calls `GetObjectLockConfiguration` inside
+  `aws_s3_bucket`'s read, which runs after every create and on every refresh.
+  Nothing skips it, so `apply` fails *after* creating the bucket and every
+  later `plan` fails too — confirmed on provider v5.100.0 and v6.67.0. Every
+  S3 **write** the site needs is allowed, so the CLI does the whole job
+  instead, idempotently, on every deploy.
+
+---
+## 7. Verify
 
 ```bash
 cd infra/terraform
@@ -169,14 +224,23 @@ eval "$(terraform output -raw proxy_target_health_check_command)"   # want AVAIL
 
 ---
 
-## 7. Tear down
+## 8. Tear down
 
 ```bash
 cd infra/terraform
 terraform destroy    # type: yes
 ```
 
-Removes everything this stack created, database included. `seed.sql`
+Removes everything this stack created, database included. It does **not**
+remove the website bucket — Terraform does not manage it (see step 6). Delete
+that separately:
+
+```bash
+npm run web:deploy -- --destroy    # prompts for the bucket name
+```
+
+Leaving the bucket in place between lab sessions is fine and costs ~nothing:
+the next `npm run web:deploy` reuses it. `seed.sql`
 regenerates the data, so nothing is permanently lost. Learner Lab accounts also
 wipe resources when the lab session ends — so after a lab reset, expect to
 start from step 3 again with a fresh `terraform apply`.
@@ -188,7 +252,7 @@ is an empty one.
 
 ---
 
-## 8. If something breaks
+## 9. If something breaks
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -199,13 +263,18 @@ is an empty one.
 | `{"message":"Internal Server Error"}` (`message` key) | The Lambda invocation itself crashed or timed out, before your code ran | CloudWatch → `/aws/lambda/<prefix>-companies-lambda`. In Git Bash, prefix the `aws logs` command with `MSYS_NO_PATHCONV=1` or the leading `/` gets mangled |
 | `{"error":"..."}` (`error` key) | Your handler ran and failed — usually the DB connection | Same logs, but look at the SQL/connection error |
 | `Cannot find package 'pg'` | Lambda zip has no dependencies | `npm install --omit=dev --prefix infra/lambda/companies`, then `terraform apply` |
-| `Connection terminated unexpectedly` | Proxy target not `AVAILABLE` yet | Run the health check in step 6, wait, retry |
+| `Connection terminated unexpectedly` | Proxy target not `AVAILABLE` yet | Run the health check in step 7, wait, retry |
 | CORS error in the browser, `curl` works | Vite is on a different port than `cors_allow_origin` | See the note in step 5 |
 | `psql` connection timeout | Your public IP changed | Re-run the `checkip` command, update `my_ip_cidr`, `terraform apply` |
 | Thai text garbled in the terminal | Cosmetic only, data is correct | `chcp 65001`, or ignore |
 | Changed Lambda code, `apply` says no changes | — | It re-zips and redeploys on any file change in `infra/lambda/companies/`; if truly unchanged there is nothing to deploy |
 | `apply` wants to destroy and recreate everything | You changed `name_prefix` | Change it back, or accept the rebuild and re-run step 4 |
 | `apply` fails: *a secret with this name is already scheduled for deletion* | A secret destroyed by an older version of this config is still inside its 30-day recovery window | `aws secretsmanager delete-secret --secret-id <prefix>-coop-db-credentials --force-delete-without-recovery`, then `apply`. The config now sets `recovery_window_in_days = 0`, so new teardowns don't do this |
+| Site URL returns `403 AccessDenied` for every file | Block Public Access got re-enabled on the bucket | `npm run web:deploy` again — it clears the block and re-puts the policy every run |
+| `apply` fails: `GetObjectLockConfiguration` AccessDenied / explicit deny | You added an `aws_s3_bucket` resource back to the config | The account's SCP blocks that read. Keep the bucket in `deploy-web.sh`; see step 6 |
+| Site loads, company list empty, console shows a CORS error | `name_prefix` changed after the API was created, so the allowed origin no longer matches the bucket | `terraform apply` — the origin is recomputed from `name_prefix` |
+| Site still shows the old build after `web:deploy` | Your browser cached `index.html` | Hard reload (Ctrl+Shift+R). Assets are fingerprinted, so only `index.html` can go stale |
+| `aws s3 sync` fails with `AccessDenied` | Learner Lab credentials aged out mid-session | Re-copy the `[default]` block from the lab's AWS CLI panel |
 | `no matching EC2 VPC found` | The account has no default VPC | `aws ec2 create-default-vpc`, or ask your instructor — this stack deliberately uses the default VPC rather than building its own |
 
 Never commit a saved plan file (`terraform plan -out=tfplan`). A plan is a zip
@@ -214,7 +283,7 @@ it contains `db_password` in plaintext. `.gitignore` already blocks `tfplan*`.
 
 ---
 
-## 9. Files
+## 10. Files
 
 In `infra/terraform/`:
 
@@ -230,6 +299,7 @@ In `infra/terraform/`:
 | `proxy.tf` | RDS Proxy, target group, target, and the 5-minute wait |
 | `lambda.tf` | Zips `infra/lambda/companies/`, Lambda function, API permission |
 | `apigateway.tf` | HTTP API, CORS, the two routes, `$default` stage |
+| `s3_web.tf` | Bucket name + site URL as locals. No resources — explains the SCP that blocks managing the bucket |
 | `outputs.tf` | `api_url` and the values the helper scripts read |
 
 Elsewhere in the repo:
@@ -240,6 +310,7 @@ Elsewhere in the repo:
 | `infra/seed.sql` | The 81 companies. Generated — re-run `npm run migrate:build-seed` instead of hand-editing |
 | `infra/load-db.sh` | `npm run db:load` (step 4) |
 | `infra/sync-env.sh` | `npm run env:sync` (step 5) |
+| `infra/deploy-web.sh` | `npm run web:deploy` (step 6) — creates/configures the bucket, builds, uploads, verifies |
 | `infra/lambda/companies/` | Handler source; `npm test` covers it with no AWS needed |
 | `.env.example` | Template for the one frontend variable, `VITE_API_URL` |
 
