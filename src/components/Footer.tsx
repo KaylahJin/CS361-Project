@@ -49,6 +49,12 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
             >
               สถานประกอบการ
             </button>
+            <button
+              onClick={() => onTabChange?.('positions')}
+              className="text-left text-sm text-slate-700 hover:text-blue-600 transition-colors font-medium cursor-pointer"
+            >
+              ตำแหน่งงานสหกิจ
+            </button>
           </div>
 
           {/* Column 2: Schedule & Criteria (Hidden temporarily) */}
