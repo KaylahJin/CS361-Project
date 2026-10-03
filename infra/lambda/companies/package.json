@@ -1,0 +1,11 @@
+{
+  "name": "cs361-lambda-companies",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CS361 V2 — Companies API Lambda (API Gateway HTTP API -> Lambda -> RDS Proxy -> PostgreSQL)",
+  "type": "module",
+  "main": "index.mjs",
+  "dependencies": {
+    "pg": "^8.23.0"
+  }
+}
