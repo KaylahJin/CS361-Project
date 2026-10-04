@@ -1,5 +1,31 @@
 # Cooperative Education Planning & Management System
 
+## Getting started
+
+```bash
+npm install
+npm run dev     # http://localhost:5173
+npm test        # unit tests, no AWS needed
+```
+
+The company list is served by a real AWS backend. To stand your own up:
+
+| Doc | Use it for |
+|---|---|
+| [`docs/project-overview.md`](docs/project-overview.md) | **Start here.** What the system is, how the pieces fit, where each piece lives |
+| [`docs/terraform-setup-guide.md`](docs/terraform-setup-guide.md) | **Deploying.** `terraform apply` + two helper commands builds the whole backend |
+| [`docs/project-setup-guide.md`](docs/project-setup-guide.md) | Understanding what each AWS resource does, or building it by hand |
+| [`docs/company-schema-design.md`](docs/company-schema-design.md) | The `companies` table and why its columns look like that |
+| [`docs/architecture-diagram-brief.md`](docs/architecture-diagram-brief.md) | Brief to hand an AI (or a designer) to produce the architecture diagrams |
+| [`docs/overview/V2.md`](docs/overview/V2.md) | The team's V2 system design, scope, and decision log |
+
+Already have a stack? Point the local dev server at it with
+`npm run env:sync`, or publish the site to its S3 bucket with
+`npm run web:deploy`.
+
+---
+
+
 ## Project Vision
 ระบบที่สามารถให้บริการทางด้านข้อมูลได้อย่างครบถ้วนได้จากที่เดียว ในอนาคตสามารถให้นักศึกษายื่นแผนสหกิจและติดตามสถานะได้
 ## Primary User

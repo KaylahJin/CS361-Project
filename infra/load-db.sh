@@ -96,8 +96,10 @@ run_sql_file schema.sql
 run_sql_file seed.sql
 
 echo
+# Read from seed.sql, never hardcoded — a literal here went stale and failed a good load.
+EXPECTED="$(grep -c "^  ('C" "$REPO_ROOT/infra/seed.sql")"
 COUNT="$(psql_q 'SELECT count(*) FROM companies;')"
-echo "companies loaded: $COUNT (expected 81)"
+echo "companies loaded: $COUNT (expected $EXPECTED, per infra/seed.sql)"
 
 POS_COUNT="$(psql_q 'SELECT count(*) FROM positions;')"
 echo "positions loaded: $POS_COUNT"
@@ -110,8 +112,10 @@ else
   echo "pg_trgm:          MISSING — ?search= will be slow"
 fi
 
-if [ "$COUNT" != "81" ]; then
-  echo "error: expected 81 companies, got $COUNT" >&2
+if [ "$COUNT" != "$EXPECTED" ]; then
+  echo "error: seed.sql holds $EXPECTED companies but the table has $COUNT" >&2
+  echo "  Lower: duplicate company_id in seed.sql. Re-run npm run migrate:build-seed." >&2
+  echo "  Higher: rows left from an earlier seed. Use --reset." >&2
   exit 1
 fi
 

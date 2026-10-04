@@ -11,6 +11,29 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+*.zip
+
+# Local editor/assistant tooling (not part of the app)
+.claude/
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.build/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+# Saved plan files. A plan is a zip that embeds BOTH the resolved variable
+# values and a full copy of the state, so `tfplan` contains db_password in
+# plaintext. Never commit one.
+tfplan
+tfplan*
+*.tfplan
 
 # Editor directories and files
 .vscode/*
