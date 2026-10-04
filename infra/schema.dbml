@@ -3,19 +3,20 @@
 // Mirrors infra/schema.sql — keep both in sync when the schema changes.
 
 Table companies {
-  company_id    varchar(10) [pk, note: "e.g. C01"]
-  name          text        [not null, note: "ชื่อเต็ม"]
-  short_name    text        [note: "ชื่อย่อ, V1 carry-over, nullable"]
-  province      text        [not null, note: "filter field, indexed (btree)"]
-  location      text        [not null, note: "ที่อยู่เต็ม"]
-  description   text        [default: '', note: "not populated yet, placeholder for future"]
-  logo_filename text
-  url           text
-  created_at    timestamptz [default: `now()`]
+  company_id    varchar(10) [pk, note: "required — e.g. C01"]
+  name          text        [not null, note: "required — display + SEARCH"]
+  short_name    text        [note: "optional — display + SEARCH (so 'KBTG' finds a Thai-only name)"]
+  province      text        [not null, note: "required — FILTER"]
+  location      text        [not null, note: "required — display, full address"]
+  description   text        [default: '', note: "optional — reserved for V3, not populated"]
+  logo_filename text        [note: "optional — display, falls back to short_name"]
+  url           text        [note: "optional — display, card link"]
+  created_at    timestamptz [default: `now()`, note: "optional — internal audit"]
 
   indexes {
-    province
-    name [type: gin, note: "pg_trgm — fuzzy search"]
+    province [note: "btree — province filter, #28"]
+    name [type: gin, note: "pg_trgm — name search, #27"]
+    short_name [type: gin, note: "pg_trgm — short_name search, #27"]
   }
 }
 
