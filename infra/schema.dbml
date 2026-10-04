@@ -1,0 +1,87 @@
+// CS361 V2 — DBML for dbdiagram.io
+// Paste this whole file into https://dbdiagram.io (or dbdocs.io) to render the ER diagram.
+// Mirrors infra/schema.sql — keep both in sync when the schema changes.
+
+Table companies {
+  company_id    varchar(10) [pk, note: "e.g. C01"]
+  name          text        [not null, note: "ชื่อเต็ม"]
+  short_name    text        [note: "ชื่อย่อ, V1 carry-over, nullable"]
+  province      text        [not null, note: "filter field, indexed (btree)"]
+  location      text        [not null, note: "ที่อยู่เต็ม"]
+  description   text        [default: '', note: "not populated yet, placeholder for future"]
+  logo_filename text
+  url           text
+  created_at    timestamptz [default: `now()`]
+
+  indexes {
+    province
+    name [type: gin, note: "pg_trgm — fuzzy search"]
+  }
+}
+
+Table coop_info {
+  info_id         integer [pk, increment]
+  item_number     integer [not null]
+  curriculum      varchar(10) [not null, note: "'61', '66', 'all'"]
+  category        text    [not null, note: "qualification | required_course | gpa | behavior"]
+  title           text    [not null]
+  description     text    [not null]
+  gpa_requirement decimal(3,2)
+  academic_year   integer [not null, default: 2568]
+  created_at      timestamptz [default: `now()`]
+}
+
+Table positions {
+  position_id   varchar(10) [pk]
+  company_id    varchar(10) [not null, ref: > companies.company_id]
+  title         text        [not null]
+  description   text        [default: '']
+  position_type text
+  created_at    timestamptz [default: `now()`]
+
+  indexes {
+    company_id
+    position_type
+  }
+
+  note: "ON DELETE CASCADE from companies"
+}
+
+Table periods {
+  period_id     varchar(10) [pk]
+  name          text    [not null]
+  step_order    integer
+  step_name     text
+  start_date    date
+  end_date      date
+  academic_year integer [not null]
+  created_at    timestamptz [default: `now()`]
+
+  indexes {
+    academic_year
+  }
+}
+
+Table students {
+  student_id VARCHAR(10) [pk]
+  name       text        [not null]
+  curriculum varchar(10)
+  gpa        decimal(3,2)
+  created_at timestamptz [default: `now()`]
+}
+
+Table coop_plans {
+  plan_id     varchar(10) [pk]
+  student_id  varchar(10) [not null, ref: > students.student_id]
+  position_id varchar(10) [not null, ref: > positions.position_id]
+  period_id   varchar(10) [not null, ref: > periods.period_id]
+  status      varchar(20) [default: 'draft']
+  created_at  timestamptz [default: `now()`]
+  updated_at  timestamptz [default: `now()`]
+
+  indexes {
+    student_id
+    position_id
+    period_id
+  }
+}
