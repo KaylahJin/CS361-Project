@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate:build-seed": "node infra/migrate/build-seed.mjs && node infra/migrate/build-positions-seed.mjs",
+    "migrate:build-positions": "node infra/migrate/build-positions-seed.mjs",
+    "db:load": "bash infra/load-db.sh",
+    "env:sync": "bash infra/sync-env.sh",
+    "web:deploy": "bash infra/deploy-web.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
