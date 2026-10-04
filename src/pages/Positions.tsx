@@ -310,12 +310,45 @@ export const Positions: React.FC = () => {
             </div>
           )}
 
+          {/* Quick Category Filter Pills */}
+          <div className="pt-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none text-xs">
+              <span className="text-slate-400 font-semibold shrink-0 mr-1 flex items-center gap-1">
+                <Filter className="w-3 h-3 text-slate-400" /> หมวดหมู่ด่วน:
+              </span>
+              {[
+                { key: 'all', label: 'ทุกสายงาน' },
+                { key: 'software_development', label: 'Software & Web' },
+                { key: 'data_ai', label: 'Data & AI' },
+                { key: 'cloud_infrastructure_devops', label: 'Cloud & DevOps' },
+                { key: 'qa_testing', label: 'QA & Testing' },
+                { key: 'ux_ui_design', label: 'UX/UI Design' },
+                { key: 'business_enterprise_systems', label: 'Business & Systems' },
+              ].map((c) => {
+                const isSelected = selectedCategory === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => setSelectedCategory(isSelected && c.key !== 'all' ? 'all' : c.key)}
+                    className={`px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Filter dropdowns & pills */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
             {/* Category Filter */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                <Filter className="w-3 h-3 text-slate-400" /> สายงาน (Category)
+                <Filter className="w-3 h-3 text-slate-400" /> สายงานทั้งหมด (Category)
               </label>
               <select
                 value={selectedCategory}
@@ -334,7 +367,7 @@ export const Positions: React.FC = () => {
             {/* Work Mode Filter */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                <Building2 className="w-3 h-3 text-slate-400" /> รูปแบบการทำงาน
+                <Building2 className="w-3 h-3 text-slate-400" /> รูปแบบการทำงาน (Work Mode)
               </label>
               <select
                 value={selectedWorkMode}
@@ -342,9 +375,9 @@ export const Positions: React.FC = () => {
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 <option value="all">ทุกรูปแบบการทำงาน</option>
-                <option value="onsite">On-site</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="remote">Remote / WFH</option>
+                <option value="onsite">On-site (ทำงานที่สถานประกอบการ)</option>
+                <option value="hybrid">Hybrid (ผสมผสาน Office/WFH)</option>
+                <option value="remote">Remote / WFH (ทำงานออนไลน์ 100%)</option>
                 <option value="unknown">ไม่ระบุ</option>
               </select>
             </div>
@@ -352,7 +385,7 @@ export const Positions: React.FC = () => {
             {/* Status Filter */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-slate-400" /> สถานะรับสมัคร
+                <CheckCircle2 className="w-3 h-3 text-slate-400" /> สถานะรับสมัคร (Status)
               </label>
               <select
                 value={selectedStatus}
@@ -367,6 +400,74 @@ export const Positions: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {/* Active Filter Tags Bar (Chips with Individual Cancel / Clear) */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-blue-600" /> ตัวกรองที่เปิดใช้:
+              </span>
+
+              {selectedCategory !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                  สายงาน: {CATEGORY_LABELS[selectedCategory as PositionCategory] || selectedCategory}
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className="hover:text-blue-950 p-0.5 cursor-pointer rounded-full hover:bg-blue-200/50"
+                    title="ยกเลิกตัวกรองสายงานนี้"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedWorkMode !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200">
+                  รูปแบบ: {WORK_MODE_LABELS[selectedWorkMode as WorkMode] || selectedWorkMode}
+                  <button
+                    onClick={() => setSelectedWorkMode('all')}
+                    className="hover:text-purple-950 p-0.5 cursor-pointer rounded-full hover:bg-purple-200/50"
+                    title="ยกเลิกตัวกรองรูปแบบการทำงานนี้"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedStatus !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  สถานะ: {STATUS_LABELS[selectedStatus as PositionStatus] || selectedStatus}
+                  <button
+                    onClick={() => setSelectedStatus('all')}
+                    className="hover:text-emerald-950 p-0.5 cursor-pointer rounded-full hover:bg-emerald-200/50"
+                    title="ยกเลิกตัวกรองสถานะนี้"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {search.trim() && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
+                  คำค้นหา: "{search.trim()}"
+                  <button
+                    onClick={() => setSearch('')}
+                    className="hover:text-amber-950 p-0.5 cursor-pointer rounded-full hover:bg-amber-200/50"
+                    title="ล้างคำค้นหานี้"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                onClick={handleClearFilters}
+                className="text-xs text-rose-600 hover:text-rose-800 font-semibold ml-auto cursor-pointer hover:underline"
+              >
+                ล้างตัวกรองทั้งหมด
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content Section: Loading / Error / Empty / List */}
