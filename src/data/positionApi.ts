@@ -7,7 +7,9 @@
 
 import type { Position, PositionQueryParams } from '../types/position';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import fallbackPositions from './positionsData.json';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export class PositionApiError extends Error {
   status: number;
@@ -28,25 +30,57 @@ export class PositionApiError extends Error {
 export async function getPositions(
   params?: PositionQueryParams
 ): Promise<Position[]> {
-  const qs = new URLSearchParams();
-  if (params?.search) qs.set('search', params.search);
-  if (params?.category) qs.set('category', params.category);
-  if (params?.work_mode) qs.set('work_mode', params.work_mode);
-  if (params?.status) qs.set('status', params.status);
-  if (params?.company_id) qs.set('company_id', params.company_id);
+  try {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.category) qs.set('category', params.category);
+    if (params?.work_mode) qs.set('work_mode', params.work_mode);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.company_id) qs.set('company_id', params.company_id);
 
-  const queryStr = qs.toString();
-  const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
-  const res = await fetch(url);
+    const queryStr = qs.toString();
+    const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
+    const res = await fetch(url);
 
-  if (!res.ok) {
-    throw new PositionApiError(
-      `Failed to fetch positions: ${res.statusText}`,
-      res.status
-    );
+    if (!res.ok) {
+      throw new PositionApiError(
+        `Failed to fetch positions: ${res.statusText}`,
+        res.status
+      );
+    }
+
+    return await res.json();
+  } catch (err) {
+    // If network error (dev server stopped or offline), fallback gracefully to local dataset
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      console.warn('Backend API unreachable, using local fallback positions data:', err);
+      let filtered = (fallbackPositions || []) as unknown as Position[];
+      if (params?.search) {
+        const s = params.search.toLowerCase();
+        filtered = filtered.filter((p) =>
+          (p.title && p.title.toLowerCase().includes(s)) ||
+          (p.company_name && p.company_name.toLowerCase().includes(s)) ||
+          (p.company_short_name && p.company_short_name.toLowerCase().includes(s)) ||
+          (p.location && p.location.toLowerCase().includes(s)) ||
+          (p.description && p.description.toLowerCase().includes(s))
+        );
+      }
+      if (params?.category) {
+        filtered = filtered.filter((p) => p.category === params.category);
+      }
+      if (params?.work_mode) {
+        filtered = filtered.filter((p) => p.work_mode === params.work_mode);
+      }
+      if (params?.status) {
+        filtered = filtered.filter((p) => p.status === params.status);
+      }
+      if (params?.company_id) {
+        filtered = filtered.filter((p) => p.company_id === params.company_id);
+      }
+      return filtered;
+    }
+    throw err;
   }
-
-  return res.json();
 }
 
 /**
