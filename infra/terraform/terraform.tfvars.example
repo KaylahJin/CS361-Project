@@ -1,0 +1,41 @@
+# Copy this file to terraform.tfvars, then replace all three values.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# terraform.tfvars is gitignored because it holds a real DB password.
+# Never commit it, and never paste it into chat, Slack, or a commit message.
+# All three values below are required — Terraform refuses to run until you
+# change them, so a forgotten placeholder fails fast instead of deploying.
+
+
+# Your own prefix for every resource name. Use your first name.
+# Everyone on this project shares one AWS account, and AWS rejects duplicate
+# security group / RDS / secret names — so if two people use the same prefix,
+# the second `apply` fails halfway and leaves a partial stack behind.
+# Keep this stable after your first apply: changing it destroys and recreates
+# everything, database included.
+name_prefix = "your-name"
+
+# RDS master password. Rules: 8+ characters, and no / @ " or space
+# characters ( ! is fine ). Pick your own — don't reuse a password you
+# use elsewhere.
+db_password = "change-me-8-chars-min-no-slash-at-or-quote-or-space"
+
+# Your current public IP, with /32 on the end. This opens port 5432 to just
+# your machine so you can run psql directly (needed once, to load the schema
+# and seed data). Get it with:
+#
+#   curl -s https://checkip.amazonaws.com
+#
+# Home/campus IPs change. When psql starts timing out, re-run that curl, put
+# the new value here, and `terraform apply` again.
+my_ip_cidr = "203.0.113.4/32"
+
+
+# ---- Optional: everything below has a working default, leave it alone ----
+#
+# aws_region        = "us-east-1"
+# db_name           = "coop_db"
+# db_username       = "postgres"
+# lab_role_name     = "LabRole"       # the pre-existing Learner Lab role
+# cors_allow_origin = "http://localhost:5173"   # must match the port Vite prints
