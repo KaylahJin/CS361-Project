@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, CheckCircle2 } from 'lucide-react';
+import { Calendar, CheckCircle2, CircleMinus } from 'lucide-react';
 import { getPeriodTimeline, PeriodApiError } from '../data/periodAPI';
 import type {
     ScheduleTimelineResponse,
     CoopSchedule,
+    ActivityType,
 } from '../types/period';
 
 const ScheduleCard: React.FC<{
@@ -92,34 +93,50 @@ export const Periods: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Filter / Search
+    const [search, setSearch] = useState('');
+    const [selectedPeriod, setSelectedPeriod] = useState('');
+    const [selectedActivityType, setSelectedActivityType] =
+        useState<ActivityType | ''>('');
+
     useEffect(() => {
         let cancelled = false;
 
-        getPeriodTimeline()
-            .then((data) => {
-                if (!cancelled) {
-                    setTimelineData(data);
-                }
-            })
-            .catch((err) => {
-                if (cancelled) return;
+        setLoading(true);
+        setError(null);
 
-                setError(
-                    err instanceof PeriodApiError
-                        ? `โหลดข้อมูลไม่สำเร็จ (${err.status})`
-                        : 'โหลดข้อมูลไม่สำเร็จ'
-                );
+        const timer = setTimeout(() => {
+            getPeriodTimeline({
+                search: search.trim() || undefined,
+                period_id: selectedPeriod || undefined,
+                activity_type: selectedActivityType || undefined,
             })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            });
+                .then((data) => {
+                    if (!cancelled) {
+                        setTimelineData(data);
+                    }
+                })
+                .catch((err) => {
+                    if (cancelled) return;
+
+                    setError(
+                        err instanceof PeriodApiError
+                            ? `โหลดข้อมูลไม่สำเร็จ (${err.status})`
+                            : 'โหลดข้อมูลไม่สำเร็จ'
+                    );
+                })
+                .finally(() => {
+                    if (!cancelled) {
+                        setLoading(false);
+                    }
+                });
+        }, 250);
 
         return () => {
             cancelled = true;
+            clearTimeout(timer);
         };
-    }, []);
+    }, [search, selectedPeriod, selectedActivityType]);
 
     return (
         <main className="w-full min-h-screen bg-white">
@@ -137,6 +154,114 @@ export const Periods: React.FC = () => {
                 </p>
             </section>
 
+
+            {/* Search & Filters */}
+            <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+                <div className="border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-white shadow-2xs">
+
+                    {/* Search */}
+                    <div className="mb-4">
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            ค้นหากำหนดการ
+                        </label>
+
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="ค้นหาชื่อกิจกรรม หรือรายละเอียด..."
+                            className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                        {/* Period */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                                รอบการศึกษา
+                            </label>
+
+                            <select
+                                value={selectedPeriod}
+                                onChange={(e) => setSelectedPeriod(e.target.value)}
+                                className="w-full px-3 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            >
+                                <option value="">ทุกรอบการศึกษา</option>
+
+                                {timelineData?.period && (
+                                    <option value={timelineData.period.period_id}>
+                                        {timelineData.period.name}
+                                    </option>
+                                )}
+                            </select>
+                        </div>
+
+                        {/* Activity Type */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                                ประเภทกิจกรรม
+                            </label>
+
+                            <select
+                                value={selectedActivityType}
+                                onChange={(e) =>
+                                    setSelectedActivityType(
+                                        e.target.value as ActivityType | ''
+                                    )
+                                }
+                                className="w-full px-3 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            >
+                                <option value="">ทุกประเภทกิจกรรม</option>
+
+                                <option value="APPLICATION">
+                                    สมัครสหกิจ
+                                </option>
+
+                                <option value="INTERVIEW">
+                                    สัมภาษณ์
+                                </option>
+
+                                <option value="ORIENTATION">
+                                    เตรียมความพร้อม
+                                </option>
+
+                                <option value="WORK_PERIOD">
+                                    ปฏิบัติงานสหกิจ
+                                </option>
+
+                                <option value="SUBMISSION">
+                                    ประเมินผล
+                                </option>
+
+                            </select>
+                        </div>
+
+                    </div>                    
+
+                    {/* Clear */}
+                    {(search || selectedPeriod || selectedActivityType) && (
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearch('');
+                                    setSelectedPeriod('');
+                                    setSelectedActivityType('');
+                                }}
+                                className="px-4 py-2 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                                ล้างตัวกรอง
+                            </button>
+                        </div>
+                    )}
+
+                </div>
+
+            </section>
+
             {/* Period Information */}
             {timelineData?.period && (
                 <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
@@ -144,10 +269,15 @@ export const Periods: React.FC = () => {
 
                         <div className="flex flex-wrap items-center gap-3">
 
-                            {timelineData.period.is_active && (
+                            {timelineData.period.is_active ? (
                                 <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs sm:text-sm font-medium text-green-700">
                                     <CheckCircle2 className="w-4 h-4" />
                                     กำลังดำเนินการ
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs sm:text-sm font-medium text-slate-600">
+                                    <CircleMinus className="w-4 h-4" />
+                                    ไม่ดำเนินการ
                                 </span>
                             )}
 
