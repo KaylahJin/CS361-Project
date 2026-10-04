@@ -1,6 +1,19 @@
 -- Issue #25 evidence. Open in pgAdmin Query Tool, run one section at a time.
 -- Each section answers one reviewer comment.
 
+-- [0] All companies, every column. Sort by the numeric part of company_id,
+--     otherwise C100 lands between C10 and C11.
+SELECT row_number() OVER (ORDER BY substring(company_id FROM 2)::int) AS no,
+       company_id, name, short_name, province, location, logo_filename, url
+FROM companies
+ORDER BY substring(company_id FROM 2)::int;
+
+-- [0b] Short version — fits on one screen
+SELECT row_number() OVER (ORDER BY substring(company_id FROM 2)::int) AS no,
+       company_id, short_name, province, name
+FROM companies
+ORDER BY substring(company_id FROM 2)::int;
+
 -- [1] Schema / columns of companies
 --     "ภาพยังไม่แสดง column/schema ของ companies"
 SELECT ordinal_position AS pos, column_name, data_type,
@@ -85,19 +98,6 @@ UNION ALL
 SELECT 'provinces with 2+ companies', count(*)::text, '>= 3',
        CASE WHEN count(*) >= 3 THEN 'PASS' ELSE 'FAIL' END
 FROM (SELECT province FROM companies GROUP BY province HAVING count(*) >= 2) p;
-
--- [0] All companies, every column. Sort by the numeric part of company_id,
---     otherwise C100 lands between C10 and C11.
-SELECT row_number() OVER (ORDER BY substring(company_id FROM 2)::int) AS no,
-       company_id, name, short_name, province, location, logo_filename, url
-FROM companies
-ORDER BY substring(company_id FROM 2)::int;
-
--- [0b] Short version — fits on one screen
-SELECT row_number() OVER (ORDER BY substring(company_id FROM 2)::int) AS no,
-       company_id, short_name, province, name
-FROM companies
-ORDER BY substring(company_id FROM 2)::int;
 
 -- [6] Proof the data is no longer static — companies not present in the old
 --     81-row registry seed, i.e. the ones that were missing before.
