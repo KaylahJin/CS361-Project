@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const listCompaniesMock = vi.fn();
 const getCompanyByIdMock = vi.fn();
+const listPositionsMock = vi.fn();
+const getPositionByIdMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -11,12 +13,22 @@ vi.mock('./getCompanyById.mjs', () => ({
   getCompanyById: getCompanyByIdMock,
 }));
 
+vi.mock('./listPositions.mjs', () => ({
+  listPositions: listPositionsMock,
+}));
+
+vi.mock('./getPositionById.mjs', () => ({
+  getPositionById: getPositionByIdMock,
+}));
+
 const { handler } = await import('./index.mjs');
 
-describe('companies router (index.mjs handler)', () => {
+describe('router (index.mjs handler)', () => {
   beforeEach(() => {
     listCompaniesMock.mockReset();
     getCompanyByIdMock.mockReset();
+    listPositionsMock.mockReset();
+    getPositionByIdMock.mockReset();
   });
 
   it('returns 404 for an unknown routeKey', async () => {
@@ -25,6 +37,8 @@ describe('companies router (index.mjs handler)', () => {
     expect(result.statusCode).toBe(404);
     expect(listCompaniesMock).not.toHaveBeenCalled();
     expect(getCompanyByIdMock).not.toHaveBeenCalled();
+    expect(listPositionsMock).not.toHaveBeenCalled();
+    expect(getPositionByIdMock).not.toHaveBeenCalled();
   });
 
   it('returns 404 for inherited Object.prototype property names used as routeKey', async () => {
@@ -48,7 +62,7 @@ describe('companies router (index.mjs handler)', () => {
     expect(body).toEqual({ error: 'Internal server error' });
   });
 
-  it('dispatches a known routeKey to the matching handler and returns its response', async () => {
+  it('dispatches GET /companies to listCompanies', async () => {
     const handlerResponse = { statusCode: 200, headers: {}, body: '[]' };
     listCompaniesMock.mockResolvedValue(handlerResponse);
 
@@ -56,6 +70,28 @@ describe('companies router (index.mjs handler)', () => {
     const result = await handler(event);
 
     expect(listCompaniesMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /positions to listPositions', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '[]' };
+    listPositionsMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /positions' };
+    const result = await handler(event);
+
+    expect(listPositionsMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /positions/{positionId} to getPositionById', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    getPositionByIdMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /positions/{positionId}', pathParameters: { positionId: 'POS001' } };
+    const result = await handler(event);
+
+    expect(getPositionByIdMock).toHaveBeenCalledWith(event);
     expect(result).toBe(handlerResponse);
   });
 });

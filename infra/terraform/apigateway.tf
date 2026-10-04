@@ -36,6 +36,18 @@ resource "aws_apigatewayv2_route" "get_company" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "list_positions" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /positions"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_position" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /positions/{positionId}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.companies.id
   name        = "$default"
