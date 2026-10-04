@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "migrate:build-seed": "node infra/migrate/build-seed.mjs",
     "db:load": "bash infra/load-db.sh",
+    "verify:api": "node infra/verify-api.mjs",
     "env:sync": "bash infra/sync-env.sh",
     "web:deploy": "bash infra/deploy-web.sh",
     "test": "vitest run"
