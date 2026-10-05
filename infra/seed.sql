@@ -197,3 +197,28 @@ ON CONFLICT (position_id) DO UPDATE SET
   application_url = EXCLUDED.application_url,
   status = EXCLUDED.status,
   source_url = EXCLUDED.source_url;
+-- infra/seed.sql
+
+-- 1. ข้อมูลรอบเวลา (Academic Periods)
+INSERT INTO periods (period_id, name, academic_year, semester, is_active) VALUES
+('P2568-1', 'ภาคการศึกษาที่ 1/2568', 2568, '1', TRUE),
+('P2567-2', 'ภาคการศึกษาที่ 2/2567', 2567, '2', FALSE)
+ON CONFLICT (period_id) DO NOTHING;
+
+-- 2. ข้อมูลกำหนดการ V1 (Coop Schedules)
+INSERT INTO coop_schedules (
+    schedule_id, 
+    period_id, 
+    title, 
+    description, 
+    activity_type, 
+    start_date, 
+    end_date, 
+    step_order
+) VALUES
+('SCH-2568-01', 'P2568-1', 'เปิดรับสมัครและยื่นคำร้องสหกิจศึกษา', 'นักศึกษากรอกข้อมูลความจำนงและเลือกสถานประกอบการ', 'APPLICATION', '2025-06-01', '2025-06-15', 1),
+('SCH-2568-02', 'P2568-1', 'สัมภาษณ์และคัดเลือกโดยสถานประกอบการ', 'สถานประกอบการดำเนินการคัดเลือกและประกาศผล', 'INTERVIEW', '2025-06-16', '2025-06-30', 2),
+('SCH-2568-03', 'P2568-1', 'อบรมเตรียมความพร้อมก่อนปฏิบัติงาน', 'เข้าร่วมโครงการสัมมนาเชิงปฏิบัติการเตรียมความพร้อม', 'ORIENTATION', '2025-07-05', '2025-07-10', 3),
+('SCH-2568-04', 'P2568-1', 'ระยะเวลาปฏิบัติงานสหกิจศึกษา ณ สถานประกอบการ', 'ปฏิบัติงานจริงเต็มเวลาร่วมกับองค์กรพันธมิตร', 'WORK_PERIOD', '2025-08-01', '2025-11-30', 4),
+('SCH-2568-05', 'P2568-1', 'ส่งรายงานและประเมินผลการปฏิบัติงาน', 'ส่งรายงานผลการปฏิบัติงานสหกิจศึกษาฉบับสมบูรณ์', 'SUBMISSION', '2025-12-01', '2025-12-15', 5)
+ON CONFLICT (schedule_id) DO NOTHING;
