@@ -50,16 +50,33 @@ Table positions {
 
 Table periods {
   period_id     varchar(10) [pk]
-  name          text    [not null]
-  step_order    integer
-  step_name     text
-  start_date    date
-  end_date      date
-  academic_year integer [not null]
+  name          text        [not null]
+  academic_year integer     [not null]
+  semester      varchar(5)  [not null, default: '1']
+  is_active     boolean     [not null, default: false]
   created_at    timestamptz [default: `now()`]
 
   indexes {
     academic_year
+    is_active
+  }
+}
+
+Table coop_schedules {
+  schedule_id   varchar(10) [pk]
+  period_id     varchar(10) [not null, ref: > periods.period_id]
+  title         text        [not null]
+  description   text        [default: '']
+  activity_type varchar(30) [not null]
+  start_date    date        [not null]
+  end_date      date        [not null]
+  step_order    integer     [not null]
+  created_at    timestamptz [default: `now()`]
+
+  indexes {
+    period_id
+    step_order
+    activity_type
   }
 }
 

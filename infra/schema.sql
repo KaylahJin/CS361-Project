@@ -126,7 +126,6 @@ CREATE TABLE coop_schedules (
 
 CREATE INDEX idx_schedules_period ON coop_schedules(period_id);
 CREATE INDEX idx_schedules_type   ON coop_schedules(activity_type);
-CREATE INDEX idx_periods_year ON periods(academic_year);
 
 -- 5. students — นักศึกษา
 CREATE TABLE students (
