@@ -12,7 +12,7 @@ export interface Company {
   short_name?: string;      // ชื่อย่อ/อังกฤษ (e.g. 'SCB', 'CDG Group')
   province: string;         // จังหวัด (สำหรับ filter)
   location: string;         // ที่อยู่เต็ม
-  description?: string;     // รายละเอียดเพิ่มเติม
+  description?: string;     // รายละเอียดเพิ่มเติม (V3+)
   logo_filename?: string;   // ชื่อไฟล์ logo (public/images/logos/)
   url?: string;             // ลิงก์เว็บไซต์
   created_at?: string;      // ISO timestamp

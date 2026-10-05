@@ -97,7 +97,7 @@ Use single quotes around the password — a `!` in it breaks bash if double-quot
 PGCLIENTENCODING=UTF8 PGPASSWORD='<password>' psql -h <endpoint> -p 5432 -U postgres -d coop_db
 ```
 ```sql
-SELECT count(*) FROM companies;   -- expect 81
+SELECT count(*) FROM companies;   -- expect 103
 ```
 `\q` to exit.
 

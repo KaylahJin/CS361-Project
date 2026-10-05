@@ -11,8 +11,10 @@
     "migrate:build-seed": "node infra/migrate/build-seed.mjs && node infra/migrate/build-positions-seed.mjs",
     "migrate:build-positions": "node infra/migrate/build-positions-seed.mjs",
     "db:load": "bash infra/load-db.sh",
+    "verify:api": "node infra/verify-api.mjs",
     "env:sync": "bash infra/sync-env.sh",
-    "web:deploy": "bash infra/deploy-web.sh"
+    "web:deploy": "bash infra/deploy-web.sh",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -23,16 +25,21 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/aws-lambda": "^8.10.152",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "csv-parse": "^7.0.3",
+    "dotenv": "^18.0.4",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "pg": "^8.23.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^3.2.4"
   }
 }

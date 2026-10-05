@@ -123,7 +123,7 @@ npm run db:load
 
 It reads the endpoint from Terraform, prompts for the `db_password` you set in
 step 2, loads `infra/schema.sql` then `infra/seed.sql`, and prints
-`companies loaded: 81`. Re-running it is safe — it detects an already-loaded
+`companies loaded: 103`. Re-running it is safe — it detects an already-loaded
 database and does nothing. Use `npm run db:load -- --reset` to wipe and reload.
 
 ---
@@ -307,7 +307,7 @@ Elsewhere in the repo:
 | File | What's in it |
 |---|---|
 | `infra/schema.sql` | Tables and indexes |
-| `infra/seed.sql` | The 81 companies. Generated — re-run `npm run migrate:build-seed` instead of hand-editing |
+| `infra/seed.sql` | The 103 companies. Generated — re-run `npm run migrate:build-seed` instead of hand-editing |
 | `infra/load-db.sh` | `npm run db:load` (step 4) |
 | `infra/sync-env.sh` | `npm run env:sync` (step 5) |
 | `infra/deploy-web.sh` | `npm run web:deploy` (step 6) — creates/configures the bucket, builds, uploads, verifies |
