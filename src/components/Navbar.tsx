@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, FileText, Building2, Briefcase } from 'lucide-react';
+import { Home, FileText, Building2, Briefcase, GraduationCap, } from 'lucide-react';
 
-export type TabType = 'home' | 'requirements' | 'employers' | 'positions';
+export type TabType = 'home' | 'requirements' | 'employers' | 'positions' | 'students';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -70,6 +70,17 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
             }`}
           >
             <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+          </button>
+          <button
+            onClick={() => onTabChange('students')}
+            title="ข้อมูลนักศึกษา"
+            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
+              activeTab === 'students'
+                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
           </button>
         </nav>
 
