@@ -3,82 +3,25 @@
 // ============================================================
 // Issue: #49 — กำหนดการสหกิจศึกษา (Home / Timeline)
 // Issue: #50 — กรองตามรอบเวลา / ประเภทกิจกรรม
-//
-// GET /periods
-//
-// Query Parameters (optional):
-//   period_id
-//       ตัวอย่าง: P2568-1
-//
-//   activity_type
-//       ตัวอย่าง: APPLICATION
-//       ตัวอย่าง: INTERVIEW
-//
-// Examples:
-//   GET /periods
-//   GET /periods?period_id=P2568-1
-//   GET /periods?activity_type=INTERVIEW
-//   GET /periods?period_id=P2568-1&activity_type=INTERVIEW
-//
-// Database:
-//   periods
-//   coop_schedules
-//
-// Response 200:
-// {
-//   "period": {...},
-//   "schedules": [...]
-// }
-//
 // ============================================================
 
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
 
-/**
- * Check whether a query parameter is actually usable.
- *
- * Empty values such as:
- *   ?period_id=
- *   ?activity_type=
- *
- * are treated as not provided.
- *
- * @param {string | undefined | null} value
- * @returns {boolean}
- */
 function isProvided(value) {
   return typeof value === 'string' && value.trim() !== '';
 }
 
-/**
- * GET /periods
- *
- * @param {{
- *   queryStringParameters?: Record<string, string> | null
- * }} event
- *
- * @returns {Promise<{
- *   statusCode: number,
- *   headers: Record<string, string>,
- *   body: string
- * }>}
- */
 export async function listPeriods(event) {
   try {
     const params = event?.queryStringParameters ?? {};
 
     const periodId = params.period_id;
     const activityType = params.activity_type;
+    const search = params.search;
 
     // ==========================================================
     // 1. Find the requested period
-    //
-    // If period_id is provided:
-    //   return that period
-    //
-    // Otherwise:
-    //   return the active period
     // ==========================================================
 
     let periodQuery;
@@ -158,6 +101,19 @@ export async function listPeriods(event) {
 
       conditions.push(
         `s.activity_type = $${values.length}`
+      );
+    }
+
+    // ----------------------------------------------------------
+    // Search: title / description
+    // ----------------------------------------------------------
+
+    if (isProvided(search)) {
+      values.push(`%${search.trim()}%`);
+
+      conditions.push(
+        `(s.title ILIKE $${values.length}
+          OR s.description ILIKE $${values.length})`
       );
     }
 
