@@ -80,7 +80,7 @@ fi
 if [ "$RESET" = "--reset" ]; then
   echo "--reset: dropping existing tables, then reloading."
   psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 --quiet \
-    -c 'DROP TABLE IF EXISTS coop_plans, students, periods, positions, coop_info, companies CASCADE;'
+    -c 'DROP TABLE IF EXISTS coop_plans, student_courses, students, periods, positions, coop_info, companies CASCADE;'
   echo
 fi
 
@@ -94,6 +94,7 @@ run_sql_file() {
 
 run_sql_file schema.sql
 run_sql_file seed.sql
+run_sql_file seed-students.sql
 
 echo
 COUNT="$(psql_q 'SELECT count(*) FROM companies;')"

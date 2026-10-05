@@ -1,3 +1,6 @@
+-- Extension สำหรับ search ชื่อบริษัท — must come before any index that uses
+-- gin_trgm_ops, or that CREATE INDEX silently fails (psql -f doesn't stop on
+-- error by default) and the index just never gets created.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 1. companies — สถานประกอบการ
@@ -159,9 +162,6 @@ CREATE INDEX idx_student_courses_course ON student_courses (course_code, status)
 -- ALTER TABLE students
 --     ADD CONSTRAINT fk_students_curriculum
 --     FOREIGN KEY (curriculum) REFERENCES curricula(curriculum);
--- Extension สำหรับ search ชื่อบริษัท — must come before any index that uses
--- gin_trgm_ops, or that CREATE INDEX silently fails (psql -f doesn't stop on
--- error by default) and the index just never gets created.
 
 -- 7. coop_plans — แผนสหกิจศึกษา
 CREATE TABLE coop_plans (
