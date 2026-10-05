@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Requirements from './pages/Requirements';
 import Employers from './pages/Employers';
 import Positions from './pages/Positions';
+import Periods from './pages/Periods';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -19,6 +20,8 @@ function App() {
         return <Employers />;
       case 'positions':
         return <Positions />;
+      case 'periods':
+        return <Periods />;
       default:
         return <Home onTabChange={setActiveTab} />;
     }
@@ -35,4 +38,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;
