@@ -26,12 +26,14 @@ import { getCompanyById } from './getCompanyById.mjs';
 import { listPositions } from './listPositions.mjs';
 import { getPositionById } from './getPositionById.mjs';
 import { jsonResponse } from './response.mjs';
+import { listCoopInfo } from './listCoopInfo.mjs';
 
 const ROUTES = Object.assign(Object.create(null), {
   'GET /companies': listCompanies,
   'GET /companies/{companyId}': getCompanyById,
   'GET /positions': listPositions,
   'GET /positions/{positionId}': getPositionById,
+  'GET /coop-info': listCoopInfo,
 });
 
 /**
