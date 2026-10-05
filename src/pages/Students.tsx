@@ -438,23 +438,35 @@ function Students() {
 
           {/* Empty */}
 
-          {!loading &&
-            !error &&
-            students.length === 0 && (
-              <div className="min-h-[300px] flex flex-col items-center justify-center">
+          {!loading && !error && students.length === 0 && (
+            <div className="min-h-[300px] flex flex-col items-center justify-center px-6 text-center">
+              <GraduationCap className="w-10 h-10 text-slate-300" />
 
-                <GraduationCap className="w-10 h-10 text-slate-300" />
+              <p className="mt-3 text-sm font-semibold text-slate-600">
+                ไม่พบข้อมูลนักศึกษา
+              </p>
 
-                <p className="mt-3 text-sm font-medium text-slate-600">
-                  ไม่พบข้อมูลนักศึกษา
-                </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {search.trim() || curriculum
+                  ? 'ไม่พบข้อมูลที่ตรงกับคำค้นหาหรือเงื่อนไขการกรอง'
+                  : 'ยังไม่มีข้อมูลนักศึกษา'}
+              </p>
 
-                <p className="mt-1 text-xs text-slate-400">
-                  ลองเปลี่ยนคำค้นหาหรือเงื่อนไขการกรอง
-                </p>
-
-              </div>
-            )}
+              {(search.trim() || curriculum) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setCurriculum('');
+                    loadStudents('', '');
+                  }}
+                  className="mt-4 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition"
+                >
+                  ล้างตัวกรอง
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Table */}
 
