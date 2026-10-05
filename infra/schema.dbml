@@ -32,6 +32,14 @@ Table coop_info {
   created_at      timestamptz [default: `now()`]
 }
 
+Enum activity_type_enum {
+  APPLICATION
+  INTERVIEW
+  ORIENTATION
+  WORK_PERIOD
+  SUBMISSION
+}
+
 Table positions {
   position_id   varchar(10) [pk]
   company_id    varchar(10) [not null, ref: > companies.company_id]

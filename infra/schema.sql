@@ -121,7 +121,16 @@ CREATE TABLE coop_schedules (
     start_date    DATE NOT NULL,
     end_date      DATE NOT NULL,
     step_order    INT NOT NULL,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT chk_coop_schedules_activity_type 
+    CHECK (activity_type IN (
+        'APPLICATION',
+        'INTERVIEW',
+        'ORIENTATION',
+        'WORK_PERIOD',
+        'SUBMISSION'
+    ))
 );
 
 CREATE INDEX idx_schedules_period ON coop_schedules(period_id);
