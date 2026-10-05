@@ -22,13 +22,50 @@ import type {
 
 import studentsData from '../data/studentsData.json';
 
+/* ============================================================
+   API timeout helper
+   ============================================================ */
+
+const fetchWithTimeout = async <T,>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Request timeout'));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
+};
+
 function Students() {
+  /* ============================================================
+     Student List State
+     ============================================================ */
+
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  /* ============================================================
+     Search / Filter State
+     ============================================================ */
+
   const [search, setSearch] = useState('');
   const [curriculum, setCurriculum] = useState('');
+
+  /* ============================================================
+     Student Detail State
+     ============================================================ */
+
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetail | null>(null);
@@ -36,9 +73,9 @@ function Students() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
 
-  // ------------------------------------------------------------
-  // Convert local JSON data to the same shape as API / Student type
-  // ------------------------------------------------------------
+  /* ============================================================
+     Convert local JSON data to Student type
+     ============================================================ */
 
   const localStudents: Student[] = studentsData.map((student) => ({
     student_id: student.studentId,
@@ -56,10 +93,10 @@ function Students() {
     })),
   }));
 
-  // ------------------------------------------------------------
-  // Filter local JSON data
-  // Used when API is unavailable
-  // ------------------------------------------------------------
+  /* ============================================================
+     Filter local JSON data
+     Used when API is unavailable / timeout
+     ============================================================ */
 
   const getFilteredLocalStudents = (
     searchValue: string,
@@ -83,10 +120,13 @@ function Students() {
     });
   };
 
-  // ------------------------------------------------------------
-  // Load student list
-  // API first -> JSON fallback
-  // ------------------------------------------------------------
+  /* ============================================================
+     Load Student List
+     
+     API first
+     - Success within 10 seconds -> use API data
+     - Error / timeout -> use local JSON
+     ============================================================ */
 
   const loadStudents = async (
     searchValue = search,
@@ -96,15 +136,18 @@ function Students() {
       setLoading(true);
       setError('');
 
-      const data = await getStudents({
-        search: searchValue.trim() || undefined,
-        curriculum: curriculumValue || undefined,
-      });
+      const data = await fetchWithTimeout(
+        getStudents({
+          search: searchValue.trim() || undefined,
+          curriculum: curriculumValue || undefined,
+        }),
+        10000
+      );
 
       setStudents(data);
     } catch (err) {
       console.warn(
-        'Student API is unavailable. Using local studentsData.json instead.',
+        'Student API is unavailable or timed out. Using local studentsData.json instead.',
         err
       );
 
@@ -120,18 +163,20 @@ function Students() {
     }
   };
 
-  // ------------------------------------------------------------
-  // Initial load
-  // ------------------------------------------------------------
+  /* ============================================================
+     Initial Load
+     ============================================================ */
 
   useEffect(() => {
     loadStudents();
+
+    // loadStudents uses the initial search/filter values here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ------------------------------------------------------------
-  // Search
-  // ------------------------------------------------------------
+  /* ============================================================
+     Search
+     ============================================================ */
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,9 +184,9 @@ function Students() {
     loadStudents(search, curriculum);
   };
 
-  // ------------------------------------------------------------
-  // Curriculum filter
-  // ------------------------------------------------------------
+  /* ============================================================
+     Curriculum Filter
+     ============================================================ */
 
   const handleCurriculumChange = (
     e: React.ChangeEvent<HTMLSelectElement>
@@ -149,27 +194,33 @@ function Students() {
     const value = e.target.value;
 
     setCurriculum(value);
-
     loadStudents(search, value);
   };
 
-  // ------------------------------------------------------------
-  // Open student detail
-  // API first -> JSON fallback
-  // ------------------------------------------------------------
+  /* ============================================================
+     Open Student Detail
+     
+     API first
+     - Success within 10 seconds -> use API data
+     - Error / timeout -> use local JSON
+     ============================================================ */
 
   const handleStudentClick = async (studentId: string) => {
-    try {
-      setDetailLoading(true);
-      setDetailError('');
-      setSelectedStudent(null);
+    setIsDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError('');
+    setSelectedStudent(null);
 
-      const data = await getStudent(studentId);
+    try {
+      const data = await fetchWithTimeout(
+        getStudent(studentId),
+        10000
+      );
 
       setSelectedStudent(data);
     } catch (error) {
       console.warn(
-        `Student API is unavailable. Using local data for ${studentId}.`,
+        `Student API is unavailable or timed out. Using local data for ${studentId}.`,
         error
       );
 
@@ -188,19 +239,20 @@ function Students() {
     }
   };
 
-  // ------------------------------------------------------------
-  // Close detail modal
-  // ------------------------------------------------------------
+  /* ============================================================
+     Close Student Detail Modal
+     ============================================================ */
 
   const handleCloseDetail = () => {
+    setIsDetailOpen(false);
     setSelectedStudent(null);
     setDetailError('');
     setDetailLoading(false);
   };
 
-  // ------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------
+  /* ============================================================
+     Course Status Helpers
+     ============================================================ */
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -242,12 +294,14 @@ function Students() {
 
   return (
     <main className="bg-white min-h-screen">
+
       {/* ======================================================
           Page Header
       ======================================================= */}
 
       <section className="border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
             <span className="text-blue-600">Student</span>{' '}
             <span className="text-slate-950">List</span>
@@ -261,6 +315,7 @@ function Students() {
             ตรวจสอบข้อมูลพื้นฐานของนักศึกษา
             และประวัติผลการเรียนสำหรับการจัดการข้อมูลสหกิจศึกษา
           </p>
+
         </div>
       </section>
 
@@ -269,10 +324,15 @@ function Students() {
       ======================================================= */}
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search / Filter */}
+
+        {/* ====================================================
+            Search / Filter
+        ===================================================== */}
 
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+
           <div className="flex flex-col lg:flex-row gap-4">
+
             {/* Search */}
 
             <form
@@ -307,21 +367,28 @@ function Students() {
             <button
               type="button"
               onClick={() => loadStudents(search, curriculum)}
-              className="h-11 px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+              disabled={loading}
+              className="h-11 px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              ค้นหา
+              {loading ? 'กำลังโหลด...' : 'ค้นหา'}
             </button>
+
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+
             <span className="text-sm text-slate-500">
               รายชื่อนักศึกษา
             </span>
 
             <span className="text-sm font-semibold text-slate-700">
-              {loading ? 'กำลังโหลด...' : `${students.length} คน`}
+              {loading
+                ? 'กำลังโหลด...'
+                : `${students.length} คน`}
             </span>
+
           </div>
+
         </div>
 
         {/* ====================================================
@@ -329,15 +396,22 @@ function Students() {
         ===================================================== */}
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+
           {/* Loading */}
 
           {loading && (
             <div className="min-h-[300px] flex flex-col items-center justify-center">
+
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
 
               <p className="mt-3 text-sm text-slate-500">
                 กำลังโหลดข้อมูลนักศึกษา...
               </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                กำลังเชื่อมต่อกับระบบ
+              </p>
+
             </div>
           )}
 
@@ -345,6 +419,7 @@ function Students() {
 
           {!loading && error && (
             <div className="min-h-[300px] flex flex-col items-center justify-center px-6">
+
               <AlertCircle className="w-8 h-8 text-red-500" />
 
               <p className="mt-3 text-sm text-red-600">
@@ -357,126 +432,158 @@ function Students() {
               >
                 ลองอีกครั้ง
               </button>
+
             </div>
           )}
 
           {/* Empty */}
 
-          {!loading && !error && students.length === 0 && (
-            <div className="min-h-[300px] flex flex-col items-center justify-center">
-              <GraduationCap className="w-10 h-10 text-slate-300" />
+          {!loading &&
+            !error &&
+            students.length === 0 && (
+              <div className="min-h-[300px] flex flex-col items-center justify-center">
 
-              <p className="mt-3 text-sm font-medium text-slate-600">
-                ไม่พบข้อมูลนักศึกษา
-              </p>
+                <GraduationCap className="w-10 h-10 text-slate-300" />
 
-              <p className="mt-1 text-xs text-slate-400">
-                ลองเปลี่ยนคำค้นหาหรือเงื่อนไขการกรอง
-              </p>
-            </div>
-          )}
+                <p className="mt-3 text-sm font-medium text-slate-600">
+                  ไม่พบข้อมูลนักศึกษา
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  ลองเปลี่ยนคำค้นหาหรือเงื่อนไขการกรอง
+                </p>
+
+              </div>
+            )}
 
           {/* Table */}
 
-          {!loading && !error && students.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
-                      รหัสนักศึกษา
-                    </th>
+          {!loading &&
+            !error &&
+            students.length > 0 && (
+              <div className="overflow-x-auto">
 
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
-                      ชื่อ - นามสกุล
-                    </th>
+                <table className="w-full">
 
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
-                      หลักสูตร
-                    </th>
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
 
-                    <th className="px-6 py-4 text-center text-xs font-bold text-slate-500">
-                      GPAX
-                    </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
+                        รหัสนักศึกษา
+                      </th>
 
-                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-500">
-                      รายละเอียด
-                    </th>
-                  </tr>
-                </thead>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
+                        ชื่อ - นามสกุล
+                      </th>
 
-                <tbody className="divide-y divide-slate-100">
-                  {students.map((student) => (
-                    <tr
-                      key={student.student_id}
-                      onClick={() =>
-                        handleStudentClick(student.student_id)
-                      }
-                      className="hover:bg-blue-50/40 cursor-pointer transition"
-                    >
-                      <td className="px-6 py-4">
-                        <span className="font-semibold text-blue-600">
-                          {student.student_id}
-                        </span>
-                      </td>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500">
+                        หลักสูตร
+                      </th>
 
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-800">
-                          {student.first_name} {student.last_name}
-                        </div>
-                      </td>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-slate-500">
+                        GPAX
+                      </th>
 
-                      <td className="px-6 py-4">
-                        <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
-                          {student.curriculum || '-'}
-                        </span>
-                      </td>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-slate-500">
+                        รายละเอียด
+                      </th>
 
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-bold text-slate-800">
-                          {student.gpa != null
-                            ? student.gpa.toFixed(2)
-                            : '-'}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStudentClick(student.student_id);
-                          }}
-                          className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-blue-100 hover:text-blue-700 transition"
-                        >
-                          ดูรายละเอียด
-                        </button>
-                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+
+                    {students.map((student) => (
+                      <tr
+                        key={student.student_id}
+                        onClick={() =>
+                          handleStudentClick(
+                            student.student_id
+                          )
+                        }
+                        className="hover:bg-blue-50/40 cursor-pointer transition"
+                      >
+
+                        <td className="px-6 py-4">
+                          <span className="font-semibold text-blue-600">
+                            {student.student_id}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-slate-800">
+                            {student.first_name}{' '}
+                            {student.last_name}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+                            {student.curriculum || '-'}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <span className="font-bold text-slate-800">
+                            {student.gpa != null
+                              ? student.gpa.toFixed(2)
+                              : '-'}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStudentClick(
+                                student.student_id
+                              );
+                            }}
+                            className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-blue-100 hover:text-blue-700 transition"
+                          >
+                            ดูรายละเอียด
+                          </button>
+
+                        </td>
+
+                      </tr>
+                    ))}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+            )}
+
         </div>
+
       </section>
 
       {/* ======================================================
           Student Detail Modal
       ======================================================= */}
 
-      {(selectedStudent || detailLoading || detailError) && (
+      {isDetailOpen && (
         <div
           className="fixed inset-0 z-[100] bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={handleCloseDetail}
         >
+
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white rounded-2xl shadow-2xl"
           >
-            {/* Modal Header */}
+
+            {/* ==================================================
+                Modal Header
+            =================================================== */}
 
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+
               <div>
+
                 <h2 className="text-xl font-black text-slate-900">
                   รายละเอียดนักศึกษา
                 </h2>
@@ -486,6 +593,7 @@ function Students() {
                     {selectedStudent.student_id}
                   </p>
                 )}
+
               </div>
 
               <button
@@ -494,67 +602,96 @@ function Students() {
               >
                 <X className="w-5 h-5" />
               </button>
+
             </div>
 
-            {/* Loading Detail */}
+            {/* ==================================================
+                Loading Detail
+            =================================================== */}
 
             {detailLoading && (
               <div className="h-80 flex flex-col items-center justify-center">
+
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
 
                 <p className="mt-3 text-sm text-slate-500">
                   กำลังโหลดรายละเอียดนักศึกษา...
                 </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  กำลังเชื่อมต่อกับระบบ
+                </p>
+
               </div>
             )}
 
-            {/* Detail Error */}
+            {/* ==================================================
+                Detail Error
+            =================================================== */}
 
             {!detailLoading && detailError && (
               <div className="h-80 flex flex-col items-center justify-center">
+
                 <AlertCircle className="w-8 h-8 text-red-500" />
 
                 <p className="mt-3 text-sm text-red-600">
                   {detailError}
                 </p>
+
               </div>
             )}
 
-            {/* Detail Content */}
+            {/* ==================================================
+                Detail Content
+            =================================================== */}
 
             {!detailLoading &&
               !detailError &&
               selectedStudent && (
                 <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+
                   {/* Basic information */}
 
                   <div className="p-6">
+
                     <div className="flex items-center gap-4 mb-6">
+
                       <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
                         <User className="w-7 h-7 text-blue-600" />
                       </div>
 
                       <div>
+
                         <h3 className="text-xl font-black text-slate-900">
                           {selectedStudent.first_name}{' '}
                           {selectedStudent.last_name}
                         </h3>
 
                         <p className="text-sm text-slate-500">
-                          รหัสนักศึกษา {selectedStudent.student_id}
+                          รหัสนักศึกษา{' '}
+                          {selectedStudent.student_id}
                         </p>
+
                       </div>
+
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
                       <InfoItem
-                        icon={<BookOpen className="w-4 h-4" />}
+                        icon={
+                          <BookOpen className="w-4 h-4" />
+                        }
                         label="หลักสูตร"
-                        value={selectedStudent.curriculum || '-'}
+                        value={
+                          selectedStudent.curriculum || '-'
+                        }
                       />
 
                       <InfoItem
-                        icon={<GraduationCap className="w-4 h-4" />}
+                        icon={
+                          <GraduationCap className="w-4 h-4" />
+                        }
                         label="GPAX"
                         value={
                           selectedStudent.gpa != null
@@ -564,30 +701,47 @@ function Students() {
                       />
 
                       <InfoItem
-                        icon={<Mail className="w-4 h-4" />}
+                        icon={
+                          <Mail className="w-4 h-4" />
+                        }
                         label="อีเมล"
-                        value={selectedStudent.email || '-'}
+                        value={
+                          selectedStudent.email || '-'
+                        }
                       />
 
                       <InfoItem
-                        icon={<Phone className="w-4 h-4" />}
+                        icon={
+                          <Phone className="w-4 h-4" />
+                        }
                         label="เบอร์โทรศัพท์"
-                        value={selectedStudent.phone || '-'}
+                        value={
+                          selectedStudent.phone || '-'
+                        }
                       />
 
                       <InfoItem
-                        icon={<Calendar className="w-4 h-4" />}
+                        icon={
+                          <Calendar className="w-4 h-4" />
+                        }
                         label="วันเกิด"
-                        value={selectedStudent.birth_date || '-'}
+                        value={
+                          selectedStudent.birth_date || '-'
+                        }
                       />
+
                     </div>
+
                   </div>
 
                   {/* Course history */}
 
                   <div className="border-t border-slate-200">
+
                     <div className="px-6 py-5 flex items-center justify-between">
+
                       <div>
+
                         <h3 className="font-black text-slate-900">
                           ประวัติผลการเรียน
                         </h3>
@@ -595,24 +749,36 @@ function Students() {
                         <p className="mt-1 text-xs text-slate-500">
                           รายวิชาและผลการเรียนของนักศึกษา
                         </p>
+
                       </div>
 
                       <span className="text-xs font-semibold text-slate-500">
-                        {selectedStudent.courses.length} รายวิชา
+                        {selectedStudent.courses.length}{' '}
+                        รายวิชา
                       </span>
+
                     </div>
 
                     {selectedStudent.courses.length === 0 ? (
+
                       <div className="px-6 pb-8 text-center">
+
                         <p className="text-sm text-slate-400">
                           ยังไม่มีข้อมูลรายวิชา
                         </p>
+
                       </div>
+
                     ) : (
+
                       <div className="px-6 pb-6 overflow-x-auto">
+
                         <table className="w-full">
+
                           <thead>
+
                             <tr className="bg-slate-50 border-y border-slate-200">
+
                               <th className="px-4 py-3 text-left text-xs font-bold text-slate-500">
                                 รหัสวิชา
                               </th>
@@ -624,50 +790,77 @@ function Students() {
                               <th className="px-4 py-3 text-center text-xs font-bold text-slate-500">
                                 Grade Point
                               </th>
+
                             </tr>
+
                           </thead>
 
                           <tbody className="divide-y divide-slate-100">
+
                             {selectedStudent.courses.map(
                               (course: StudentCourse) => (
                                 <tr key={course.course_code}>
+
                                   <td className="px-4 py-3 text-sm font-semibold text-slate-800">
                                     {course.course_code}
                                   </td>
 
                                   <td className="px-4 py-3 text-center">
+
                                     <span
                                       className={`inline-flex px-2.5 py-1 rounded-full border text-xs font-medium ${getStatusClass(
                                         course.status
                                       )}`}
                                     >
-                                      {getStatusLabel(course.status)}
+                                      {getStatusLabel(
+                                        course.status
+                                      )}
                                     </span>
+
                                   </td>
 
                                   <td className="px-4 py-3 text-center">
+
                                     <span className="text-sm font-bold text-slate-800">
-                                      {course.grade_point != null
-                                        ? course.grade_point.toFixed(2)
+                                      {course.grade_point !=
+                                      null
+                                        ? course.grade_point.toFixed(
+                                            2
+                                          )
                                         : '-'}
                                     </span>
+
                                   </td>
+
                                 </tr>
                               )
                             )}
+
                           </tbody>
+
                         </table>
+
                       </div>
+
                     )}
+
                   </div>
+
                 </div>
               )}
+
           </div>
+
         </div>
       )}
+
     </main>
   );
 }
+
+/* ============================================================
+   Info Item
+   ============================================================ */
 
 interface InfoItemProps {
   icon: React.ReactNode;
@@ -675,9 +868,14 @@ interface InfoItemProps {
   value: string;
 }
 
-function InfoItem({ icon, label, value }: InfoItemProps) {
+function InfoItem({
+  icon,
+  label,
+  value,
+}: InfoItemProps) {
   return (
     <div className="rounded-xl border border-slate-200 p-4">
+
       <div className="flex items-center gap-2 text-xs text-slate-500">
         {icon}
         <span>{label}</span>
@@ -686,6 +884,7 @@ function InfoItem({ icon, label, value }: InfoItemProps) {
       <p className="mt-2 text-sm font-semibold text-slate-800 break-words">
         {value}
       </p>
+
     </div>
   );
 }
