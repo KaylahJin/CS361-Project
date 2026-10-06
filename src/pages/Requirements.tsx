@@ -4,35 +4,54 @@ import HistoricalSection from '../components/HistoricalSection';
 import { getCoopInfo } from '../data/coopInfoApi';
 import type { CoopInfo } from '../types/coopInfo';
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export const Requirements: React.FC = () => {
   const [coopInfo, setCoopInfo] = useState<CoopInfo[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // หน่วงคำค้น ไม่ยิง API ทุกตัวอักษร
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      SEARCH_DEBOUNCE_MS
+    );
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   useEffect(() => {
-    async function loadCoopInfo() {
-      try {
-        setLoading(true);
-        setError(null);
+    let cancelled = false;
 
-        const data = await getCoopInfo({
-          search,
-          category,
-        });
+    setLoading(true);
+    setError(null);
 
-        setCoopInfo(data);
-      } catch (err) {
+    getCoopInfo({
+      search: debouncedSearch || undefined,
+      category: category || undefined,
+    })
+      .then((data) => {
+        if (!cancelled) setCoopInfo(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
         console.error('Failed to load coop info:', err);
         setError('ไม่สามารถโหลดข้อมูลข้อกำหนดสหกิจได้');
-      } finally {
-        setLoading(false);
-      }
-    }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    loadCoopInfo();
-  }, [search, category]);
+    // ทิ้งผลของ request เก่าเมื่อมี request ใหม่เข้ามา
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, category]);
 
   // Group data by item number so that curriculum 61/66
   // can be displayed under the same requirement item.
@@ -52,6 +71,8 @@ export const Requirements: React.FC = () => {
     .map(Number)
     .sort((a, b) => a - b);
 
+  const academicYear = coopInfo[0]?.academic_year ?? '2568';
+
   return (
     <main className="w-full min-h-screen bg-white">
       {/* Hero Section */}
@@ -60,6 +81,7 @@ export const Requirements: React.FC = () => {
           <span className="text-blue-600">Cooperative Education </span>
           <span className="text-slate-950">Requirements</span>
         </h1>
+
         <p className="mt-3 text-xl sm:text-2xl font-bold text-slate-900">
           เกณฑ์และคุณสมบัติสหกิจศึกษา
         </p>
@@ -67,7 +89,6 @@ export const Requirements: React.FC = () => {
 
       {/* Content Container */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-
         {/* Prominent Notice Banner: Current year criteria not updated yet */}
         <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-amber-900 shadow-xs flex items-start gap-3.5">
           <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0 mt-0.5">
@@ -87,7 +108,7 @@ export const Requirements: React.FC = () => {
 
             <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
               ข้อมูลเกณฑ์และคุณสมบัติที่แสดงด้านล่างนี้เป็น{' '}
-              <strong>เกณฑ์ของปีการศึกษา 2568 (ปีก่อนหน้า)</strong>{' '}
+              <strong>เกณฑ์ของปีการศึกษา {academicYear} (ปีก่อนหน้า)</strong>{' '}
               เพื่อให้นักศึกษาใช้เป็นแนวทางในการเตรียมตัว
               โปรดรอประกาศเกณฑ์ทางการของปีการศึกษา 2569 อีกครั้ง
             </p>
@@ -102,7 +123,7 @@ export const Requirements: React.FC = () => {
             </div>
 
             <div className="text-xs sm:text-sm font-semibold text-slate-500">
-              ปีการศึกษา 2568
+              ปีการศึกษา {academicYear}
             </div>
           </div>
 
@@ -192,11 +213,15 @@ export const Requirements: React.FC = () => {
               const items = groupedCoopInfo[itemNumber];
               const firstItem = items[0];
 
+              const hasCurriculumSplit = items.some(
+                (item) => item.curriculum !== 'all'
+              );
+
               return (
                 <div
                   key={itemNumber}
                   className={
-                    items.length > 1
+                    hasCurriculumSplit
                       ? 'p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3'
                       : 'flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs'
                   }
@@ -206,9 +231,15 @@ export const Requirements: React.FC = () => {
                     {itemNumber}
                   </span>
 
-                  <div className={items.length > 1 ? 'flex-1' : 'text-xs sm:text-sm text-slate-800 leading-relaxed pt-0.5'}>
+                  <div
+                    className={
+                      hasCurriculumSplit
+                        ? 'flex-1'
+                        : 'text-xs sm:text-sm text-slate-800 leading-relaxed pt-0.5'
+                    }
+                  >
                     {/* Single item */}
-                    {items.length === 1 ? (
+                    {!hasCurriculumSplit ? (
                       <div>
                         <div className="font-bold text-slate-900 mb-1">
                           {firstItem.title}
