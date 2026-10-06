@@ -27,6 +27,7 @@ import { listPositions } from './listPositions.mjs';
 import { getPositionById } from './getPositionById.mjs';
 import { listPeriods } from './listPeriods.mjs';
 import { jsonResponse } from './response.mjs';
+import { listCoopInfo } from './listCoopInfo.mjs';
 import { listStudents } from './listStudents.mjs';
 import { getStudentById } from './getStudentById.mjs';
 
@@ -35,6 +36,7 @@ const ROUTES = Object.assign(Object.create(null), {
   'GET /companies/{companyId}': getCompanyById,
   'GET /positions': listPositions,
   'GET /positions/{positionId}': getPositionById,
+  'GET /coop-info': listCoopInfo,
   'GET /students': listStudents,
   'GET /students/{studentId}': getStudentById,
   'GET /periods': listPeriods,
