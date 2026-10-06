@@ -198,6 +198,7 @@ ON CONFLICT (position_id) DO UPDATE SET
   status = EXCLUDED.status,
   source_url = EXCLUDED.source_url;
 
+DELETE FROM coop_info;
 INSERT INTO coop_info (item_number, curriculum, category, title, description, gpa_requirement, academic_year) VALUES
   (1, 'all', 'qualification','คุณสมบัติทั่วไป','เป็นนักศึกษาสาขาวิชาวิทยาการคอมพิวเตอร์ คณะวิทยาศาสตร์ฯ ม.ธรรมศาสตร์',NULL, 2568),
   (2, '61', 'required_course','รายวิชาที่ต้องเคยศึกษา','เคยศึกษา วิชา คพ.101, คพ.102, คพ.111, (คพ.213 หรือ 216), คพ.251 และ คพ.264 โดยที่เกรดเฉลี่ยของรายวิชากลุ่มนี้ไม่ต่ำกว่า 2.5',2.50, 2568),
