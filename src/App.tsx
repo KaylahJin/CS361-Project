@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Requirements from './pages/Requirements';
 import Employers from './pages/Employers';
 import Positions from './pages/Positions';
+import Students from './pages/Students';
 import Periods from './pages/Periods';
 
 function App() {
@@ -20,6 +21,8 @@ function App() {
         return <Employers />;
       case 'positions':
         return <Positions />;
+      case 'students':
+        return <Students />;
       case 'periods':
         return <Periods />;
       default:
