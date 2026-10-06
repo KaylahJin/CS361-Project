@@ -4,6 +4,8 @@ const listCompaniesMock = vi.fn();
 const getCompanyByIdMock = vi.fn();
 const listPositionsMock = vi.fn();
 const getPositionByIdMock = vi.fn();
+const listStudentsMock = vi.fn();
+const getStudentByIdMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -21,6 +23,14 @@ vi.mock('./getPositionById.mjs', () => ({
   getPositionById: getPositionByIdMock,
 }));
 
+vi.mock('./listStudents.mjs', () => ({
+  listStudents: listStudentsMock,
+}));
+
+vi.mock('./getStudentById.mjs', () => ({
+  getStudentById: getStudentByIdMock,
+}));
+
 const { handler } = await import('./index.mjs');
 
 describe('router (index.mjs handler)', () => {
@@ -29,6 +39,8 @@ describe('router (index.mjs handler)', () => {
     getCompanyByIdMock.mockReset();
     listPositionsMock.mockReset();
     getPositionByIdMock.mockReset();
+    listStudentsMock.mockReset();
+    getStudentByIdMock.mockReset();
   });
 
   it('returns 404 for an unknown routeKey', async () => {
@@ -39,6 +51,8 @@ describe('router (index.mjs handler)', () => {
     expect(getCompanyByIdMock).not.toHaveBeenCalled();
     expect(listPositionsMock).not.toHaveBeenCalled();
     expect(getPositionByIdMock).not.toHaveBeenCalled();
+    expect(listStudentsMock).not.toHaveBeenCalled();
+    expect(getStudentByIdMock).not.toHaveBeenCalled();
   });
 
   it('returns 404 for inherited Object.prototype property names used as routeKey', async () => {
@@ -92,6 +106,28 @@ describe('router (index.mjs handler)', () => {
     const result = await handler(event);
 
     expect(getPositionByIdMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /students to listStudents', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '[]' };
+    listStudentsMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /students' };
+    const result = await handler(event);
+
+    expect(listStudentsMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /students/{studentId} to getStudentById', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    getStudentByIdMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /students/{studentId}', pathParameters: { studentId: '6100000001' } };
+    const result = await handler(event);
+
+    expect(getStudentByIdMock).toHaveBeenCalledWith(event);
     expect(result).toBe(handlerResponse);
   });
 });
