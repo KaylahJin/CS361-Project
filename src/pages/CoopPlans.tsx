@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import {
   ArrowLeft,
   Building2,
@@ -22,34 +23,6 @@ import type {
   CoopPlanQueryParams,
   CoopPlanStatus,
 } from '../types/coopPlan';
-
-import coopPlansData from '../data/coopPlansData.json';
-
-/* ============================================================
-   API timeout helper
-   ============================================================ */
-
-const fetchWithTimeout = async <T,>(
-  promise: Promise<T>,
-  timeoutMs: number
-): Promise<T> => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error('Request timeout'));
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([
-      promise,
-      timeoutPromise,
-    ]);
-  } finally {
-    clearTimeout(timeoutId!);
-  }
-};
 
 function StatusBadge({ status }: { status: CoopPlanStatus }) {
   const config = {
@@ -86,7 +59,11 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
   );
 }
 
-function LoadingState({ text = 'กำลังโหลดข้อมูล...' }: { text?: string }) {
+function LoadingState({
+  text = 'กำลังโหลดข้อมูล...',
+}: {
+  text?: string;
+}) {
   return (
     <div className="flex min-h-[360px] items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-slate-500">
@@ -389,17 +366,18 @@ function PlanDetail({
 
 function CoopPlans() {
   const [plans, setPlans] = useState<CoopPlan[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(
-    null,
-  );
+  const [selectedPlan, setSelectedPlan] =
+    useState<CoopPlan | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<CoopPlanStatus | ''>('');
+  const [status, setStatus] =
+    useState<CoopPlanStatus | ''>('');
   const [curriculum, setCurriculum] = useState('');
+  const [periodId, setPeriodId] = useState('');
 
   const loadPlans = async () => {
     setLoading(true);
@@ -410,6 +388,7 @@ function CoopPlans() {
         search: search.trim() || undefined,
         status: status || undefined,
         curriculum: curriculum || undefined,
+        periodId: periodId || undefined,
       };
 
       const data = await getCoopPlans(params);
@@ -427,7 +406,7 @@ function CoopPlans() {
 
   useEffect(() => {
     loadPlans();
-  }, [search, status, curriculum]);
+  }, [search, status, curriculum, periodId]);
 
   const handleSelectPlan = async (planId: number) => {
     setDetailLoading(true);
@@ -481,7 +460,8 @@ function CoopPlans() {
 
       {/* Filters */}
       <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-[1fr_200px_180px]">
+        <div className="grid gap-4 md:grid-cols-[1fr_180px_200px_180px]">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
@@ -494,6 +474,7 @@ function CoopPlans() {
             />
           </div>
 
+          {/* Curriculum Filter */}
           <select
             value={curriculum}
             onChange={(e) => setCurriculum(e.target.value)}
@@ -504,10 +485,28 @@ function CoopPlans() {
             <option value="66">หลักสูตร 66</option>
           </select>
 
+          {/* Term Filter */}
+          <select
+            value={periodId}
+            onChange={(e) => setPeriodId(e.target.value)}
+            className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="">
+              ทุกรอบปีการศึกษา / ภาคเรียน
+            </option>
+
+            <option value="P2568-1">
+              ปีการศึกษา 2568 ภาคเรียนที่ 1
+            </option>
+          </select>
+
+          {/* Status Filter */}
           <select
             value={status}
             onChange={(e) =>
-              setStatus(e.target.value as CoopPlanStatus | '')
+              setStatus(
+                e.target.value as CoopPlanStatus | '',
+              )
             }
             className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           >
@@ -577,7 +576,9 @@ function CoopPlans() {
                 {plans.map((plan) => (
                   <tr
                     key={plan.plan_id}
-                    onClick={() => handleSelectPlan(plan.plan_id)}
+                    onClick={() =>
+                      handleSelectPlan(plan.plan_id)
+                    }
                     className="cursor-pointer border-b border-slate-100 transition hover:bg-blue-50/40 last:border-0"
                   >
                     <td className="px-6 py-4">
