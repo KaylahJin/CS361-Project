@@ -60,6 +60,18 @@ resource "aws_apigatewayv2_route" "get_student" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "list_coop_plans" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /coop-plans"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_coop_plan" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /coop-plans/{planId}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.companies.id
   name        = "$default"
