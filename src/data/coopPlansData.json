@@ -42,9 +42,9 @@
     "last_name": "รักเรียน",
     "curriculum": "61",
     "position_title": "Web Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C47",
+    "company_name": "บริษัท เซ็นทรัล รีเทล คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "company_short_name": "Central Retail (CRC)",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -90,9 +90,9 @@
     "last_name": "สะกะดุ้ง",
     "curriculum": "61",
     "position_title": "Software Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C18",
+    "company_name": "บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)",
+    "company_short_name": "SCG",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -114,9 +114,9 @@
     "last_name": "พากเพียร",
     "curriculum": "66",
     "position_title": "Software Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C52",
+    "company_name": "บริษัท อินโนเวทีฟ เอ็กซ์ตรีมิสต์ จำกัด",
+    "company_short_name": "INEX",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -138,9 +138,9 @@
     "last_name": "มั่นคง",
     "curriculum": "61",
     "position_title": "Data Analyst",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C68",
+    "company_name": "บริษัท ศุภาลัย จำกัด (มหาชน)",
+    "company_short_name": "Supalai",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -162,9 +162,9 @@
     "last_name": "ใจดี",
     "curriculum": "61",
     "position_title": "Data Analyst",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C47",
+    "company_name": "บริษัท เซ็นทรัล รีเทล คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "company_short_name": "Central Retail (CRC)",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -186,9 +186,9 @@
     "last_name": "เจริญสุข",
     "curriculum": "66",
     "position_title": "Machine Learning Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C77",
+    "company_name": "บริษัท ลูลู่ เทคโนโลยี จำกัด",
+    "company_short_name": "Lulu Tech",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -210,9 +210,9 @@
     "last_name": "ใจดี",
     "curriculum": "61",
     "position_title": "Software Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C46",
+    "company_name": "บริษัท เบลนเดต้า จำกัด",
+    "company_short_name": "Blendata",
     "period_name": "สหกิจศึกษา P2568-1"
   },
   {
@@ -234,9 +234,9 @@
     "last_name": "ตั้งใจ",
     "curriculum": "66",
     "position_title": "Software Developer",
-    "company_id": null,
-    "company_name": null,
-    "company_short_name": null,
+    "company_id": "C33",
+    "company_name": "บริษัท เอสซีบี เทคเอกซ์ จำกัด",
+    "company_short_name": "SCB TechX",
     "period_name": "สหกิจศึกษา P2568-1"
   }
 ]
