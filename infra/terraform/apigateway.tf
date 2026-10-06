@@ -42,9 +42,27 @@ resource "aws_apigatewayv2_route" "list_positions" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "list_coop_info" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /coop-info"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_apigatewayv2_route" "get_position" {
   api_id    = aws_apigatewayv2_api.companies.id
   route_key = "GET /positions/{positionId}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "list_students" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /students"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_student" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /students/{studentId}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 

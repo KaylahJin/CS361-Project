@@ -1,0 +1,199 @@
+[
+  {
+    "studentId": "6100000001",
+    "firstName": "เอเอ",
+    "lastName": "สะกะดุ้ง",
+    "email": "test.aa@example.ac.th",
+    "phone": "0800000001",
+    "birthDate": "2002-01-15",
+    "curriculum": "61",
+    "gpa": 3.2,
+    "courses": [
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.216","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.264","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.384","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.322","status":"PASSED","gradePoint":3}
+    ]
+  },
+  {
+    "studentId": "6100000002",
+    "firstName": "ซีซี",
+    "lastName": "ใจดี",
+    "email": "test.cc@example.ac.th",
+    "phone": "0800000003",
+    "birthDate": "2002-03-21",
+    "curriculum": "61",
+    "gpa": 3.65,
+    "courses": [
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":4},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.264","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.384","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.266","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.302","status":"PASSED","gradePoint":3.5}
+    ]
+  },
+  {
+    "studentId": "6100000003",
+    "firstName": "ดีดี",
+    "lastName": "ใจดี",
+    "email": "test.dd@example.ac.th",
+    "phone": "0800000004",
+    "birthDate": "2002-07-08",
+    "curriculum": "61",
+    "gpa": 2.6,
+    "courses": [
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.264","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.384","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.348","status":"ENROLLED","gradePoint":null}
+    ]
+  },
+  {
+    "studentId": "6100000004",
+    "firstName": "อีอี",
+    "lastName": "รักเรียน",
+    "email": "test.ee@example.ac.th",
+    "phone": "0800000005",
+    "birthDate": "2002-11-02",
+    "curriculum": "61",
+    "gpa": 2.8,
+    "courses": [
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":2},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":2},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.216","status":"PASSED","gradePoint":2},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.264","status":"PASSED","gradePoint":2},
+      {"courseCode":"คพ.384","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.322","status":"PASSED","gradePoint":3}
+    ]
+  },
+  {
+    "studentId": "6100000005",
+    "firstName": "เอฟเอฟ",
+    "lastName": "มั่นคง",
+    "email": "test.ff@example.ac.th",
+    "phone": "0800000006",
+    "birthDate": "2002-09-19",
+    "curriculum": "61",
+    "gpa": 2.75,
+    "courses": [
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.264","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.384","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.322","status":"ENROLLED","gradePoint":null}
+    ]
+  },
+  {
+    "studentId": "6100000006",
+    "firstName": "จีจี",
+    "lastName": "สายลม",
+    "email": "test.gg@example.ac.th",
+    "phone": null,
+    "birthDate": null,
+    "curriculum": "61",
+    "gpa": null,
+    "courses": []
+  },
+  {
+    "studentId": "6600000001",
+    "firstName": "บีบี",
+    "lastName": "น้ำทิพย์",
+    "email": "test.bb@example.ac.th",
+    "phone": "0800000002",
+    "birthDate": "2004-06-30",
+    "curriculum": "66",
+    "gpa": 2.9,
+    "courses": [
+      {"courseCode":"คพ.100","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":2.5},
+      {"courseCode":"คพ.180","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.331","status":"ENROLLED","gradePoint":null}
+    ]
+  },
+  {
+    "studentId": "6600000002",
+    "firstName": "เอชเอช",
+    "lastName": "พากเพียร",
+    "email": "test.hh@example.ac.th",
+    "phone": "0800000007",
+    "birthDate": "2004-02-11",
+    "curriculum": "66",
+    "gpa": 3.3,
+    "courses": [
+      {"courseCode":"คพ.100","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":2},
+      {"courseCode":"คพ.216","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.261","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.180","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.262","status":"ENROLLED","gradePoint":null}
+    ]
+  },
+  {
+    "studentId": "6600000003",
+    "firstName": "ไอไอ",
+    "lastName": "ตั้งใจ",
+    "email": "test.ii@example.ac.th",
+    "phone": "0800000008",
+    "birthDate": "2004-08-27",
+    "curriculum": "66",
+    "gpa": 3,
+    "courses": [
+      {"courseCode":"คพ.100","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.213","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.251","status":"FAILED","gradePoint":0},
+      {"courseCode":"คพ.261","status":"PASSED","gradePoint":3},
+      {"courseCode":"คพ.180","status":"ENROLLED","gradePoint":null},
+      {"courseCode":"คพ.240","status":"ENROLLED","gradePoint":null}
+    ]
+  },
+  {
+    "studentId": "6600000004",
+    "firstName": "เจเจ",
+    "lastName": "เจริญสุข",
+    "email": "test.jj@example.ac.th",
+    "phone": "+66812345678",
+    "birthDate": "2003-12-25",
+    "curriculum": "66",
+    "gpa": 3.85,
+    "courses": [
+      {"courseCode":"คพ.100","status":"PASSED","gradePoint":4},
+      {"courseCode":"คพ.101","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.102","status":"PASSED","gradePoint":4},
+      {"courseCode":"คพ.111","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.216","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.251","status":"PASSED","gradePoint":4},
+      {"courseCode":"คพ.261","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.180","status":"PASSED","gradePoint":4},
+      {"courseCode":"คพ.331","status":"PASSED","gradePoint":3.5},
+      {"courseCode":"คพ.301","status":"PASSED","gradePoint":3.5}
+    ]
+  }
+]
