@@ -26,7 +26,7 @@ import studentsData from '../data/studentsData.json';
    API timeout helper
    ============================================================ */
 
-const fetchWithTimeout = async <T,>(
+   const fetchWithTimeout = async <T,>(
   promise: Promise<T>,
   timeoutMs: number
 ): Promise<T> => {
@@ -42,6 +42,79 @@ const fetchWithTimeout = async <T,>(
     return await Promise.race([promise, timeoutPromise]);
   } finally {
     clearTimeout(timeoutId!);
+  }
+};
+
+/* ============================================================
+   Local fallback data (studentsData.json)
+   Defined at module scope so it is created once and is stable
+   (no need to list it as a hook dependency).
+   ============================================================ */
+
+const localStudents: Student[] = studentsData.map((student) => ({
+  student_id: student.studentId,
+  first_name: student.firstName,
+  last_name: student.lastName,
+  email: student.email,
+  phone: student.phone,
+  birth_date: student.birthDate,
+  curriculum: student.curriculum,
+  gpa: student.gpa,
+  courses: student.courses.map((course) => ({
+    course_code: course.courseCode,
+    status: course.status,
+    grade_point: course.gradePoint,
+  })),
+}));
+
+const getFilteredLocalStudents = (
+  searchValue: string,
+  curriculumValue: string
+): Student[] => {
+  const keyword = searchValue.trim().toLowerCase();
+
+  return localStudents.filter((student) => {
+    const matchesSearch =
+      !keyword ||
+      student.student_id.toLowerCase().includes(keyword) ||
+      `${student.first_name} ${student.last_name}`
+        .toLowerCase()
+        .includes(keyword);
+
+    const matchesCurriculum =
+      !curriculumValue || student.curriculum === curriculumValue;
+
+    return matchesSearch && matchesCurriculum;
+  });
+};
+
+/* ============================================================
+   Fetch student list (no React state in here)
+
+   API first
+   - Success within 10 seconds -> use API data
+   - Error / timeout -> use local JSON
+   ============================================================ */
+
+const fetchStudentList = async (
+  searchValue: string,
+  curriculumValue: string
+): Promise<Student[]> => {
+  try {
+    return await fetchWithTimeout(
+      getStudents({
+        search: searchValue.trim() || undefined,
+        curriculum: curriculumValue || undefined,
+      }),
+      10000
+    );
+  } catch (err) {
+    console.warn(
+      'Student API is unavailable or timed out. Using local studentsData.json instead.',
+      err
+    );
+
+    return getFilteredLocalStudents(searchValue, curriculumValue);
   }
 };
 
@@ -74,90 +147,19 @@ function Students() {
   const [detailError, setDetailError] = useState('');
 
   /* ============================================================
-     Convert local JSON data to Student type
-     ============================================================ */
-
-  const localStudents: Student[] = studentsData.map((student) => ({
-    student_id: student.studentId,
-    first_name: student.firstName,
-    last_name: student.lastName,
-    email: student.email,
-    phone: student.phone,
-    birth_date: student.birthDate,
-    curriculum: student.curriculum,
-    gpa: student.gpa,
-    courses: student.courses.map((course) => ({
-      course_code: course.courseCode,
-      status: course.status,
-      grade_point: course.gradePoint,
-    })),
-  }));
-
-  /* ============================================================
-     Filter local JSON data
-     Used when API is unavailable / timeout
-     ============================================================ */
-
-  const getFilteredLocalStudents = (
-    searchValue: string,
-    curriculumValue: string
-  ): Student[] => {
-    const keyword = searchValue.trim().toLowerCase();
-
-    return localStudents.filter((student) => {
-      const matchesSearch =
-        !keyword ||
-        student.student_id.toLowerCase().includes(keyword) ||
-        `${student.first_name} ${student.last_name}`
-          .toLowerCase()
-          .includes(keyword);
-
-      const matchesCurriculum =
-        !curriculumValue ||
-        student.curriculum === curriculumValue;
-
-      return matchesSearch && matchesCurriculum;
-    });
-  };
-
-  /* ============================================================
-     Load Student List
-     
-     API first
-     - Success within 10 seconds -> use API data
-     - Error / timeout -> use local JSON
+     Load Student List (called from event handlers: search, filter, retry)
      ============================================================ */
 
   const loadStudents = async (
     searchValue = search,
     curriculumValue = curriculum
   ) => {
+    setLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError('');
-
-      const data = await fetchWithTimeout(
-        getStudents({
-          search: searchValue.trim() || undefined,
-          curriculum: curriculumValue || undefined,
-        }),
-        10000
-      );
-
+      const data = await fetchStudentList(searchValue, curriculumValue);
       setStudents(data);
-    } catch (err) {
-      console.warn(
-        'Student API is unavailable or timed out. Using local studentsData.json instead.',
-        err
-      );
-
-      const fallbackData = getFilteredLocalStudents(
-        searchValue,
-        curriculumValue
-      );
-
-      setStudents(fallbackData);
-      setError('');
     } finally {
       setLoading(false);
     }
@@ -165,13 +167,25 @@ function Students() {
 
   /* ============================================================
      Initial Load
+
+     `loading` already starts as true, so nothing is set
+     synchronously here. State is only updated after the data
+     arrives, and `cancelled` stops a late response from updating
+     an unmounted component.
      ============================================================ */
 
   useEffect(() => {
-    loadStudents();
+    let cancelled = false;
 
-    // loadStudents uses the initial search/filter values here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchStudentList('', '').then((data) => {
+      if (cancelled) return;
+      setStudents(data);
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /* ============================================================
