@@ -7,6 +7,7 @@ import Employers from './pages/Employers';
 import Positions from './pages/Positions';
 import Students from './pages/Students';
 import Periods from './pages/Periods';
+import CoopPlans from './pages/CoopPlans';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -25,6 +26,8 @@ function App() {
         return <Students />;
       case 'periods':
         return <Periods />;
+      case 'coop-plans':
+        return <CoopPlans />;
       default:
         return <Home onTabChange={setActiveTab} />;
     }
@@ -32,7 +35,11 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-white text-slate-900">
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+
       <div className="flex-grow">
         {renderContent()}
       </div>

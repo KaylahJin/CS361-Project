@@ -1,19 +1,37 @@
 import React from 'react';
-import { Home, FileText, Building2, Briefcase, GraduationCap, RotateCcwClock } from 'lucide-react';
 
-export type TabType = 'home' | 'requirements' | 'employers' | 'positions' | 'students' | 'periods';
+import {
+  Home,
+  FileText,
+  Building2,
+  Briefcase,
+  GraduationCap,
+  RotateCcwClock,
+  ClipboardList,
+} from 'lucide-react';
+
+export type TabType =
+  | 'home'
+  | 'requirements'
+  | 'employers'
+  | 'positions'
+  | 'students'
+  | 'coop-plans'
+  | 'periods';
 
 interface NavbarProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  activeTab,
+  onTabChange,
+}) => {
   return (
     <header className="w-full bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <div 
+        <div
           onClick={() => onTabChange('home')}
           className="cursor-pointer select-none"
         >
@@ -22,7 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
           </span>
         </div>
 
-        {/* Center Nav Pill */}
         <nav className="flex items-center space-x-1 sm:space-x-2 bg-slate-50/80 p-1 rounded-full border border-slate-200/80 shadow-xs">
           <button
             onClick={() => onTabChange('home')}
@@ -84,6 +101,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
             <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
           </button>
 
+          {/* Co-op Plans */}
+          <button
+            onClick={() => onTabChange('coop-plans')}
+            title="แผนสหกิจ"
+            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
+              activeTab === 'coop-plans'
+                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
+          </button>
+
           <button
             onClick={() => onTabChange('periods')}
             title="รอบเวลากำหนดการสหกิจ"
@@ -97,7 +127,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
           </button>
         </nav>
 
-        {/* Right spacing balance */}
         <div className="w-8 hidden sm:block" />
       </div>
     </header>
