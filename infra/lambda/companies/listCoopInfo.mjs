@@ -66,7 +66,7 @@ export async function listCoopInfo(event) {
 
     if (isProvided(curriculum)) {
       values.push(curriculum);
-      conditions.push(`curriculum = $${values.length}`);
+      conditions.push(`curriculum IN ($${values.length}, 'all')`);
     }
 
     const where =

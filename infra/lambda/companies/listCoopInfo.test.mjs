@@ -81,7 +81,7 @@ describe('listCoopInfo', () => {
     expect(values).toEqual(['gpa']);
   });
 
-  it('with curriculum only, queries with an exact-match condition', async () => {
+  it('with curriculum only, includes both the requested curriculum and all-curriculum records', async () => {
     queryMock.mockResolvedValue({ rows: [] });
 
     const event = {
@@ -92,7 +92,7 @@ describe('listCoopInfo', () => {
 
     const [text, values] = queryMock.mock.calls[0];
 
-    expect(text).toMatch(/curriculum\s*=\s*\$\d/i);
+    expect(text).toMatch(/curriculum\s+IN\s*\(\s*\$\d+\s*,\s*['"]all['"]\s*\)/i);
     expect(values).toEqual(['61']);
   });
 
@@ -113,7 +113,9 @@ describe('listCoopInfo', () => {
 
     expect(text).toMatch(/ILIKE/i);
     expect(text).toMatch(/category\s*=\s*\$\d/i);
-    expect(text).toMatch(/curriculum\s*=\s*\$\d/i);
+    expect(text).toMatch(
+      /curriculum\s+IN\s*\(\s*\$\d+\s*,\s*['"]all['"]\s*\)/i
+    );
     expect(text.match(/AND/g)).toHaveLength(2);
 
     expect(values).toEqual([
