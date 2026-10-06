@@ -80,7 +80,7 @@ fi
 if [ "$RESET" = "--reset" ]; then
   echo "--reset: dropping existing tables, then reloading."
   psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 --quiet \
-    -c 'DROP TABLE IF EXISTS coop_plans, student_courses, students, periods, positions, coop_info, companies CASCADE;'
+    -c 'DROP TABLE IF EXISTS coop_plans, student_courses, students, periods, positions, coop_info, companies, coop_plans CASCADE;'
   echo
 fi
 

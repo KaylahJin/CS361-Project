@@ -6,6 +6,8 @@ const listPositionsMock = vi.fn();
 const getPositionByIdMock = vi.fn();
 const listStudentsMock = vi.fn();
 const getStudentByIdMock = vi.fn();
+const listCoopPlansMock = vi.fn();
+const getCoopPlanByIdMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -31,6 +33,14 @@ vi.mock('./getStudentById.mjs', () => ({
   getStudentById: getStudentByIdMock,
 }));
 
+vi.mock('./listCoopPlans.mjs', () => ({
+  listCoopPlans: listCoopPlansMock,
+}));
+
+vi.mock('./getCoopPlanById.mjs', () => ({
+  getCoopPlanById: getCoopPlanByIdMock,
+}));
+
 const { handler } = await import('./index.mjs');
 
 describe('router (index.mjs handler)', () => {
@@ -41,6 +51,8 @@ describe('router (index.mjs handler)', () => {
     getPositionByIdMock.mockReset();
     listStudentsMock.mockReset();
     getStudentByIdMock.mockReset();
+    listCoopPlansMock.mockReset();
+    getCoopPlanByIdMock.mockReset();
   });
 
   it('returns 404 for an unknown routeKey', async () => {
@@ -53,6 +65,8 @@ describe('router (index.mjs handler)', () => {
     expect(getPositionByIdMock).not.toHaveBeenCalled();
     expect(listStudentsMock).not.toHaveBeenCalled();
     expect(getStudentByIdMock).not.toHaveBeenCalled();
+    expect(listCoopPlansMock).not.toHaveBeenCalled();
+    expect(getCoopPlanByIdMock).not.toHaveBeenCalled();
   });
 
   it('returns 404 for inherited Object.prototype property names used as routeKey', async () => {
@@ -128,6 +142,28 @@ describe('router (index.mjs handler)', () => {
     const result = await handler(event);
 
     expect(getStudentByIdMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /coop-plans to listCoopPlans', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '[]' };
+    listCoopPlansMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /coop-plans' };
+    const result = await handler(event);
+
+    expect(listCoopPlansMock).toHaveBeenCalledWith(event);
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches GET /coop-plans/{planId} to getCoopPlanById', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    getCoopPlanByIdMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'GET /coop-plans/{planId}', pathParameters: { planId: '101' } };
+    const result = await handler(event);
+
+    expect(getCoopPlanByIdMock).toHaveBeenCalledWith(event);
     expect(result).toBe(handlerResponse);
   });
 });
