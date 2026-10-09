@@ -381,7 +381,7 @@ const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
     case 'open':
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           {label}
         </span>
       );
@@ -394,8 +394,8 @@ const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
       );
     case 'expired':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
           {label}
         </span>
       );
@@ -749,7 +749,7 @@ export const Positions: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="text-xs font-semibold text-blue-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer bg-white/80 hover:bg-white border border-blue-200 px-2.5 py-1 rounded-lg transition-colors"
+                className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer bg-white/90 hover:bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition-colors"
                 title="ล้างคำค้นหา"
               >
                 <X className="w-3.5 h-3.5" /> ล้างคำค้นหา
@@ -894,12 +894,22 @@ export const Positions: React.FC = () => {
               )}
 
               {selectedStatus !== 'all' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedStatus === 'open'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : selectedStatus === 'expired'
+                      ? 'bg-red-50 text-red-700 border-red-200'
+                      : selectedStatus === 'closed'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  } border`}
+                >
                   สถานะ: {STATUS_LABELS[selectedStatus as PositionStatus] || selectedStatus}
                   <button
                     type="button"
                     onClick={() => setSelectedStatus('all')}
-                    className="hover:text-emerald-950 p-0.5 cursor-pointer rounded-full hover:bg-emerald-200/50"
+                    className="hover:opacity-80 p-0.5 cursor-pointer rounded-full hover:bg-black/10 ml-0.5"
                     title="ยกเลิกตัวกรองสถานะนี้"
                     aria-label="ยกเลิกตัวกรองสถานะ"
                   >
@@ -1231,12 +1241,12 @@ export const Positions: React.FC = () => {
 
               {/* Status Alert Notice (For closed / expired positions) */}
               {(activeModalPosition.status === 'closed' || activeModalPosition.status === 'expired') && (
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs sm:text-sm">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-red-50/90 border border-red-200 text-red-950 text-xs sm:text-sm">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
-                    <strong className="font-bold">หมายเหตุสถานะประกาศ:</strong> ตำแหน่งนี้
+                    <strong className="font-bold text-red-900">หมายเหตุสถานะประกาศ:</strong> ตำแหน่งนี้
                     {activeModalPosition.status === 'closed' ? ' ปิดรับสมัครแล้ว' : ' หมดเขตรับสมัครแล้ว'}
-                    {' '}ข้อมูลที่แสดงในระบบเป็นประวัติเพื่อใช้อ้างอิงการจัดทำแผนสหกิจศึกษา คุณสามารถกด 'ดูประกาศต้นทางย้อนหลัง' ด้านล่างเพื่อตรวจสอบรายละเอียดเพิ่มเติม
+                    {' '}ข้อมูลที่แสดงในระบบเป็นประวัติเพื่อใช้อ้างอิงการจัดทำแผนสหกิจศึกษา คุณสามารถกด 'ดูช่องทางรับสมัครย้อนหลัง' ด้านล่างเพื่อตรวจสอบรายละเอียดเพิ่มเติม
                   </div>
                 </div>
               )}
@@ -1313,7 +1323,7 @@ export const Positions: React.FC = () => {
                     <Calendar className="w-4 h-4 text-amber-600" aria-hidden="true" />
                     <span>กำหนดการรับสมัคร</span>
                   </div>
-                  <div className="font-bold text-sm text-slate-900">
+                  <div className={`font-bold text-sm ${activeModalPosition.status === 'expired' || activeModalPosition.status === 'closed' ? 'text-red-700' : activeModalPosition.status === 'open' ? 'text-emerald-700' : 'text-slate-900'}`}>
                     {activeModalPosition.application_deadline
                       ? activeModalPosition.application_deadline
                       : 'เปิดรับสมัครต่อเนื่อง / จนกว่าจะเต็ม'}
@@ -1328,7 +1338,7 @@ export const Positions: React.FC = () => {
               {activeModalPosition.description && (
                 <div className="bg-slate-50/60 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                       <Banknote className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <span>รายละเอียดงาน เบี้ยเลี้ยง และสวัสดิการ</span>
