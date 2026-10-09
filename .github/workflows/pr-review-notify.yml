@@ -1,0 +1,90 @@
+﻿name: PR Review Notifications
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, review_requested]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  notify-reviewer:
+    name: 📢 Notify Reviewer on PR Open / Ready
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' &&
+      (github.event.action == 'opened' || github.event.action == 'ready_for_review' || github.event.action == 'review_requested')
+
+    steps:
+      - name: Post comment to PR asking reviewer
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const reviewers = pr.requested_reviewers.map(r => @${{ '' }}${{ '' }}).join(', ');
+            const assignees = pr.assignees.map(a => @).join(', ');
+            const body = [
+              ## 🔔 PR Review Request,
+              `,
+              **Assignee(s):** ,
+              **Requested Reviewer(s):** ,
+              `,
+              > This PR is **ready for review**. Please check the changes and leave feedback. 🙏,
+              `,
+              | Check | Status |,
+              |-------|--------|,
+              | CI Lint & Type-check | ⏳ Running... |,
+              | Unit Tests | ⏳ Running... |,
+              | Build | ⏳ Running... |,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
+
+  notify-review-done:
+    name: 📣 Notify Assignee When Review Submitted
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_review' && github.event.action == 'submitted'
+
+    steps:
+      - name: Comment on PR after review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const review = context.payload.review;
+            const pr = context.payload.pull_request;
+            const reviewer = review.user.login;
+            const state = review.state;
+            const assignees = pr.assignees.map(a => @).join(', ');
+
+            const stateEmoji = {
+              APPROVED: '✅',
+              CHANGES_REQUESTED: '🔧',
+              COMMENTED: '💬',
+            }[state] || '📝';
+
+            const stateText = {
+              APPROVED: 'approved this PR',
+              CHANGES_REQUESTED: 'requested changes',
+              COMMENTED: 'left a comment',
+            }[state] || 'reviewed this PR';
+
+            const body = [
+              ##  Review Update,
+              `,
+              **Reviewer @** has ****.,
+              assignees ? \n**Assignee(s) ** — please check the review and respond accordingly. : '',
+              `,
+              review.body ? > _""_ : '',
+            ].filter(Boolean).join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Search,
   Briefcase,
@@ -16,6 +16,18 @@ import {
   CheckCircle2,
   ChevronRight,
   Info,
+  Code2,
+  Database,
+  Cloud,
+  CheckSquare,
+  Palette,
+  BarChart3,
+  Wrench,
+  Shield,
+  TrendingUp,
+  Cpu,
+  Sparkles,
+  Globe,
 } from 'lucide-react';
 import { getPositions } from '../data/positionApi';
 import {
@@ -60,21 +72,31 @@ const HighlightMatch: React.FC<{
     </span>
   );
 };
+
 const CompanyLogo: React.FC<{
   logo?: string | null;
   name?: string | null;
   shortName?: string | null;
-}> = ({ logo, name, shortName }) => {
+  isGrayscale?: boolean;
+}> = ({ logo, name, shortName, isGrayscale = false }) => {
   const [hasError, setHasError] = useState(false);
 
   if (!hasError && logo) {
     return (
-      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/80 p-2 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-blue-200 transition-colors">
+      <div
+        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/80 p-2 flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+          isGrayscale ? 'group-hover:border-slate-300' : 'group-hover:border-blue-200'
+        }`}
+      >
         <img
           src={`/images/logos/${logo}`}
           alt={name || 'Company Logo'}
           onError={() => setHasError(true)}
-          className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform duration-200"
+          className={`max-h-full max-w-full object-contain filter transition-all duration-200 ${
+            isGrayscale
+              ? 'grayscale opacity-75 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105'
+              : 'group-hover:scale-105'
+          }`}
         />
       </div>
     );
@@ -82,15 +104,285 @@ const CompanyLogo: React.FC<{
 
   const initial = (shortName || name || 'CO').trim().slice(0, 3).toUpperCase();
   return (
-    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs text-blue-700 font-bold text-xs sm:text-sm select-none">
+    <div
+      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs font-bold text-xs sm:text-sm select-none ${
+        isGrayscale
+          ? 'bg-slate-100 border-slate-200 text-slate-500'
+          : 'bg-blue-50 border-blue-100 text-blue-700'
+      }`}
+    >
       {initial}
     </div>
   );
 };
 
+// ============================================================
+// Meaningful Category Color Themes & Icons (Ref: F18)
+// Conveys intuitive industry meaning for each specialized field
+// ============================================================
+export interface CategoryTheme {
+  bg: string;
+  text: string;
+  border: string;
+  activeBg: string;
+  iconColor: string;
+  hoverBorder: string;
+  hoverText: string;
+  hoverBg: string;
+  focusRing: string;
+  description: string;
+}
+
+export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
+  // Indigo / Royal: Code, Logic, Engineering, Development
+  software_development: {
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-700',
+    border: 'border-indigo-200',
+    activeBg: 'bg-indigo-600 text-white',
+    iconColor: 'text-indigo-600',
+    hoverBorder: 'hover:border-indigo-400',
+    hoverText: 'group-hover:text-indigo-600',
+    hoverBg: 'hover:bg-indigo-50/20',
+    focusRing: 'focus:ring-indigo-500/50',
+    description: 'Indigo: สื่อถึงตรรกะ การเขียนโค้ด และการพัฒนาซอฟต์แวร์',
+  },
+  // Purple / Violet: Artificial Intelligence, Deep Tech, Data Science
+  data_ai: {
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+    border: 'border-purple-200',
+    activeBg: 'bg-purple-600 text-white',
+    iconColor: 'text-purple-600',
+    hoverBorder: 'hover:border-purple-400',
+    hoverText: 'group-hover:text-purple-600',
+    hoverBg: 'hover:bg-purple-50/20',
+    focusRing: 'focus:ring-purple-500/50',
+    description: 'Purple: สื่อถึงความฉลาด ปัญญาประดิษฐ์ และการวิเคราะห์ข้อมูล',
+  },
+  // Sky / Cyan: Cloud Computing, DevOps, Distributed Systems
+  cloud_infrastructure_devops: {
+    bg: 'bg-sky-50',
+    text: 'text-sky-700',
+    border: 'border-sky-200',
+    activeBg: 'bg-sky-600 text-white',
+    iconColor: 'text-sky-600',
+    hoverBorder: 'hover:border-sky-400',
+    hoverText: 'group-hover:text-sky-600',
+    hoverBg: 'hover:bg-sky-50/20',
+    focusRing: 'focus:ring-sky-500/50',
+    description: 'Sky Blue: สื่อถึงระบบคลาวด์ โครงสร้างพื้นฐาน และระบบเครือข่าย',
+  },
+  // Emerald / Green: Quality Assurance, Testing, Verified, Zero-Bug
+  qa_testing: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    border: 'border-emerald-200',
+    activeBg: 'bg-emerald-600 text-white',
+    iconColor: 'text-emerald-600',
+    hoverBorder: 'hover:border-emerald-400',
+    hoverText: 'group-hover:text-emerald-600',
+    hoverBg: 'hover:bg-emerald-50/20',
+    focusRing: 'focus:ring-emerald-500/50',
+    description: 'Emerald: สื่อถึงการทดสอบผ่าน การรับประกันคุณภาพ และความถูกต้อง',
+  },
+  // Fuchsia / Pink: Creative Arts, Human-Centric Experience, UI/UX
+  ux_ui_design: {
+    bg: 'bg-fuchsia-50',
+    text: 'text-fuchsia-700',
+    border: 'border-fuchsia-200',
+    activeBg: 'bg-fuchsia-600 text-white',
+    iconColor: 'text-fuchsia-600',
+    hoverBorder: 'hover:border-fuchsia-400',
+    hoverText: 'group-hover:text-fuchsia-600',
+    hoverBg: 'hover:bg-fuchsia-50/20',
+    focusRing: 'focus:ring-fuchsia-500/50',
+    description: 'Fuchsia: สื่อถึงความคิดสร้างสรรค์ การออกแบบ และประสบการณ์ผู้ใช้',
+  },
+  // Amber / Warm Gold: Business Strategy, Value, System Analysis
+  business_enterprise_systems: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-800',
+    border: 'border-amber-200',
+    activeBg: 'bg-amber-600 text-white',
+    iconColor: 'text-amber-600',
+    hoverBorder: 'hover:border-amber-400',
+    hoverText: 'group-hover:text-amber-700',
+    hoverBg: 'hover:bg-amber-50/20',
+    focusRing: 'focus:ring-amber-500/50',
+    description: 'Amber: สื่อถึงการวิเคราะห์ธุรกิจ กระบวนการทำงาน และระบบองค์กร',
+  },
+  // Rose / Crimson: Cybersecurity, Protection, Firewall, Threat Defense
+  cybersecurity: {
+    bg: 'bg-rose-50',
+    text: 'text-rose-700',
+    border: 'border-rose-200',
+    activeBg: 'bg-rose-600 text-white',
+    iconColor: 'text-rose-600',
+    hoverBorder: 'hover:border-rose-400',
+    hoverText: 'group-hover:text-rose-600',
+    hoverBg: 'hover:bg-rose-50/20',
+    focusRing: 'focus:ring-rose-500/50',
+    description: 'Rose: สื่อถึงความปลอดภัยไซเบอร์ การป้องกันภัยคุกคาม และเกราะคุ้มกัน',
+  },
+  // Teal: Operations, Reliability, Helpdesk, Troubleshooting
+  it_support_operations: {
+    bg: 'bg-teal-50',
+    text: 'text-teal-700',
+    border: 'border-teal-200',
+    activeBg: 'bg-teal-600 text-white',
+    iconColor: 'text-teal-600',
+    hoverBorder: 'hover:border-teal-400',
+    hoverText: 'group-hover:text-teal-600',
+    hoverBg: 'hover:bg-teal-50/20',
+    focusRing: 'focus:ring-teal-500/50',
+    description: 'Teal: สื่อถึงการดูแลบำรุงรักษา สนับสนุนด้านไอที และความเสถียร',
+  },
+  // Orange: Commercial, Growth, Deals, Technical Consultation
+  technical_sales: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
+    activeBg: 'bg-orange-600 text-white',
+    iconColor: 'text-orange-600',
+    hoverBorder: 'hover:border-orange-400',
+    hoverText: 'group-hover:text-orange-600',
+    hoverBg: 'hover:bg-orange-50/20',
+    focusRing: 'focus:ring-orange-500/50',
+    description: 'Orange: สื่อถึงการขายเชิงเทคนิค การเจรจา และการเติบโตทางธุรกิจ',
+  },
+  // Blue: Corporate Solutions, Enterprise Architecture, Integration
+  it_solutions: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    activeBg: 'bg-blue-600 text-white',
+    iconColor: 'text-blue-600',
+    hoverBorder: 'hover:border-blue-400',
+    hoverText: 'group-hover:text-blue-600',
+    hoverBg: 'hover:bg-blue-50/20',
+    focusRing: 'focus:ring-blue-500/50',
+    description: 'Blue: สื่อถึงโซลูชันไอทีแบบบูรณาการ และสถาปัตยกรรมองค์กร',
+  },
+  // Slate: General / Other
+  other: {
+    bg: 'bg-slate-100',
+    text: 'text-slate-700',
+    border: 'border-slate-200',
+    activeBg: 'bg-slate-700 text-white',
+    iconColor: 'text-slate-500',
+    hoverBorder: 'hover:border-slate-400',
+    hoverText: 'group-hover:text-slate-800',
+    hoverBg: 'hover:bg-slate-50/20',
+    focusRing: 'focus:ring-slate-500/50',
+    description: 'Slate: สายงานอื่นๆ หรือสายงานทั่วไป',
+  },
+  all: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    activeBg: 'bg-blue-600 text-white',
+    iconColor: 'text-blue-600',
+    hoverBorder: 'hover:border-blue-400',
+    hoverText: 'group-hover:text-blue-600',
+    hoverBg: 'hover:bg-blue-50/20',
+    focusRing: 'focus:ring-blue-500/50',
+    description: 'Blue: ทุกสายงาน',
+  },
+};
+
+export const getCategoryTheme = (category: string): CategoryTheme => {
+  return (
+    CATEGORY_THEMES[category] || {
+      bg: 'bg-slate-100',
+      text: 'text-slate-700',
+      border: 'border-slate-200',
+      activeBg: 'bg-slate-700 text-white',
+      iconColor: 'text-slate-500',
+      hoverBorder: 'hover:border-slate-400',
+      hoverText: 'group-hover:text-slate-800',
+      hoverBg: 'hover:bg-slate-50/20',
+      focusRing: 'focus:ring-slate-500/50',
+      description: 'Default',
+    }
+  );
+};
+
+// Category icon helper (Ref: F18)
+export const getCategoryIcon = (category: PositionCategory | string, className: string = 'w-3.5 h-3.5') => {
+  switch (category) {
+    case 'software_development':
+      return <Code2 className={className} />;
+    case 'data_ai':
+      return <Database className={className} />;
+    case 'cloud_infrastructure_devops':
+      return <Cloud className={className} />;
+    case 'qa_testing':
+      return <CheckSquare className={className} />;
+    case 'ux_ui_design':
+      return <Palette className={className} />;
+    case 'business_enterprise_systems':
+      return <BarChart3 className={className} />;
+    case 'it_support_operations':
+      return <Wrench className={className} />;
+    case 'cybersecurity':
+      return <Shield className={className} />;
+    case 'technical_sales':
+      return <TrendingUp className={className} />;
+    case 'it_solutions':
+      return <Cpu className={className} />;
+    case 'all':
+      return <Sparkles className={className} />;
+    default:
+      return <Briefcase className={className} />;
+  }
+};
+
+// Category badge with tailored semantic color and icon (Ref: F18)
+export const CategoryBadge: React.FC<{
+  category: PositionCategory | string;
+  className?: string;
+  isSubdued?: boolean;
+}> = ({ category, className = '', isSubdued = false }) => {
+  const label = CATEGORY_LABELS[category as PositionCategory] || category;
+  const theme = getCategoryTheme(category);
+  if (isSubdued) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 ${className}`}
+      >
+        {getCategoryIcon(category, 'w-3.5 h-3.5 text-slate-400 shrink-0')}
+        <span>{label}</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${theme.bg} ${theme.text} border ${theme.border} ${className}`}
+    >
+      {getCategoryIcon(category, `w-3.5 h-3.5 ${theme.iconColor} shrink-0`)}
+      <span>{label}</span>
+    </span>
+  );
+};
+
 // Work mode badge with styling
-const WorkModeBadge: React.FC<{ mode: WorkMode }> = ({ mode }) => {
+const WorkModeBadge: React.FC<{ mode: WorkMode; isSubdued?: boolean }> = ({ mode, isSubdued = false }) => {
   const label = WORK_MODE_LABELS[mode] || mode;
+  if (isSubdued) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+        {mode === 'onsite' ? (
+          <Building2 className="w-3 h-3 text-slate-400" />
+        ) : mode === 'hybrid' ? (
+          <Layers className="w-3 h-3 text-slate-400" />
+        ) : (
+          <Globe className="w-3 h-3 text-slate-400" />
+        )}
+        {label}
+      </span>
+    );
+  }
   switch (mode) {
     case 'onsite':
       return (
@@ -122,27 +414,80 @@ const WorkModeBadge: React.FC<{ mode: WorkMode }> = ({ mode }) => {
   }
 };
 
-// Status badge with styling
+// Deadline Date Formatter (DD/MM/YYYY Pattern)
+export const formatApplicationDeadline = (
+  deadline: string | null | undefined,
+  status: PositionStatus
+): { formatted: string; hasExplicitDate: boolean; rawDateOnly: string | null } => {
+  if (deadline && deadline.trim()) {
+    const trimmed = deadline.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const [, y, m, d] = match;
+      const formattedDate = `${d}/${m}/${y}`;
+      return {
+        formatted: formattedDate,
+        hasExplicitDate: true,
+        rawDateOnly: formattedDate,
+      };
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+      return {
+        formatted: trimmed,
+        hasExplicitDate: true,
+        rawDateOnly: trimmed,
+      };
+    }
+    return {
+      formatted: trimmed,
+      hasExplicitDate: true,
+      rawDateOnly: trimmed,
+    };
+  }
+
+  if (status === 'expired') {
+    return {
+      formatted: 'หมดเขตรับสมัครแล้ว (ตามประกาศเดิม)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  if (status === 'closed') {
+    return {
+      formatted: 'ปิดรับสมัครแล้ว (ตามประกาศเดิม)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  if (status === 'open') {
+    return {
+      formatted: 'เปิดรับสมัครต่อเนื่อง (จนกว่าจะเต็มจำนวน)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  return {
+    formatted: 'ตามประกาศของสถานประกอบการ',
+    hasExplicitDate: false,
+    rawDateOnly: null,
+  };
+};
+
+// Status badge with styling (Muted/Flat for expired/closed to not distract users)
 const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
   const label = STATUS_LABELS[status] || status;
   switch (status) {
     case 'open':
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           {label}
         </span>
       );
     case 'closed':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-          {label}
-        </span>
-      );
     case 'expired':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
           <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           {label}
         </span>
@@ -156,6 +501,128 @@ const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
   }
 };
 
+// CTA Button Helper for Dynamic Status Action (Ref: Issue #84 / F11)
+interface PositionCtaConfig {
+  label: string;
+  url: string | null;
+  style: 'primary' | 'secondary' | 'info' | 'disabled';
+  iconType: 'apply' | 'globe' | 'source' | 'none';
+}
+
+const getPositionCtaConfig = (pos: Position): PositionCtaConfig => {
+  // Case 1: Direct application URL exists (highest priority)
+  if (pos.application_url) {
+    if (pos.status === 'open') {
+      return {
+        label: 'ไปช่องทางรับสมัคร',
+        url: pos.application_url,
+        style: 'primary',
+        iconType: 'apply',
+      };
+    }
+    if (pos.status === 'closed' || pos.status === 'expired') {
+      return {
+        label: 'ดูช่องทางรับสมัครย้อนหลัง',
+        url: pos.application_url,
+        style: 'secondary',
+        iconType: 'apply',
+      };
+    }
+    return {
+      label: 'ไปช่องทางรับสมัคร',
+      url: pos.application_url,
+      style: 'primary',
+      iconType: 'apply',
+    };
+  }
+
+  // Case 2: No direct application URL, but official company website exists
+  if (pos.company_url) {
+    const companyDisplayName = pos.company_short_name || pos.company_name || 'บริษัท';
+    return {
+      label: `ไปยังเว็บไซต์ ${companyDisplayName}`,
+      url: pos.company_url,
+      style: pos.status === 'open' ? 'primary' : 'secondary',
+      iconType: 'globe',
+    };
+  }
+
+  // Case 3: Fallback to department CSTU announcement
+  if (pos.source_url) {
+    return {
+      label: 'ดูประกาศในระบบ CSTU',
+      url: pos.source_url,
+      style: 'info',
+      iconType: 'source',
+    };
+  }
+
+  return {
+    label: 'ไม่มีลิงก์ภายนอก',
+    url: null,
+    style: 'disabled',
+    iconType: 'none',
+  };
+};
+
+// Dynamic CTA Button Component (Ref: F11)
+const PositionCtaButton: React.FC<{
+  pos: Position;
+  size?: 'sm' | 'md';
+  className?: string;
+}> = ({ pos, size = 'md', className = '' }) => {
+  const config = getPositionCtaConfig(pos);
+  const sizeClasses =
+    size === 'sm'
+      ? 'px-3.5 py-1.5 text-xs'
+      : 'px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm';
+
+  if (!config.url || config.style === 'disabled') {
+    return (
+      <span
+        onClick={(e) => e.stopPropagation()}
+        className={`inline-flex items-center justify-center gap-1.5 rounded-xl font-medium bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none ${sizeClasses} ${className}`}
+        title="ไม่มีลิงก์ภายนอกสำหรับตำแหน่งนี้"
+      >
+        <span>{config.label}</span>
+      </span>
+    );
+  }
+
+  let styleClasses = '';
+  switch (config.style) {
+    case 'primary':
+      styleClasses =
+        'bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-2xs hover:shadow-xs focus:ring-2 focus:ring-blue-500/40';
+      break;
+    case 'secondary':
+      styleClasses =
+        'bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-slate-400/40';
+      break;
+    case 'info':
+      styleClasses =
+        'bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold border border-blue-200 hover:border-blue-300 focus:ring-2 focus:ring-blue-400/40';
+      break;
+  }
+
+  return (
+    <a
+      href={config.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-150 cursor-pointer ${styleClasses} ${sizeClasses} ${className}`}
+    >
+      <span>{config.label}</span>
+      {config.iconType === 'globe' ? (
+        <Globe className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      )}
+    </a>
+  );
+};
+
 export const Positions: React.FC = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,11 +634,80 @@ export const Positions: React.FC = () => {
   const [selectedWorkMode, setSelectedWorkMode] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  // Modal detail view
+  // Modal detail view state & Accessibility refs (Ref: Issue #84 / F10)
   const [activeModalPosition, setActiveModalPosition] = useState<Position | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const initialFocusRef = useRef<HTMLButtonElement>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
+
+  // Modal open & close handlers with focus restoration
+  const handleOpenModal = useCallback((pos: Position) => {
+    lastFocusedElementRef.current = document.activeElement as HTMLElement;
+    setActiveModalPosition(pos);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setActiveModalPosition(null);
+  }, []);
+
+  // Keyboard navigation & Focus trap for Modal (Ref: F10)
+  useEffect(() => {
+    if (!activeModalPosition) {
+      if (lastFocusedElementRef.current) {
+        lastFocusedElementRef.current.focus();
+        lastFocusedElementRef.current = null;
+      }
+      return;
+    }
+
+    // Set initial focus to close button after render
+    const timer = setTimeout(() => {
+      initialFocusRef.current?.focus();
+    }, 50);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCloseModal();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [activeModalPosition, handleCloseModal]);
 
   // Fetch positions from API
-  const fetchPositions = async () => {
+  const fetchPositions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -189,7 +725,7 @@ export const Positions: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, selectedCategory, selectedWorkMode, selectedStatus]);
 
   // Debounced search / trigger on filter change
   useEffect(() => {
@@ -198,7 +734,7 @@ export const Positions: React.FC = () => {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [search, selectedCategory, selectedWorkMode, selectedStatus]);
+  }, [fetchPositions]);
 
   // Reset all filters
   const handleClearFilters = () => {
@@ -261,8 +797,10 @@ export const Positions: React.FC = () => {
               />
               {search && (
                 <button
+                  type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full"
+                  aria-label="ล้างข้อความค้นหา"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -276,6 +814,7 @@ export const Positions: React.FC = () => {
               </span>
               {hasActiveFilters && (
                 <button
+                  type="button"
                   onClick={handleClearFilters}
                   className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
                 >
@@ -301,8 +840,9 @@ export const Positions: React.FC = () => {
                 </span>
               </span>
               <button
+                type="button"
                 onClick={() => setSearch('')}
-                className="text-xs font-semibold text-blue-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer bg-white/80 hover:bg-white border border-blue-200 px-2.5 py-1 rounded-lg transition-colors"
+                className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer bg-white/90 hover:bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition-colors"
                 title="ล้างคำค้นหา"
               >
                 <X className="w-3.5 h-3.5" /> ล้างคำค้นหา
@@ -310,33 +850,37 @@ export const Positions: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Category Filter Pills */}
+          {/* Quick Category Filter Pills with Semantic Theme Colors (Ref: F18) */}
           <div className="pt-2">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none text-xs">
               <span className="text-slate-400 font-semibold shrink-0 mr-1 flex items-center gap-1">
                 <Filter className="w-3 h-3 text-slate-400" /> หมวดหมู่ด่วน:
               </span>
               {[
-                { key: 'all', label: 'ทุกสายงาน' },
-                { key: 'software_development', label: 'Software & Web' },
-                { key: 'data_ai', label: 'Data & AI' },
-                { key: 'cloud_infrastructure_devops', label: 'Cloud & DevOps' },
-                { key: 'qa_testing', label: 'QA & Testing' },
-                { key: 'ux_ui_design', label: 'UX/UI Design' },
-                { key: 'business_enterprise_systems', label: 'Business & Systems' },
+                { key: 'all', label: 'ทุกสายงาน', icon: Sparkles },
+                { key: 'software_development', label: 'Software & Web', icon: Code2 },
+                { key: 'data_ai', label: 'Data & AI', icon: Database },
+                { key: 'cloud_infrastructure_devops', label: 'Cloud & DevOps', icon: Cloud },
+                { key: 'qa_testing', label: 'QA & Testing', icon: CheckSquare },
+                { key: 'ux_ui_design', label: 'UX/UI Design', icon: Palette },
+                { key: 'business_enterprise_systems', label: 'Business & Systems', icon: BarChart3 },
               ].map((c) => {
                 const isSelected = selectedCategory === c.key;
+                const theme = getCategoryTheme(c.key);
+                const Icon = c.icon;
                 return (
                   <button
                     key={c.key}
+                    type="button"
                     onClick={() => setSelectedCategory(isSelected && c.key !== 'all' ? 'all' : c.key)}
-                    className={`px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600 text-white shadow-2xs'
+                        ? `${theme.activeBg} shadow-2xs`
                         : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
                     }`}
                   >
-                    {c.label}
+                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : theme.iconColor}`} />
+                    <span>{c.label}</span>
                   </button>
                 );
               })}
@@ -347,10 +891,11 @@ export const Positions: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
             {/* Category Filter */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+              <label htmlFor="filter-category" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
                 <Filter className="w-3 h-3 text-slate-400" /> สายงานทั้งหมด (Category)
               </label>
               <select
+                id="filter-category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -366,10 +911,11 @@ export const Positions: React.FC = () => {
 
             {/* Work Mode Filter */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+              <label htmlFor="filter-workmode" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
                 <Building2 className="w-3 h-3 text-slate-400" /> รูปแบบการทำงาน (Work Mode)
               </label>
               <select
+                id="filter-workmode"
                 value={selectedWorkMode}
                 onChange={(e) => setSelectedWorkMode(e.target.value)}
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -384,10 +930,11 @@ export const Positions: React.FC = () => {
 
             {/* Status Filter */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+              <label htmlFor="filter-status" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-slate-400" /> สถานะรับสมัคร (Status)
               </label>
               <select
+                id="filter-status"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -409,12 +956,15 @@ export const Positions: React.FC = () => {
               </span>
 
               {selectedCategory !== 'all' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                  สายงาน: {CATEGORY_LABELS[selectedCategory as PositionCategory] || selectedCategory}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${getCategoryTheme(selectedCategory).bg} ${getCategoryTheme(selectedCategory).text} border ${getCategoryTheme(selectedCategory).border}`}>
+                  {getCategoryIcon(selectedCategory, `w-3 h-3 ${getCategoryTheme(selectedCategory).iconColor}`)}
+                  <span>สายงาน: {CATEGORY_LABELS[selectedCategory as PositionCategory] || selectedCategory}</span>
                   <button
+                    type="button"
                     onClick={() => setSelectedCategory('all')}
-                    className="hover:text-blue-950 p-0.5 cursor-pointer rounded-full hover:bg-blue-200/50"
+                    className="hover:opacity-80 p-0.5 cursor-pointer rounded-full hover:bg-black/10 ml-0.5"
                     title="ยกเลิกตัวกรองสายงานนี้"
+                    aria-label="ยกเลิกตัวกรองสายงาน"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -425,9 +975,11 @@ export const Positions: React.FC = () => {
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200">
                   รูปแบบ: {WORK_MODE_LABELS[selectedWorkMode as WorkMode] || selectedWorkMode}
                   <button
+                    type="button"
                     onClick={() => setSelectedWorkMode('all')}
                     className="hover:text-purple-950 p-0.5 cursor-pointer rounded-full hover:bg-purple-200/50"
                     title="ยกเลิกตัวกรองรูปแบบการทำงานนี้"
+                    aria-label="ยกเลิกตัวกรองรูปแบบการทำงาน"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -435,12 +987,20 @@ export const Positions: React.FC = () => {
               )}
 
               {selectedStatus !== 'all' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedStatus === 'open'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  } border`}
+                >
                   สถานะ: {STATUS_LABELS[selectedStatus as PositionStatus] || selectedStatus}
                   <button
+                    type="button"
                     onClick={() => setSelectedStatus('all')}
-                    className="hover:text-emerald-950 p-0.5 cursor-pointer rounded-full hover:bg-emerald-200/50"
+                    className="hover:opacity-80 p-0.5 cursor-pointer rounded-full hover:bg-black/10 ml-0.5"
                     title="ยกเลิกตัวกรองสถานะนี้"
+                    aria-label="ยกเลิกตัวกรองสถานะ"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -451,9 +1011,11 @@ export const Positions: React.FC = () => {
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
                   คำค้นหา: "{search.trim()}"
                   <button
+                    type="button"
                     onClick={() => setSearch('')}
                     className="hover:text-amber-950 p-0.5 cursor-pointer rounded-full hover:bg-amber-200/50"
                     title="ล้างคำค้นหานี้"
+                    aria-label="ล้างคำค้นหา"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -461,6 +1023,7 @@ export const Positions: React.FC = () => {
               )}
 
               <button
+                type="button"
                 onClick={handleClearFilters}
                 className="text-xs text-rose-600 hover:text-rose-800 font-semibold ml-auto cursor-pointer hover:underline"
               >
@@ -504,6 +1067,7 @@ export const Positions: React.FC = () => {
             </h3>
             <p className="text-sm text-slate-600 mb-6">{error}</p>
             <button
+              type="button"
               onClick={fetchPositions}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
             >
@@ -512,7 +1076,7 @@ export const Positions: React.FC = () => {
             </button>
           </div>
         ) : positions.length === 0 ? (
-          /* Empty State (Acceptance Criteria #3 for #40) */
+          /* Empty State */
           <div className="bg-white border border-slate-200/90 rounded-3xl p-12 text-center max-w-xl mx-auto my-8 shadow-2xs">
             <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
               <Briefcase className="w-8 h-8 stroke-[1.5]" />
@@ -530,6 +1094,7 @@ export const Positions: React.FC = () => {
             <div className="flex flex-wrap items-center justify-center gap-3">
               {search.trim() && (
                 <button
+                  type="button"
                   onClick={() => setSearch('')}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
                 >
@@ -539,6 +1104,7 @@ export const Positions: React.FC = () => {
               )}
               {hasActiveFilters && (
                 <button
+                  type="button"
                   onClick={handleClearFilters}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm shadow-xs transition-colors cursor-pointer ${
                     search.trim()
@@ -553,15 +1119,31 @@ export const Positions: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Position Cards Grid / List (Acceptance Criteria #1, #2, #3) */
+          /* Position Cards Grid / List (Ref: F10, F11, F18) */
           <div className="space-y-4">
             {positions.map((pos) => {
-              const categoryLabel = CATEGORY_LABELS[pos.category] || pos.category;
+              const theme = getCategoryTheme(pos.category);
+              const isInactive = pos.status === 'expired' || pos.status === 'closed';
+              const deadlineInfo = formatApplicationDeadline(pos.application_deadline, pos.status);
 
               return (
                 <div
                   key={pos.position_id}
-                  className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 relative overflow-hidden"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenModal(pos)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenModal(pos);
+                    }
+                  }}
+                  aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title} ของ ${pos.company_name || 'สถานประกอบการ'}`}
+                  className={`group rounded-2xl sm:rounded-3xl border p-5 sm:p-6 shadow-2xs transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 ${
+                    isInactive
+                      ? 'bg-slate-50/70 border-slate-200 hover:border-slate-400 hover:bg-slate-100/70 hover:shadow-xs focus:ring-slate-400'
+                      : `bg-white border-slate-200/90 ${theme.hoverBorder} ${theme.hoverBg} hover:shadow-md ${theme.focusRing}`
+                  }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 justify-between">
                     {/* Left: Logo & Core Info */}
@@ -570,6 +1152,7 @@ export const Positions: React.FC = () => {
                         logo={pos.company_logo}
                         name={pos.company_name}
                         shortName={pos.company_short_name}
+                        isGrayscale={isInactive}
                       />
 
                       <div className="flex-1 min-w-0">
@@ -594,27 +1177,44 @@ export const Positions: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Position Title */}
+                        {/* Position Title: Grayscale on inactive, Category hover on active */}
                         <h2
-                          onClick={() => setActiveModalPosition(pos)}
-                          className="font-extrabold text-base sm:text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-snug cursor-pointer flex items-center gap-1.5"
+                          className={`font-bold text-base sm:text-lg transition-colors leading-snug flex items-center gap-1.5 ${
+                            isInactive
+                              ? 'text-slate-700 group-hover:text-slate-900'
+                              : `text-slate-900 ${theme.hoverText}`
+                          }`}
                         >
                           <HighlightMatch text={pos.title} query={search} />
-                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-blue-600" />
+                          <ChevronRight
+                            className={`w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ${
+                              isInactive ? 'text-slate-400' : theme.iconColor
+                            } shrink-0`}
+                            aria-hidden="true"
+                          />
                         </h2>
 
-                        {/* Badges Row */}
+                        {/* Badges Row (Ref: F18) */}
                         <div className="flex flex-wrap items-center gap-2 mt-2.5">
                           {/* Category Badge */}
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                            {categoryLabel}
-                          </span>
+                          <CategoryBadge category={pos.category} isSubdued={isInactive} />
 
                           {/* Work Mode */}
-                          <WorkModeBadge mode={pos.work_mode} />
+                          <WorkModeBadge mode={pos.work_mode} isSubdued={isInactive} />
 
                           {/* Status */}
                           <StatusBadge status={pos.status} />
+
+                          {/* Explicit Deadline Date Chip (Pattern DD/MM/YYYY) */}
+                          {deadlineInfo.hasExplicitDate && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                              title="วันสิ้นสุดการรับสมัคร (วัน/เดือน/ปี)"
+                            >
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              <span>ปิดรับ: {deadlineInfo.formatted}</span>
+                            </span>
+                          )}
 
                           {/* Position ID */}
                           <span className="text-[11px] font-mono text-slate-400 ml-auto hidden sm:inline">
@@ -631,47 +1231,57 @@ export const Positions: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Qualifications Snippet */}
+                        {/* Qualifications Prompt */}
                         {pos.qualification && (
-                          <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-500">
-                            <GraduationCap className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                            <p className="line-clamp-1 italic">
-                              คุณสมบัติ:{' '}
-                              <HighlightMatch text={pos.qualification} query={search} />
-                            </p>
+                          <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
+                            <GraduationCap
+                              className={`w-3.5 h-3.5 ${isInactive ? 'text-slate-400' : theme.iconColor} shrink-0`}
+                              aria-hidden="true"
+                            />
+                            <span className="font-medium text-slate-700">มีกำหนดคุณสมบัติ</span>
+                            <span className="text-slate-300">·</span>
+                            <span
+                              className={`${
+                                isInactive ? 'text-slate-600 group-hover:text-slate-900' : theme.hoverText
+                              } font-medium group-hover:underline inline-flex items-center gap-0.5`}
+                            >
+                              ตรวจสอบรายละเอียดเพิ่มเติม
+                              <ChevronRight
+                                className={`w-3 h-3 ${isInactive ? 'text-slate-400' : theme.iconColor}`}
+                                aria-hidden="true"
+                              />
+                            </span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
-                      {pos.application_url ? (
-                        <a
-                          href={pos.application_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-2xs hover:shadow transition-all duration-150"
-                        >
-                          สมัครงาน
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      ) : (
+                    {/* Right: Actions (Ref: F10, F11) */}
+                    <div className="flex flex-col sm:items-end justify-between sm:justify-start gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setActiveModalPosition(pos)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenModal(pos);
+                          }}
+                          aria-haspopup="dialog"
+                          aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title}`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          ดูรายละเอียด
-                          <Info className="w-3.5 h-3.5" />
+                          <Info className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                          <span>ดูรายละเอียด</span>
                         </button>
-                      )}
+                        <PositionCtaButton pos={pos} size="md" />
+                      </div>
 
                       {pos.source_url && (
                         <a
                           href={pos.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] text-slate-400 hover:text-blue-600 underline transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[11px] text-slate-400 hover:text-blue-600 underline transition-colors self-end sm:self-auto"
                         >
                           แหล่งที่มาประกาศ
                         </a>
@@ -685,138 +1295,281 @@ export const Positions: React.FC = () => {
         )}
       </div>
 
-      {/* Position Detail Modal */}
-      {activeModalPosition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-xl p-6 sm:p-8 space-y-6">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                <CompanyLogo
-                  logo={activeModalPosition.company_logo}
-                  name={activeModalPosition.company_name}
-                  shortName={activeModalPosition.company_short_name}
-                />
-                <div>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {activeModalPosition.company_name}
+      {/* Position Detail Modal (Ref: F10 Accessibility, F11 Dynamic CTA, F18 Key-Value Grid) */}
+      {activeModalPosition && (() => {
+        const modalTheme = getCategoryTheme(activeModalPosition.category);
+        const isModalInactive =
+          activeModalPosition.status === 'expired' || activeModalPosition.status === 'closed';
+
+        return (
+          <div
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleCloseModal();
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
+          >
+            <div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-position-title"
+              aria-describedby="modal-position-description"
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden relative my-auto animate-in zoom-in-95 duration-200"
+            >
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-4 p-6 sm:p-7 border-b border-slate-100 bg-gradient-to-b from-slate-50/50 to-white shrink-0">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <CompanyLogo
+                    logo={activeModalPosition.company_logo}
+                    name={activeModalPosition.company_name}
+                    shortName={activeModalPosition.company_short_name}
+                    isGrayscale={isModalInactive}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs font-semibold text-slate-500">
+                        {activeModalPosition.company_name || 'สถานประกอบการ'}
+                      </span>
+                      {activeModalPosition.company_province && (
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {activeModalPosition.company_province}
+                        </span>
+                      )}
+                    </div>
+                    <h3
+                      id="modal-position-title"
+                      className={`text-xl sm:text-2xl font-bold leading-snug ${
+                        isModalInactive ? 'text-slate-900' : modalTheme.text
+                      }`}
+                    >
+                      {activeModalPosition.title}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Close Button (X) with accessible name (Ref: F10) */}
+                <button
+                  ref={initialFocusRef}
+                  type="button"
+                  onClick={handleCloseModal}
+                  aria-label="ปิดหน้ารายละเอียด"
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Body (Ref: F18 Key-Value Grid & Visual Hierarchy) */}
+              <div
+                id="modal-position-description"
+                className="p-6 sm:p-7 overflow-y-auto space-y-6 text-sm text-slate-700"
+              >
+                {/* Badges Strip (Ref: F18) */}
+                <div className="flex flex-wrap items-center gap-2 pb-2">
+                  <CategoryBadge category={activeModalPosition.category} isSubdued={isModalInactive} />
+                  <WorkModeBadge mode={activeModalPosition.work_mode} isSubdued={isModalInactive} />
+                  <StatusBadge status={activeModalPosition.status} />
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
+                    #{activeModalPosition.position_id}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
-                    {activeModalPosition.title}
-                  </h3>
+                </div>
+
+              {/* Status Alert Notice (For closed / expired positions) */}
+              {(activeModalPosition.status === 'closed' || activeModalPosition.status === 'expired') && (
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 text-slate-700 text-xs sm:text-sm">
+                  <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <strong className="font-semibold text-slate-800">หมายเหตุสถานะประกาศ:</strong> ตำแหน่งนี้
+                    {activeModalPosition.status === 'closed' ? ' ปิดรับสมัครแล้ว' : ' หมดเขตรับสมัครแล้ว'}
+                    {' '}ข้อมูลที่แสดงในระบบเป็นประวัติเพื่อใช้อ้างอิงการจัดทำแผนสหกิจศึกษา คุณสามารถกด 'ดูช่องทางรับสมัครย้อนหลัง' ด้านล่างเพื่อตรวจสอบรายละเอียดเพิ่มเติม
+                  </div>
+                </div>
+              )}
+
+              {/* Structured Key-Value Grid (Ref: F18) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Grid Item 1: Company */}
+                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <Building2 className="w-4 h-4 text-blue-600" aria-hidden="true" />
+                    <span>สถานประกอบการ</span>
+                  </div>
+                  <div className="font-bold text-sm text-slate-900">
+                    {activeModalPosition.company_name || 'ไม่ระบุชื่อสถานประกอบการ'}
+                  </div>
+                  {activeModalPosition.company_short_name && activeModalPosition.company_short_name !== activeModalPosition.company_name && (
+                    <div className="text-xs text-slate-500">
+                      ชื่อย่อ: {activeModalPosition.company_short_name}
+                    </div>
+                  )}
+                  {activeModalPosition.company_province && (
+                    <div className="text-xs text-slate-500 flex items-center gap-1 pt-0.5">
+                      <MapPin className="w-3 h-3 text-slate-400" aria-hidden="true" />
+                      <span>จังหวัด{activeModalPosition.company_province}</span>
+                    </div>
+                  )}
+                  {activeModalPosition.company_url && (
+                    <div className="pt-1.5">
+                      <a
+                        href={activeModalPosition.company_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                      >
+                        <Globe className="w-3 h-3 text-blue-500" aria-hidden="true" />
+                        <span>เว็บไซต์ทางการสถานประกอบการ</span>
+                        <ExternalLink className="w-2.5 h-2.5 text-blue-400" aria-hidden="true" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Grid Item 2: Work Mode & Location */}
+                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <Layers className="w-4 h-4 text-purple-600" aria-hidden="true" />
+                    <span>รูปแบบและสถานที่ปฏิบัติงาน</span>
+                  </div>
+                  <div className="pt-0.5">
+                    <WorkModeBadge mode={activeModalPosition.work_mode} />
+                  </div>
+                  <div className="text-xs text-slate-600 pt-1">
+                    {activeModalPosition.location || 'ปฏิบัติงานตามที่สถานประกอบการกำหนด'}
+                  </div>
+                </div>
+
+                {/* Grid Item 3: Category & Reference ID */}
+                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <Briefcase className="w-4 h-4 text-slate-500" aria-hidden="true" />
+                    <span>สายงานและรหัสตำแหน่ง</span>
+                  </div>
+                  <div className="pt-1">
+                    <CategoryBadge category={activeModalPosition.category} className="text-xs sm:text-sm py-1 px-3" />
+                  </div>
+                  <div className="text-xs font-mono text-slate-400 pt-1">
+                    Position Code: #{activeModalPosition.position_id}
+                  </div>
+                </div>
+
+                {/* Grid Item 4: Application Deadline & Status */}
+                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <Calendar className="w-4 h-4 text-slate-500" aria-hidden="true" />
+                    <span>กำหนดการรับสมัคร</span>
+                  </div>
+                  <div className="font-bold text-sm text-slate-800">
+                    {(() => {
+                      const dl = formatApplicationDeadline(
+                        activeModalPosition.application_deadline,
+                        activeModalPosition.status
+                      );
+                      if (dl.hasExplicitDate) {
+                        return (
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-mono text-base font-bold text-slate-900 tracking-wide">
+                              {dl.formatted}
+                            </span>
+                            <span className="text-xs text-slate-400 font-normal">
+                              (วัน/เดือน/ปี)
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="text-xs sm:text-sm font-semibold text-slate-600">
+                          {dl.formatted}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="pt-0.5">
+                    <StatusBadge status={activeModalPosition.status} />
+                  </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => setActiveModalPosition(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                {CATEGORY_LABELS[activeModalPosition.category] || activeModalPosition.category}
-              </span>
-              <WorkModeBadge mode={activeModalPosition.work_mode} />
-              <StatusBadge status={activeModalPosition.status} />
-              <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
-                #{activeModalPosition.position_id}
-              </span>
-            </div>
-
-            {/* Details Grid */}
-            <div className="space-y-4 text-sm text-slate-700">
-              {activeModalPosition.location && (
-                <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      สถานที่ปฏิบัติงาน:
-                    </span>
-                    <span>{activeModalPosition.location}</span>
-                  </div>
-                </div>
-              )}
-
+              {/* Details Section: Description & Allowance */}
               {activeModalPosition.description && (
-                <div className="flex items-start gap-2.5">
-                  <Banknote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      รายละเอียดและเบี้ยเลี้ยง:
-                    </span>
-                    <span className="leading-relaxed">{activeModalPosition.description}</span>
+                <div className="bg-slate-50/60 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                      <Banknote className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span>รายละเอียดงาน เบี้ยเลี้ยง และสวัสดิการ</span>
                   </div>
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line pl-0 sm:pl-8">
+                    {activeModalPosition.description}
+                  </p>
                 </div>
               )}
 
+              {/* Details Section: Qualifications */}
               {activeModalPosition.qualification && (
-                <div className="flex items-start gap-2.5">
-                  <GraduationCap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      คุณสมบัติผู้สมัคร:
-                    </span>
-                    <span className="leading-relaxed">{activeModalPosition.qualification}</span>
+                <div className="bg-blue-50/30 rounded-2xl border border-blue-100 p-4 sm:p-5 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-950">
+                    <div className="p-1.5 rounded-lg bg-blue-100/80 text-blue-700">
+                      <GraduationCap className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span>คุณสมบัติและความสามารถที่ต้องการ</span>
                   </div>
-                </div>
-              )}
-
-              {activeModalPosition.application_deadline && (
-                <div className="flex items-start gap-2.5">
-                  <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      กำหนดปิดรับสมัคร:
-                    </span>
-                    <span>{activeModalPosition.application_deadline}</span>
-                  </div>
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line pl-0 sm:pl-8">
+                    {activeModalPosition.qualification}
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Modal Actions */}
-            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-              {activeModalPosition.source_url ? (
-                <a
-                  href={activeModalPosition.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-medium"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  ตรวจสอบประกาศทางการ
-                </a>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <button
-                  onClick={() => setActiveModalPosition(null)}
-                  className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-                >
-                  ปิดหน้าต่าง
-                </button>
-                {activeModalPosition.application_url && (
+            {/* Modal Footer / Actions (Ref: F10, F11) */}
+            <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center flex-wrap gap-3">
+                {activeModalPosition.source_url && (
                   <a
-                    href={activeModalPosition.application_url}
+                    href={activeModalPosition.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 underline font-medium"
+                    title="เปิดหน้าประกาศเดิมใน Google Sites ของภาควิชา CSTU"
                   >
-                    เปิดหน้าสมัครงาน
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>ประกาศต้นทางในระบบ CSTU Co-op</span>
                   </a>
                 )}
+                {activeModalPosition.company_url && activeModalPosition.application_url && (
+                  <a
+                    href={activeModalPosition.company_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-blue-600 underline font-medium"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                    <span>เว็บไซต์บริษัท</span>
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  aria-label="ปิดหน้ารายละเอียด"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-200/80 bg-slate-100 border border-slate-200 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  ปิดหน้ารายละเอียด
+                </button>
+                <PositionCtaButton
+                  pos={activeModalPosition}
+                  size="md"
+                  className="flex-1 sm:flex-initial"
+                />
               </div>
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
     </main>
   );
 };
