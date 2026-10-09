@@ -77,17 +77,26 @@ const CompanyLogo: React.FC<{
   logo?: string | null;
   name?: string | null;
   shortName?: string | null;
-}> = ({ logo, name, shortName }) => {
+  isGrayscale?: boolean;
+}> = ({ logo, name, shortName, isGrayscale = false }) => {
   const [hasError, setHasError] = useState(false);
 
   if (!hasError && logo) {
     return (
-      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/80 p-2 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-blue-200 transition-colors">
+      <div
+        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/80 p-2 flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+          isGrayscale ? 'group-hover:border-slate-300' : 'group-hover:border-blue-200'
+        }`}
+      >
         <img
           src={`/images/logos/${logo}`}
           alt={name || 'Company Logo'}
           onError={() => setHasError(true)}
-          className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform duration-200"
+          className={`max-h-full max-w-full object-contain filter transition-all duration-200 ${
+            isGrayscale
+              ? 'grayscale opacity-75 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105'
+              : 'group-hover:scale-105'
+          }`}
         />
       </div>
     );
@@ -95,7 +104,13 @@ const CompanyLogo: React.FC<{
 
   const initial = (shortName || name || 'CO').trim().slice(0, 3).toUpperCase();
   return (
-    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs text-blue-700 font-bold text-xs sm:text-sm select-none">
+    <div
+      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs font-bold text-xs sm:text-sm select-none ${
+        isGrayscale
+          ? 'bg-slate-100 border-slate-200 text-slate-500'
+          : 'bg-blue-50 border-blue-100 text-blue-700'
+      }`}
+    >
       {initial}
     </div>
   );
@@ -324,12 +339,23 @@ export const getCategoryIcon = (category: PositionCategory | string, className: 
 };
 
 // Category badge with tailored semantic color and icon (Ref: F18)
-export const CategoryBadge: React.FC<{ category: PositionCategory | string; className?: string }> = ({
-  category,
-  className = '',
-}) => {
+export const CategoryBadge: React.FC<{
+  category: PositionCategory | string;
+  className?: string;
+  isSubdued?: boolean;
+}> = ({ category, className = '', isSubdued = false }) => {
   const label = CATEGORY_LABELS[category as PositionCategory] || category;
   const theme = getCategoryTheme(category);
+  if (isSubdued) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 ${className}`}
+      >
+        {getCategoryIcon(category, 'w-3.5 h-3.5 text-slate-400 shrink-0')}
+        <span>{label}</span>
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${theme.bg} ${theme.text} border ${theme.border} ${className}`}
@@ -341,8 +367,22 @@ export const CategoryBadge: React.FC<{ category: PositionCategory | string; clas
 };
 
 // Work mode badge with styling
-const WorkModeBadge: React.FC<{ mode: WorkMode }> = ({ mode }) => {
+const WorkModeBadge: React.FC<{ mode: WorkMode; isSubdued?: boolean }> = ({ mode, isSubdued = false }) => {
   const label = WORK_MODE_LABELS[mode] || mode;
+  if (isSubdued) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+        {mode === 'onsite' ? (
+          <Building2 className="w-3 h-3 text-slate-400" />
+        ) : mode === 'hybrid' ? (
+          <Layers className="w-3 h-3 text-slate-400" />
+        ) : (
+          <Globe className="w-3 h-3 text-slate-400" />
+        )}
+        {label}
+      </span>
+    );
+  }
   switch (mode) {
     case 'onsite':
       return (
@@ -374,7 +414,66 @@ const WorkModeBadge: React.FC<{ mode: WorkMode }> = ({ mode }) => {
   }
 };
 
-// Status badge with styling
+// Deadline Date Formatter (DD/MM/YYYY Pattern)
+export const formatApplicationDeadline = (
+  deadline: string | null | undefined,
+  status: PositionStatus
+): { formatted: string; hasExplicitDate: boolean; rawDateOnly: string | null } => {
+  if (deadline && deadline.trim()) {
+    const trimmed = deadline.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const [, y, m, d] = match;
+      const formattedDate = `${d}/${m}/${y}`;
+      return {
+        formatted: formattedDate,
+        hasExplicitDate: true,
+        rawDateOnly: formattedDate,
+      };
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+      return {
+        formatted: trimmed,
+        hasExplicitDate: true,
+        rawDateOnly: trimmed,
+      };
+    }
+    return {
+      formatted: trimmed,
+      hasExplicitDate: true,
+      rawDateOnly: trimmed,
+    };
+  }
+
+  if (status === 'expired') {
+    return {
+      formatted: 'หมดเขตรับสมัครแล้ว (ตามประกาศเดิม)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  if (status === 'closed') {
+    return {
+      formatted: 'ปิดรับสมัครแล้ว (ตามประกาศเดิม)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  if (status === 'open') {
+    return {
+      formatted: 'เปิดรับสมัครต่อเนื่อง (จนกว่าจะเต็มจำนวน)',
+      hasExplicitDate: false,
+      rawDateOnly: null,
+    };
+  }
+  return {
+    formatted: 'ตามประกาศของสถานประกอบการ',
+    hasExplicitDate: false,
+    rawDateOnly: null,
+  };
+};
+
+// Status badge with styling (Muted/Flat for expired/closed to not distract users)
 const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
   const label = STATUS_LABELS[status] || status;
   switch (status) {
@@ -386,16 +485,10 @@ const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
         </span>
       );
     case 'closed':
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-          {label}
-        </span>
-      );
     case 'expired':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           {label}
         </span>
       );
@@ -898,10 +991,6 @@ export const Positions: React.FC = () => {
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                     selectedStatus === 'open'
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : selectedStatus === 'expired'
-                      ? 'bg-red-50 text-red-700 border-red-200'
-                      : selectedStatus === 'closed'
-                      ? 'bg-rose-50 text-rose-700 border-rose-200'
                       : 'bg-slate-100 text-slate-700 border-slate-200'
                   } border`}
                 >
@@ -1034,6 +1123,9 @@ export const Positions: React.FC = () => {
           <div className="space-y-4">
             {positions.map((pos) => {
               const theme = getCategoryTheme(pos.category);
+              const isInactive = pos.status === 'expired' || pos.status === 'closed';
+              const deadlineInfo = formatApplicationDeadline(pos.application_deadline, pos.status);
+
               return (
                 <div
                   key={pos.position_id}
@@ -1047,7 +1139,11 @@ export const Positions: React.FC = () => {
                     }
                   }}
                   aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title} ของ ${pos.company_name || 'สถานประกอบการ'}`}
-                  className={`group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 ${theme.hoverBorder} ${theme.hoverBg} p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 ${theme.focusRing}`}
+                  className={`group rounded-2xl sm:rounded-3xl border p-5 sm:p-6 shadow-2xs transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 ${
+                    isInactive
+                      ? 'bg-slate-50/70 border-slate-200 hover:border-slate-400 hover:bg-slate-100/70 hover:shadow-xs focus:ring-slate-400'
+                      : `bg-white border-slate-200/90 ${theme.hoverBorder} ${theme.hoverBg} hover:shadow-md ${theme.focusRing}`
+                  }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 justify-between">
                     {/* Left: Logo & Core Info */}
@@ -1056,6 +1152,7 @@ export const Positions: React.FC = () => {
                         logo={pos.company_logo}
                         name={pos.company_name}
                         shortName={pos.company_short_name}
+                        isGrayscale={isInactive}
                       />
 
                       <div className="flex-1 min-w-0">
@@ -1080,22 +1177,44 @@ export const Positions: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Position Title: Interactive Heading with Category Hover Color */}
-                        <h2 className={`font-bold text-base sm:text-lg text-slate-900 ${theme.hoverText} transition-colors leading-snug flex items-center gap-1.5`}>
+                        {/* Position Title: Grayscale on inactive, Category hover on active */}
+                        <h2
+                          className={`font-bold text-base sm:text-lg transition-colors leading-snug flex items-center gap-1.5 ${
+                            isInactive
+                              ? 'text-slate-700 group-hover:text-slate-900'
+                              : `text-slate-900 ${theme.hoverText}`
+                          }`}
+                        >
                           <HighlightMatch text={pos.title} query={search} />
-                          <ChevronRight className={`w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ${theme.iconColor} shrink-0`} aria-hidden="true" />
+                          <ChevronRight
+                            className={`w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ${
+                              isInactive ? 'text-slate-400' : theme.iconColor
+                            } shrink-0`}
+                            aria-hidden="true"
+                          />
                         </h2>
 
                         {/* Badges Row (Ref: F18) */}
                         <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                          {/* Category Badge with Color Theme & Icon */}
-                          <CategoryBadge category={pos.category} />
+                          {/* Category Badge */}
+                          <CategoryBadge category={pos.category} isSubdued={isInactive} />
 
                           {/* Work Mode */}
-                          <WorkModeBadge mode={pos.work_mode} />
+                          <WorkModeBadge mode={pos.work_mode} isSubdued={isInactive} />
 
                           {/* Status */}
                           <StatusBadge status={pos.status} />
+
+                          {/* Explicit Deadline Date Chip (Pattern DD/MM/YYYY) */}
+                          {deadlineInfo.hasExplicitDate && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                              title="วันสิ้นสุดการรับสมัคร (วัน/เดือน/ปี)"
+                            >
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              <span>ปิดรับ: {deadlineInfo.formatted}</span>
+                            </span>
+                          )}
 
                           {/* Position ID */}
                           <span className="text-[11px] font-mono text-slate-400 ml-auto hidden sm:inline">
@@ -1115,12 +1234,22 @@ export const Positions: React.FC = () => {
                         {/* Qualifications Prompt */}
                         {pos.qualification && (
                           <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
-                            <GraduationCap className={`w-3.5 h-3.5 ${theme.iconColor} shrink-0`} aria-hidden="true" />
+                            <GraduationCap
+                              className={`w-3.5 h-3.5 ${isInactive ? 'text-slate-400' : theme.iconColor} shrink-0`}
+                              aria-hidden="true"
+                            />
                             <span className="font-medium text-slate-700">มีกำหนดคุณสมบัติ</span>
                             <span className="text-slate-300">·</span>
-                            <span className={`${theme.hoverText} font-medium group-hover:underline inline-flex items-center gap-0.5`}>
+                            <span
+                              className={`${
+                                isInactive ? 'text-slate-600 group-hover:text-slate-900' : theme.hoverText
+                              } font-medium group-hover:underline inline-flex items-center gap-0.5`}
+                            >
                               ตรวจสอบรายละเอียดเพิ่มเติม
-                              <ChevronRight className={`w-3 h-3 ${theme.iconColor}`} aria-hidden="true" />
+                              <ChevronRight
+                                className={`w-3 h-3 ${isInactive ? 'text-slate-400' : theme.iconColor}`}
+                                aria-hidden="true"
+                              />
                             </span>
                           </div>
                         )}
@@ -1241,10 +1370,10 @@ export const Positions: React.FC = () => {
 
               {/* Status Alert Notice (For closed / expired positions) */}
               {(activeModalPosition.status === 'closed' || activeModalPosition.status === 'expired') && (
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-red-50/90 border border-red-200 text-red-950 text-xs sm:text-sm">
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 text-slate-700 text-xs sm:text-sm">
+                  <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
-                    <strong className="font-bold text-red-900">หมายเหตุสถานะประกาศ:</strong> ตำแหน่งนี้
+                    <strong className="font-semibold text-slate-800">หมายเหตุสถานะประกาศ:</strong> ตำแหน่งนี้
                     {activeModalPosition.status === 'closed' ? ' ปิดรับสมัครแล้ว' : ' หมดเขตรับสมัครแล้ว'}
                     {' '}ข้อมูลที่แสดงในระบบเป็นประวัติเพื่อใช้อ้างอิงการจัดทำแผนสหกิจศึกษา คุณสามารถกด 'ดูช่องทางรับสมัครย้อนหลัง' ด้านล่างเพื่อตรวจสอบรายละเอียดเพิ่มเติม
                   </div>
@@ -1318,15 +1447,35 @@ export const Positions: React.FC = () => {
                 </div>
 
                 {/* Grid Item 4: Application Deadline & Status */}
-                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1">
+                <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                    <Calendar className="w-4 h-4 text-amber-600" aria-hidden="true" />
+                    <Calendar className="w-4 h-4 text-slate-500" aria-hidden="true" />
                     <span>กำหนดการรับสมัคร</span>
                   </div>
-                  <div className={`font-bold text-sm ${activeModalPosition.status === 'expired' || activeModalPosition.status === 'closed' ? 'text-red-700' : activeModalPosition.status === 'open' ? 'text-emerald-700' : 'text-slate-900'}`}>
-                    {activeModalPosition.application_deadline
-                      ? activeModalPosition.application_deadline
-                      : 'เปิดรับสมัครต่อเนื่อง / จนกว่าจะเต็ม'}
+                  <div className="font-bold text-sm text-slate-800">
+                    {(() => {
+                      const dl = formatApplicationDeadline(
+                        activeModalPosition.application_deadline,
+                        activeModalPosition.status
+                      );
+                      if (dl.hasExplicitDate) {
+                        return (
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-mono text-base font-bold text-slate-900 tracking-wide">
+                              {dl.formatted}
+                            </span>
+                            <span className="text-xs text-slate-400 font-normal">
+                              (วัน/เดือน/ปี)
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="text-xs sm:text-sm font-semibold text-slate-600">
+                          {dl.formatted}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="pt-0.5">
                     <StatusBadge status={activeModalPosition.status} />
