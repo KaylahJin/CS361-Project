@@ -111,6 +111,10 @@ export interface CategoryTheme {
   border: string;
   activeBg: string;
   iconColor: string;
+  hoverBorder: string;
+  hoverText: string;
+  hoverBg: string;
+  focusRing: string;
   description: string;
 }
 
@@ -122,6 +126,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-indigo-200',
     activeBg: 'bg-indigo-600 text-white',
     iconColor: 'text-indigo-600',
+    hoverBorder: 'hover:border-indigo-400',
+    hoverText: 'group-hover:text-indigo-600',
+    hoverBg: 'hover:bg-indigo-50/20',
+    focusRing: 'focus:ring-indigo-500/50',
     description: 'Indigo: สื่อถึงตรรกะ การเขียนโค้ด และการพัฒนาซอฟต์แวร์',
   },
   // Purple / Violet: Artificial Intelligence, Deep Tech, Data Science
@@ -131,6 +139,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-purple-200',
     activeBg: 'bg-purple-600 text-white',
     iconColor: 'text-purple-600',
+    hoverBorder: 'hover:border-purple-400',
+    hoverText: 'group-hover:text-purple-600',
+    hoverBg: 'hover:bg-purple-50/20',
+    focusRing: 'focus:ring-purple-500/50',
     description: 'Purple: สื่อถึงความฉลาด ปัญญาประดิษฐ์ และการวิเคราะห์ข้อมูล',
   },
   // Sky / Cyan: Cloud Computing, DevOps, Distributed Systems
@@ -140,6 +152,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-sky-200',
     activeBg: 'bg-sky-600 text-white',
     iconColor: 'text-sky-600',
+    hoverBorder: 'hover:border-sky-400',
+    hoverText: 'group-hover:text-sky-600',
+    hoverBg: 'hover:bg-sky-50/20',
+    focusRing: 'focus:ring-sky-500/50',
     description: 'Sky Blue: สื่อถึงระบบคลาวด์ โครงสร้างพื้นฐาน และระบบเครือข่าย',
   },
   // Emerald / Green: Quality Assurance, Testing, Verified, Zero-Bug
@@ -149,6 +165,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-emerald-200',
     activeBg: 'bg-emerald-600 text-white',
     iconColor: 'text-emerald-600',
+    hoverBorder: 'hover:border-emerald-400',
+    hoverText: 'group-hover:text-emerald-600',
+    hoverBg: 'hover:bg-emerald-50/20',
+    focusRing: 'focus:ring-emerald-500/50',
     description: 'Emerald: สื่อถึงการทดสอบผ่าน การรับประกันคุณภาพ และความถูกต้อง',
   },
   // Fuchsia / Pink: Creative Arts, Human-Centric Experience, UI/UX
@@ -158,6 +178,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-fuchsia-200',
     activeBg: 'bg-fuchsia-600 text-white',
     iconColor: 'text-fuchsia-600',
+    hoverBorder: 'hover:border-fuchsia-400',
+    hoverText: 'group-hover:text-fuchsia-600',
+    hoverBg: 'hover:bg-fuchsia-50/20',
+    focusRing: 'focus:ring-fuchsia-500/50',
     description: 'Fuchsia: สื่อถึงความคิดสร้างสรรค์ การออกแบบ และประสบการณ์ผู้ใช้',
   },
   // Amber / Warm Gold: Business Strategy, Value, System Analysis
@@ -167,6 +191,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-amber-200',
     activeBg: 'bg-amber-600 text-white',
     iconColor: 'text-amber-600',
+    hoverBorder: 'hover:border-amber-400',
+    hoverText: 'group-hover:text-amber-700',
+    hoverBg: 'hover:bg-amber-50/20',
+    focusRing: 'focus:ring-amber-500/50',
     description: 'Amber: สื่อถึงการวิเคราะห์ธุรกิจ กระบวนการทำงาน และระบบองค์กร',
   },
   // Rose / Crimson: Cybersecurity, Protection, Firewall, Threat Defense
@@ -176,6 +204,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-rose-200',
     activeBg: 'bg-rose-600 text-white',
     iconColor: 'text-rose-600',
+    hoverBorder: 'hover:border-rose-400',
+    hoverText: 'group-hover:text-rose-600',
+    hoverBg: 'hover:bg-rose-50/20',
+    focusRing: 'focus:ring-rose-500/50',
     description: 'Rose: สื่อถึงความปลอดภัยไซเบอร์ การป้องกันภัยคุกคาม และเกราะคุ้มกัน',
   },
   // Teal: Operations, Reliability, Helpdesk, Troubleshooting
@@ -185,6 +217,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-teal-200',
     activeBg: 'bg-teal-600 text-white',
     iconColor: 'text-teal-600',
+    hoverBorder: 'hover:border-teal-400',
+    hoverText: 'group-hover:text-teal-600',
+    hoverBg: 'hover:bg-teal-50/20',
+    focusRing: 'focus:ring-teal-500/50',
     description: 'Teal: สื่อถึงการดูแลบำรุงรักษา สนับสนุนด้านไอที และความเสถียร',
   },
   // Orange: Commercial, Growth, Deals, Technical Consultation
@@ -194,6 +230,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-orange-200',
     activeBg: 'bg-orange-600 text-white',
     iconColor: 'text-orange-600',
+    hoverBorder: 'hover:border-orange-400',
+    hoverText: 'group-hover:text-orange-600',
+    hoverBg: 'hover:bg-orange-50/20',
+    focusRing: 'focus:ring-orange-500/50',
     description: 'Orange: สื่อถึงการขายเชิงเทคนิค การเจรจา และการเติบโตทางธุรกิจ',
   },
   // Blue: Corporate Solutions, Enterprise Architecture, Integration
@@ -203,6 +243,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-blue-200',
     activeBg: 'bg-blue-600 text-white',
     iconColor: 'text-blue-600',
+    hoverBorder: 'hover:border-blue-400',
+    hoverText: 'group-hover:text-blue-600',
+    hoverBg: 'hover:bg-blue-50/20',
+    focusRing: 'focus:ring-blue-500/50',
     description: 'Blue: สื่อถึงโซลูชันไอทีแบบบูรณาการ และสถาปัตยกรรมองค์กร',
   },
   // Slate: General / Other
@@ -212,6 +256,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-slate-200',
     activeBg: 'bg-slate-700 text-white',
     iconColor: 'text-slate-500',
+    hoverBorder: 'hover:border-slate-400',
+    hoverText: 'group-hover:text-slate-800',
+    hoverBg: 'hover:bg-slate-50/20',
+    focusRing: 'focus:ring-slate-500/50',
     description: 'Slate: สายงานอื่นๆ หรือสายงานทั่วไป',
   },
   all: {
@@ -220,6 +268,10 @@ export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
     border: 'border-blue-200',
     activeBg: 'bg-blue-600 text-white',
     iconColor: 'text-blue-600',
+    hoverBorder: 'hover:border-blue-400',
+    hoverText: 'group-hover:text-blue-600',
+    hoverBg: 'hover:bg-blue-50/20',
+    focusRing: 'focus:ring-blue-500/50',
     description: 'Blue: ทุกสายงาน',
   },
 };
@@ -232,6 +284,10 @@ export const getCategoryTheme = (category: string): CategoryTheme => {
       border: 'border-slate-200',
       activeBg: 'bg-slate-700 text-white',
       iconColor: 'text-slate-500',
+      hoverBorder: 'hover:border-slate-400',
+      hoverText: 'group-hover:text-slate-800',
+      hoverBg: 'hover:bg-slate-50/20',
+      focusRing: 'focus:ring-slate-500/50',
       description: 'Default',
     }
   );
@@ -967,6 +1023,7 @@ export const Positions: React.FC = () => {
           /* Position Cards Grid / List (Ref: F10, F11, F18) */
           <div className="space-y-4">
             {positions.map((pos) => {
+              const theme = getCategoryTheme(pos.category);
               return (
                 <div
                   key={pos.position_id}
@@ -980,7 +1037,7 @@ export const Positions: React.FC = () => {
                     }
                   }}
                   aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title} ของ ${pos.company_name || 'สถานประกอบการ'}`}
-                  className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-blue-400/80 p-5 sm:p-6 shadow-2xs hover:shadow-md hover:bg-slate-50/40 transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                  className={`group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 ${theme.hoverBorder} ${theme.hoverBg} p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 ${theme.focusRing}`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 justify-between">
                     {/* Left: Logo & Core Info */}
@@ -1013,10 +1070,10 @@ export const Positions: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Position Title: Interactive Heading */}
-                        <h2 className="font-bold text-base sm:text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-snug flex items-center gap-1.5">
+                        {/* Position Title: Interactive Heading with Category Hover Color */}
+                        <h2 className={`font-bold text-base sm:text-lg text-slate-900 ${theme.hoverText} transition-colors leading-snug flex items-center gap-1.5`}>
                           <HighlightMatch text={pos.title} query={search} />
-                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-blue-600 shrink-0" aria-hidden="true" />
+                          <ChevronRight className={`w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ${theme.iconColor} shrink-0`} aria-hidden="true" />
                         </h2>
 
                         {/* Badges Row (Ref: F18) */}
@@ -1045,15 +1102,15 @@ export const Positions: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Qualifications Prompt (Concise Scan-friendly link, full details in modal) */}
+                        {/* Qualifications Prompt */}
                         {pos.qualification && (
                           <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
-                            <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden="true" />
+                            <GraduationCap className={`w-3.5 h-3.5 ${theme.iconColor} shrink-0`} aria-hidden="true" />
                             <span className="font-medium text-slate-700">มีกำหนดคุณสมบัติ</span>
                             <span className="text-slate-300">·</span>
-                            <span className="text-blue-600 font-medium group-hover:underline inline-flex items-center gap-0.5">
+                            <span className={`${theme.hoverText} font-medium group-hover:underline inline-flex items-center gap-0.5`}>
                               ตรวจสอบรายละเอียดเพิ่มเติม
-                              <ChevronRight className="w-3 h-3 text-blue-500" aria-hidden="true" />
+                              <ChevronRight className={`w-3 h-3 ${theme.iconColor}`} aria-hidden="true" />
                             </span>
                           </div>
                         )}
