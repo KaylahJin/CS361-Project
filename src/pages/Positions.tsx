@@ -1296,77 +1296,85 @@ export const Positions: React.FC = () => {
       </div>
 
       {/* Position Detail Modal (Ref: F10 Accessibility, F11 Dynamic CTA, F18 Key-Value Grid) */}
-      {activeModalPosition && (
-        <div
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseModal();
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
-        >
+      {activeModalPosition && (() => {
+        const modalTheme = getCategoryTheme(activeModalPosition.category);
+        const isModalInactive =
+          activeModalPosition.status === 'expired' || activeModalPosition.status === 'closed';
+
+        return (
           <div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-position-title"
-            aria-describedby="modal-position-description"
-            className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden relative my-auto animate-in zoom-in-95 duration-200"
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleCloseModal();
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
           >
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 p-6 sm:p-7 border-b border-slate-100 bg-gradient-to-b from-slate-50/50 to-white shrink-0">
-              <div className="flex items-start gap-4 flex-1 min-w-0">
-                <CompanyLogo
-                  logo={activeModalPosition.company_logo}
-                  name={activeModalPosition.company_name}
-                  shortName={activeModalPosition.company_short_name}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-xs font-semibold text-slate-500">
-                      {activeModalPosition.company_name || 'สถานประกอบการ'}
-                    </span>
-                    {activeModalPosition.company_province && (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        {activeModalPosition.company_province}
-                      </span>
-                    )}
-                  </div>
-                  <h3
-                    id="modal-position-title"
-                    className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug"
-                  >
-                    {activeModalPosition.title}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Close Button (X) with accessible name (Ref: F10) */}
-              <button
-                ref={initialFocusRef}
-                type="button"
-                onClick={handleCloseModal}
-                aria-label="ปิดหน้ารายละเอียด"
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* Modal Scrollable Body (Ref: F18 Key-Value Grid & Visual Hierarchy) */}
             <div
-              id="modal-position-description"
-              className="p-6 sm:p-7 overflow-y-auto space-y-6 text-sm text-slate-700"
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-position-title"
+              aria-describedby="modal-position-description"
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden relative my-auto animate-in zoom-in-95 duration-200"
             >
-              {/* Badges Strip (Ref: F18) */}
-              <div className="flex flex-wrap items-center gap-2 pb-2">
-                <CategoryBadge category={activeModalPosition.category} />
-                <WorkModeBadge mode={activeModalPosition.work_mode} />
-                <StatusBadge status={activeModalPosition.status} />
-                <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
-                  #{activeModalPosition.position_id}
-                </span>
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-4 p-6 sm:p-7 border-b border-slate-100 bg-gradient-to-b from-slate-50/50 to-white shrink-0">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <CompanyLogo
+                    logo={activeModalPosition.company_logo}
+                    name={activeModalPosition.company_name}
+                    shortName={activeModalPosition.company_short_name}
+                    isGrayscale={isModalInactive}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs font-semibold text-slate-500">
+                        {activeModalPosition.company_name || 'สถานประกอบการ'}
+                      </span>
+                      {activeModalPosition.company_province && (
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {activeModalPosition.company_province}
+                        </span>
+                      )}
+                    </div>
+                    <h3
+                      id="modal-position-title"
+                      className={`text-xl sm:text-2xl font-bold leading-snug ${
+                        isModalInactive ? 'text-slate-900' : modalTheme.text
+                      }`}
+                    >
+                      {activeModalPosition.title}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Close Button (X) with accessible name (Ref: F10) */}
+                <button
+                  ref={initialFocusRef}
+                  type="button"
+                  onClick={handleCloseModal}
+                  aria-label="ปิดหน้ารายละเอียด"
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
+
+              {/* Modal Scrollable Body (Ref: F18 Key-Value Grid & Visual Hierarchy) */}
+              <div
+                id="modal-position-description"
+                className="p-6 sm:p-7 overflow-y-auto space-y-6 text-sm text-slate-700"
+              >
+                {/* Badges Strip (Ref: F18) */}
+                <div className="flex flex-wrap items-center gap-2 pb-2">
+                  <CategoryBadge category={activeModalPosition.category} isSubdued={isModalInactive} />
+                  <WorkModeBadge mode={activeModalPosition.work_mode} isSubdued={isModalInactive} />
+                  <StatusBadge status={activeModalPosition.status} />
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
+                    #{activeModalPosition.position_id}
+                  </span>
+                </div>
 
               {/* Status Alert Notice (For closed / expired positions) */}
               {(activeModalPosition.status === 'closed' || activeModalPosition.status === 'expired') && (
@@ -1560,7 +1568,8 @@ export const Positions: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
     </main>
   );
 };
