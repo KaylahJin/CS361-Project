@@ -56,14 +56,29 @@ export async function getPositions(
       console.warn('Backend API unreachable, using local fallback positions data:', err);
       let filtered = (fallbackPositions || []) as unknown as Position[];
       if (params?.search) {
-        const s = params.search.toLowerCase();
-        filtered = filtered.filter((p) =>
-          (p.title && p.title.toLowerCase().includes(s)) ||
-          (p.company_name && p.company_name.toLowerCase().includes(s)) ||
-          (p.company_short_name && p.company_short_name.toLowerCase().includes(s)) ||
-          (p.location && p.location.toLowerCase().includes(s)) ||
-          (p.description && p.description.toLowerCase().includes(s))
-        );
+        const rawSearch = params.search.toLowerCase().trim();
+        const tokens = rawSearch.split(/\s+/).filter(Boolean);
+        filtered = filtered.filter((p) => {
+          const searchableText = [
+            p.title,
+            p.company_name,
+            p.company_short_name,
+            p.location,
+            p.description,
+            p.qualification,
+            p.application_url,
+            p.company_url,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+          return (
+            searchableText.includes(rawSearch) ||
+            tokens.every((t) => searchableText.includes(t)) ||
+            tokens.some((t) => t.length >= 3 && searchableText.includes(t))
+          );
+        });
       }
       if (params?.category) {
         filtered = filtered.filter((p) => p.category === params.category);

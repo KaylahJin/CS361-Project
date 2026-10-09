@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Cpu,
   Sparkles,
+  Globe,
 } from 'lucide-react';
 import { getPositions } from '../data/positionApi';
 import {
@@ -356,61 +357,62 @@ interface PositionCtaConfig {
   label: string;
   url: string | null;
   style: 'primary' | 'secondary' | 'info' | 'disabled';
+  iconType: 'apply' | 'globe' | 'source' | 'none';
 }
 
 const getPositionCtaConfig = (pos: Position): PositionCtaConfig => {
-  if (pos.status === 'open') {
-    if (pos.application_url) {
+  // Case 1: Direct application URL exists (highest priority)
+  if (pos.application_url) {
+    if (pos.status === 'open') {
       return {
         label: 'ไปช่องทางรับสมัคร',
         url: pos.application_url,
         style: 'primary',
+        iconType: 'apply',
       };
     }
-    if (pos.source_url) {
+    if (pos.status === 'closed' || pos.status === 'expired') {
       return {
-        label: 'ตรวจสอบประกาศทางการ',
-        url: pos.source_url,
-        style: 'primary',
+        label: 'ดูช่องทางรับสมัครย้อนหลัง',
+        url: pos.application_url,
+        style: 'secondary',
+        iconType: 'apply',
       };
     }
     return {
       label: 'ไปช่องทางรับสมัคร',
-      url: null,
-      style: 'disabled',
+      url: pos.application_url,
+      style: 'primary',
+      iconType: 'apply',
     };
   }
 
-  if (pos.status === 'closed' || pos.status === 'expired') {
-    const targetUrl = pos.application_url || pos.source_url;
-    if (targetUrl) {
-      return {
-        label: 'ดูประกาศต้นทางย้อนหลัง',
-        url: targetUrl,
-        style: 'secondary',
-      };
-    }
+  // Case 2: No direct application URL, but official company website exists
+  if (pos.company_url) {
+    const companyDisplayName = pos.company_short_name || pos.company_name || 'บริษัท';
     return {
-      label: 'ดูประกาศต้นทางย้อนหลัง',
-      url: null,
-      style: 'disabled',
+      label: `ไปยังเว็บไซต์ ${companyDisplayName}`,
+      url: pos.company_url,
+      style: pos.status === 'open' ? 'primary' : 'secondary',
+      iconType: 'globe',
     };
   }
 
-  // unknown or any other status
-  const fallbackUrl = pos.source_url || pos.application_url;
-  if (fallbackUrl) {
+  // Case 3: Fallback to department CSTU announcement
+  if (pos.source_url) {
     return {
-      label: 'ตรวจสอบประกาศทางการ',
-      url: fallbackUrl,
+      label: 'ดูประกาศในระบบ CSTU',
+      url: pos.source_url,
       style: 'info',
+      iconType: 'source',
     };
   }
 
   return {
-    label: 'ตรวจสอบประกาศทางการ',
+    label: 'ไม่มีลิงก์ภายนอก',
     url: null,
     style: 'disabled',
+    iconType: 'none',
   };
 };
 
@@ -461,7 +463,11 @@ const PositionCtaButton: React.FC<{
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-150 cursor-pointer ${styleClasses} ${sizeClasses} ${className}`}
     >
       <span>{config.label}</span>
-      <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      {config.iconType === 'globe' ? (
+        <Globe className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      )}
     </a>
   );
 };
@@ -1189,6 +1195,20 @@ export const Positions: React.FC = () => {
                       <span>จังหวัด{activeModalPosition.company_province}</span>
                     </div>
                   )}
+                  {activeModalPosition.company_url && (
+                    <div className="pt-1.5">
+                      <a
+                        href={activeModalPosition.company_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                      >
+                        <Globe className="w-3 h-3 text-blue-500" aria-hidden="true" />
+                        <span>เว็บไซต์ทางการสถานประกอบการ</span>
+                        <ExternalLink className="w-2.5 h-2.5 text-blue-400" aria-hidden="true" />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Grid Item 2: Work Mode & Location */}
@@ -1269,19 +1289,31 @@ export const Positions: React.FC = () => {
 
             {/* Modal Footer / Actions (Ref: F10, F11) */}
             <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              {activeModalPosition.source_url ? (
-                <a
-                  href={activeModalPosition.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 underline font-medium"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>ตรวจสอบประกาศทางการ</span>
-                </a>
-              ) : (
-                <div />
-              )}
+              <div className="flex items-center flex-wrap gap-3">
+                {activeModalPosition.source_url && (
+                  <a
+                    href={activeModalPosition.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 underline font-medium"
+                    title="เปิดหน้าประกาศเดิมใน Google Sites ของภาควิชา CSTU"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>ประกาศต้นทางในระบบ CSTU Co-op</span>
+                  </a>
+                )}
+                {activeModalPosition.company_url && activeModalPosition.application_url && (
+                  <a
+                    href={activeModalPosition.company_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-blue-600 underline font-medium"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                    <span>เว็บไซต์บริษัท</span>
+                  </a>
+                )}
+              </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <button

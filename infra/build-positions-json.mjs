@@ -72,6 +72,7 @@ for (const line of posLines) {
     company_short_name: company.short_name || null,
     company_logo: company.logo_filename || null,
     company_province: company.province || null,
+    company_url: company.url || null,
     title: parseVal(values[2]),
     category: parseVal(values[3]),
     description: parseVal(values[4]),
