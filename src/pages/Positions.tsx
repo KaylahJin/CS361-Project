@@ -100,6 +100,142 @@ const CompanyLogo: React.FC<{
   );
 };
 
+// ============================================================
+// Meaningful Category Color Themes & Icons (Ref: F18)
+// Conveys intuitive industry meaning for each specialized field
+// ============================================================
+export interface CategoryTheme {
+  bg: string;
+  text: string;
+  border: string;
+  activeBg: string;
+  iconColor: string;
+  description: string;
+}
+
+export const CATEGORY_THEMES: Record<string, CategoryTheme> = {
+  // Indigo / Royal: Code, Logic, Engineering, Development
+  software_development: {
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-700',
+    border: 'border-indigo-200',
+    activeBg: 'bg-indigo-600 text-white',
+    iconColor: 'text-indigo-600',
+    description: 'Indigo: สื่อถึงตรรกะ การเขียนโค้ด และการพัฒนาซอฟต์แวร์',
+  },
+  // Purple / Violet: Artificial Intelligence, Deep Tech, Data Science
+  data_ai: {
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+    border: 'border-purple-200',
+    activeBg: 'bg-purple-600 text-white',
+    iconColor: 'text-purple-600',
+    description: 'Purple: สื่อถึงความฉลาด ปัญญาประดิษฐ์ และการวิเคราะห์ข้อมูล',
+  },
+  // Sky / Cyan: Cloud Computing, DevOps, Distributed Systems
+  cloud_infrastructure_devops: {
+    bg: 'bg-sky-50',
+    text: 'text-sky-700',
+    border: 'border-sky-200',
+    activeBg: 'bg-sky-600 text-white',
+    iconColor: 'text-sky-600',
+    description: 'Sky Blue: สื่อถึงระบบคลาวด์ โครงสร้างพื้นฐาน และระบบเครือข่าย',
+  },
+  // Emerald / Green: Quality Assurance, Testing, Verified, Zero-Bug
+  qa_testing: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    border: 'border-emerald-200',
+    activeBg: 'bg-emerald-600 text-white',
+    iconColor: 'text-emerald-600',
+    description: 'Emerald: สื่อถึงการทดสอบผ่าน การรับประกันคุณภาพ และความถูกต้อง',
+  },
+  // Fuchsia / Pink: Creative Arts, Human-Centric Experience, UI/UX
+  ux_ui_design: {
+    bg: 'bg-fuchsia-50',
+    text: 'text-fuchsia-700',
+    border: 'border-fuchsia-200',
+    activeBg: 'bg-fuchsia-600 text-white',
+    iconColor: 'text-fuchsia-600',
+    description: 'Fuchsia: สื่อถึงความคิดสร้างสรรค์ การออกแบบ และประสบการณ์ผู้ใช้',
+  },
+  // Amber / Warm Gold: Business Strategy, Value, System Analysis
+  business_enterprise_systems: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-800',
+    border: 'border-amber-200',
+    activeBg: 'bg-amber-600 text-white',
+    iconColor: 'text-amber-600',
+    description: 'Amber: สื่อถึงการวิเคราะห์ธุรกิจ กระบวนการทำงาน และระบบองค์กร',
+  },
+  // Rose / Crimson: Cybersecurity, Protection, Firewall, Threat Defense
+  cybersecurity: {
+    bg: 'bg-rose-50',
+    text: 'text-rose-700',
+    border: 'border-rose-200',
+    activeBg: 'bg-rose-600 text-white',
+    iconColor: 'text-rose-600',
+    description: 'Rose: สื่อถึงความปลอดภัยไซเบอร์ การป้องกันภัยคุกคาม และเกราะคุ้มกัน',
+  },
+  // Teal: Operations, Reliability, Helpdesk, Troubleshooting
+  it_support_operations: {
+    bg: 'bg-teal-50',
+    text: 'text-teal-700',
+    border: 'border-teal-200',
+    activeBg: 'bg-teal-600 text-white',
+    iconColor: 'text-teal-600',
+    description: 'Teal: สื่อถึงการดูแลบำรุงรักษา สนับสนุนด้านไอที และความเสถียร',
+  },
+  // Orange: Commercial, Growth, Deals, Technical Consultation
+  technical_sales: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
+    activeBg: 'bg-orange-600 text-white',
+    iconColor: 'text-orange-600',
+    description: 'Orange: สื่อถึงการขายเชิงเทคนิค การเจรจา และการเติบโตทางธุรกิจ',
+  },
+  // Blue: Corporate Solutions, Enterprise Architecture, Integration
+  it_solutions: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    activeBg: 'bg-blue-600 text-white',
+    iconColor: 'text-blue-600',
+    description: 'Blue: สื่อถึงโซลูชันไอทีแบบบูรณาการ และสถาปัตยกรรมองค์กร',
+  },
+  // Slate: General / Other
+  other: {
+    bg: 'bg-slate-100',
+    text: 'text-slate-700',
+    border: 'border-slate-200',
+    activeBg: 'bg-slate-700 text-white',
+    iconColor: 'text-slate-500',
+    description: 'Slate: สายงานอื่นๆ หรือสายงานทั่วไป',
+  },
+  all: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    activeBg: 'bg-blue-600 text-white',
+    iconColor: 'text-blue-600',
+    description: 'Blue: ทุกสายงาน',
+  },
+};
+
+export const getCategoryTheme = (category: string): CategoryTheme => {
+  return (
+    CATEGORY_THEMES[category] || {
+      bg: 'bg-slate-100',
+      text: 'text-slate-700',
+      border: 'border-slate-200',
+      activeBg: 'bg-slate-700 text-white',
+      iconColor: 'text-slate-500',
+      description: 'Default',
+    }
+  );
+};
+
 // Category icon helper (Ref: F18)
 export const getCategoryIcon = (category: PositionCategory | string, className: string = 'w-3.5 h-3.5') => {
   switch (category) {
@@ -130,17 +266,18 @@ export const getCategoryIcon = (category: PositionCategory | string, className: 
   }
 };
 
-// Category badge with icon and styling
+// Category badge with tailored semantic color and icon (Ref: F18)
 export const CategoryBadge: React.FC<{ category: PositionCategory | string; className?: string }> = ({
   category,
   className = '',
 }) => {
   const label = CATEGORY_LABELS[category as PositionCategory] || category;
+  const theme = getCategoryTheme(category);
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100/90 ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${theme.bg} ${theme.text} border ${theme.border} ${className}`}
     >
-      {getCategoryIcon(category, 'w-3.5 h-3.5 text-blue-600 shrink-0')}
+      {getCategoryIcon(category, `w-3.5 h-3.5 ${theme.iconColor} shrink-0`)}
       <span>{label}</span>
     </span>
   );
@@ -556,7 +693,7 @@ export const Positions: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Category Filter Pills with Icons (Ref: F18) */}
+          {/* Quick Category Filter Pills with Semantic Theme Colors (Ref: F18) */}
           <div className="pt-2">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none text-xs">
               <span className="text-slate-400 font-semibold shrink-0 mr-1 flex items-center gap-1">
@@ -572,6 +709,7 @@ export const Positions: React.FC = () => {
                 { key: 'business_enterprise_systems', label: 'Business & Systems', icon: BarChart3 },
               ].map((c) => {
                 const isSelected = selectedCategory === c.key;
+                const theme = getCategoryTheme(c.key);
                 const Icon = c.icon;
                 return (
                   <button
@@ -580,11 +718,11 @@ export const Positions: React.FC = () => {
                     onClick={() => setSelectedCategory(isSelected && c.key !== 'all' ? 'all' : c.key)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600 text-white shadow-2xs'
+                        ? `${theme.activeBg} shadow-2xs`
                         : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : theme.iconColor}`} />
                     <span>{c.label}</span>
                   </button>
                 );
@@ -661,13 +799,13 @@ export const Positions: React.FC = () => {
               </span>
 
               {selectedCategory !== 'all' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                  {getCategoryIcon(selectedCategory, 'w-3 h-3 text-blue-600')}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${getCategoryTheme(selectedCategory).bg} ${getCategoryTheme(selectedCategory).text} border ${getCategoryTheme(selectedCategory).border}`}>
+                  {getCategoryIcon(selectedCategory, `w-3 h-3 ${getCategoryTheme(selectedCategory).iconColor}`)}
                   <span>สายงาน: {CATEGORY_LABELS[selectedCategory as PositionCategory] || selectedCategory}</span>
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('all')}
-                    className="hover:text-blue-950 p-0.5 cursor-pointer rounded-full hover:bg-blue-200/50 ml-0.5"
+                    className="hover:opacity-80 p-0.5 cursor-pointer rounded-full hover:bg-black/10 ml-0.5"
                     title="ยกเลิกตัวกรองสายงานนี้"
                     aria-label="ยกเลิกตัวกรองสายงาน"
                   >
@@ -872,7 +1010,7 @@ export const Positions: React.FC = () => {
 
                         {/* Badges Row (Ref: F18) */}
                         <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                          {/* Category Badge with Icon */}
+                          {/* Category Badge with Color Theme & Icon */}
                           <CategoryBadge category={pos.category} />
 
                           {/* Work Mode */}
@@ -1070,14 +1208,13 @@ export const Positions: React.FC = () => {
                 {/* Grid Item 3: Category & Reference ID */}
                 <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                    <Briefcase className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+                    <Briefcase className="w-4 h-4 text-slate-500" aria-hidden="true" />
                     <span>สายงานและรหัสตำแหน่ง</span>
                   </div>
-                  <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5 pt-0.5">
-                    {getCategoryIcon(activeModalPosition.category, 'w-4 h-4 text-blue-600 shrink-0')}
-                    <span>{CATEGORY_LABELS[activeModalPosition.category] || activeModalPosition.category}</span>
+                  <div className="pt-1">
+                    <CategoryBadge category={activeModalPosition.category} className="text-xs sm:text-sm py-1 px-3" />
                   </div>
-                  <div className="text-xs font-mono text-slate-400 pt-0.5">
+                  <div className="text-xs font-mono text-slate-400 pt-1">
                     Position Code: #{activeModalPosition.position_id}
                   </div>
                 </div>
