@@ -1014,7 +1014,7 @@ export const Positions: React.FC = () => {
                         </div>
 
                         {/* Position Title: Interactive Heading */}
-                        <h2 className="font-extrabold text-base sm:text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-snug flex items-center gap-1.5">
+                        <h2 className="font-bold text-base sm:text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-snug flex items-center gap-1.5">
                           <HighlightMatch text={pos.title} query={search} />
                           <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-blue-600 shrink-0" aria-hidden="true" />
                         </h2>
@@ -1138,7 +1138,7 @@ export const Positions: React.FC = () => {
                   </div>
                   <h3
                     id="modal-position-title"
-                    className="text-xl sm:text-2xl font-black text-slate-900 leading-snug"
+                    className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug"
                   >
                     {activeModalPosition.title}
                   </h3>
