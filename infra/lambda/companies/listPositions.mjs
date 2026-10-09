@@ -65,9 +65,11 @@ export async function listPositions(event) {
     const values = [];
 
     if (isProvided(search)) {
-      values.push(`%${search}%`);
+      // trim and escape %, _, \
+      const term = search.trim().replace(/[\\%_]/g, '\\$&');
+      values.push(`%${term}%`);
       const idx = values.length;
-      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx})`);
+      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx} OR p.location ILIKE $${idx})`);
     }
 
     if (isProvided(category)) {
