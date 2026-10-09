@@ -431,6 +431,7 @@ const PositionCtaButton: React.FC<{
   if (!config.url || config.style === 'disabled') {
     return (
       <span
+        onClick={(e) => e.stopPropagation()}
         className={`inline-flex items-center justify-center gap-1.5 rounded-xl font-medium bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none ${sizeClasses} ${className}`}
         title="ไม่มีลิงก์ภายนอกสำหรับตำแหน่งนี้"
       >
@@ -460,6 +461,7 @@ const PositionCtaButton: React.FC<{
       href={config.url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl transition-all duration-150 cursor-pointer ${styleClasses} ${sizeClasses} ${className}`}
     >
       <span>{config.label}</span>
@@ -968,7 +970,17 @@ export const Positions: React.FC = () => {
               return (
                 <div
                   key={pos.position_id}
-                  className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 relative overflow-hidden"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenModal(pos)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenModal(pos);
+                    }
+                  }}
+                  aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title} ของ ${pos.company_name || 'สถานประกอบการ'}`}
+                  className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-blue-400/80 p-5 sm:p-6 shadow-2xs hover:shadow-md hover:bg-slate-50/40 transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/60"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 justify-between">
                     {/* Left: Logo & Core Info */}
@@ -1001,17 +1013,10 @@ export const Positions: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Position Title: Accessible Interactive Heading (Ref: F10) */}
-                        <h2>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenModal(pos)}
-                            aria-haspopup="dialog"
-                            className="text-left font-extrabold text-base sm:text-lg text-slate-900 hover:text-blue-600 focus:text-blue-600 transition-colors leading-snug cursor-pointer flex items-center gap-1.5 group/title focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-0.5 -ml-0.5"
-                          >
-                            <HighlightMatch text={pos.title} query={search} />
-                            <ChevronRight className="w-4 h-4 opacity-0 group-hover/title:opacity-100 group-focus/title:opacity-100 group-hover/title:translate-x-0.5 transition-all text-blue-600 shrink-0" aria-hidden="true" />
-                          </button>
+                        {/* Position Title: Interactive Heading */}
+                        <h2 className="font-extrabold text-base sm:text-lg text-slate-900 group-hover:text-blue-600 transition-colors leading-snug flex items-center gap-1.5">
+                          <HighlightMatch text={pos.title} query={search} />
+                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-blue-600 shrink-0" aria-hidden="true" />
                         </h2>
 
                         {/* Badges Row (Ref: F18) */}
@@ -1040,14 +1045,16 @@ export const Positions: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Qualifications Snippet */}
+                        {/* Qualifications Prompt (Concise Scan-friendly link, full details in modal) */}
                         {pos.qualification && (
-                          <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-500">
-                            <GraduationCap className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                            <p className="line-clamp-1 italic">
-                              คุณสมบัติ:{' '}
-                              <HighlightMatch text={pos.qualification} query={search} />
-                            </p>
+                          <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden="true" />
+                            <span className="font-medium text-slate-700">มีกำหนดคุณสมบัติ</span>
+                            <span className="text-slate-300">·</span>
+                            <span className="text-blue-600 font-medium group-hover:underline inline-flex items-center gap-0.5">
+                              ตรวจสอบรายละเอียดเพิ่มเติม
+                              <ChevronRight className="w-3 h-3 text-blue-500" aria-hidden="true" />
+                            </span>
                           </div>
                         )}
                       </div>
@@ -1058,7 +1065,10 @@ export const Positions: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => handleOpenModal(pos)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenModal(pos);
+                          }}
                           aria-haspopup="dialog"
                           aria-label={`ดูรายละเอียดตำแหน่ง ${pos.title}`}
                           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1074,6 +1084,7 @@ export const Positions: React.FC = () => {
                           href={pos.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="text-[11px] text-slate-400 hover:text-blue-600 underline transition-colors self-end sm:self-auto"
                         >
                           แหล่งที่มาประกาศ
