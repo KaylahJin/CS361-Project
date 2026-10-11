@@ -249,3 +249,13 @@ CREATE TRIGGER trg_coop_plans_updated_at
 CREATE INDEX idx_coop_plans_student  ON coop_plans(student_id);
 CREATE INDEX idx_coop_plans_position ON coop_plans(position_id);
 CREATE INDEX idx_coop_plans_period   ON coop_plans(period_id);
+
+-- 8. position_periods — ตำแหน่งกับรอบสหกิจ
+CREATE TABLE IF NOT EXISTS position_periods (
+  position_id VARCHAR(10) NOT NULL REFERENCES positions(position_id) ON DELETE CASCADE,
+  period_id VARCHAR(20) NOT NULL REFERENCES periods(period_id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (position_id, period_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_position_periods_period ON position_periods(period_id);
