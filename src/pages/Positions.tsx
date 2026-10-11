@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Search,
   Briefcase,
@@ -170,8 +170,17 @@ export const Positions: React.FC = () => {
   // Modal detail view
   const [activeModalPosition, setActiveModalPosition] = useState<Position | null>(null);
 
+  // กันผลลัพธ์เก่าทับผลลัพธ์ใหม่: ยกเลิก request เดิม + เทียบรหัส request
+  const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+
   // Fetch positions from API
-  const fetchPositions = async () => {
+  const fetchPositions = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
+
     setLoading(true);
     setError(null);
     try {
@@ -181,24 +190,33 @@ export const Positions: React.FC = () => {
       if (selectedWorkMode !== 'all') params.work_mode = selectedWorkMode as WorkMode;
       if (selectedStatus !== 'all') params.status = selectedStatus as PositionStatus;
 
-      const data = await getPositions(params);
+      const data = await getPositions(params, { signal: controller.signal });
+      if (requestId !== requestIdRef.current) return; // มี request ใหม่กว่าแล้ว ทิ้งผลนี้
       setPositions(data);
     } catch (err) {
+      // ถูกยกเลิกหรือถูกแทนที่ด้วยคำค้นใหม่ ไม่ต้องแสดง Error
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
       console.error('Failed to fetch positions from API:', err);
+      setPositions([]); // ไม่ให้ค้างรายการเก่าไว้ใต้ Error
       setError(err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อกับ Position API ได้');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  };
+  }, [search, selectedCategory, selectedWorkMode, selectedStatus]);
 
   // Debounced search / trigger on filter change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPositions();
-    }, 250);
-
+    const timer = setTimeout(fetchPositions, 250);
     return () => clearTimeout(timer);
-  }, [search, selectedCategory, selectedWorkMode, selectedStatus]);
+  }, [fetchPositions]);
+
+  // ยกเลิก request ที่ค้างอยู่เมื่อออกจากหน้านี้
+  useEffect(() => {
+    return () => {
+      requestIdRef.current++;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Reset all filters
   const handleClearFilters = () => {
@@ -272,7 +290,7 @@ export const Positions: React.FC = () => {
             {/* Results Count & Clear Button */}
             <div className="flex items-center justify-between sm:justify-end gap-3 text-xs sm:text-sm">
               <span className="font-semibold text-slate-600">
-                {!loading && `${positions.length} ตำแหน่งงาน`}
+                  {!loading && !error && `${positions.length} ตำแหน่งงาน`}
               </span>
               {hasActiveFilters && (
                 <button
@@ -293,7 +311,7 @@ export const Positions: React.FC = () => {
                 <Search className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
                   ผลการค้นหาด้วยคำสำคัญ: <strong className="font-bold underline decoration-blue-400">"{search}"</strong>
-                  {!loading && (
+                  {!loading && !error && (
                     <span className="ml-1 text-blue-900 font-bold">
                       (พบ {positions.length} รายการ)
                     </span>
@@ -495,7 +513,7 @@ export const Positions: React.FC = () => {
           </div>
         ) : error ? (
           /* Error State */
-          <div className="bg-rose-50 border border-rose-200 rounded-3xl p-8 text-center max-w-xl mx-auto my-12">
+          <div role="alert" className="bg-rose-50 border border-rose-200 rounded-3xl p-8 text-center max-w-xl mx-auto my-12">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-6 h-6" />
             </div>
@@ -504,7 +522,7 @@ export const Positions: React.FC = () => {
             </h3>
             <p className="text-sm text-slate-600 mb-6">{error}</p>
             <button
-              onClick={fetchPositions}
+              onClick={() => fetchPositions()}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
             >
               <RotateCw className="w-4 h-4" />

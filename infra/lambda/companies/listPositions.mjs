@@ -4,7 +4,7 @@
 // Issue: #38 — พัฒนา API สำหรับเรียกข้อมูล Position/Project
 //
 // Query params (all optional):
-//   search     -> ILIKE against p.title OR c.name OR c.short_name
+//   search     -> ILIKE against p.title OR c.name OR c.short_name OR p.location
 //   category   -> exact match against p.category
 //   work_mode  -> exact match against p.work_mode
 //   status     -> exact match against p.status
@@ -65,9 +65,11 @@ export async function listPositions(event) {
     const values = [];
 
     if (isProvided(search)) {
-      values.push(`%${search}%`);
+      // trim and escape %, _, \
+      const term = search.trim().replace(/[\\%_]/g, '\\$&');
+      values.push(`%${term}%`);
       const idx = values.length;
-      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx})`);
+      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx} OR p.location ILIKE $${idx})`);
     }
 
     if (isProvided(category)) {

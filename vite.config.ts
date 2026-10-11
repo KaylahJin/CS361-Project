@@ -12,6 +12,7 @@ function mockPositionsApiPlugin() {
       server.middlewares.use((req: any, res: any, next: any) => {
         const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
         if (parsedUrl.pathname === '/positions' && req.method === 'GET') {
+          res.setHeader('X-Data-Source', 'mock:positionsData.json');
           const filePath = path.resolve(process.cwd(), 'src/data/positionsData.json');
           if (!fs.existsSync(filePath)) {
             next();
@@ -30,8 +31,7 @@ function mockPositionsApiPlugin() {
               (p.title && p.title.toLowerCase().includes(search)) ||
               (p.company_name && p.company_name.toLowerCase().includes(search)) ||
               (p.company_short_name && p.company_short_name.toLowerCase().includes(search)) ||
-              (p.location && p.location.toLowerCase().includes(search)) ||
-              (p.description && p.description.toLowerCase().includes(search))
+              (p.location && p.location.toLowerCase().includes(search))
             );
           }
           if (category) {
