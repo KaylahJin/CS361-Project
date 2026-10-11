@@ -4,7 +4,7 @@
 // Issue: #38 — พัฒนา API สำหรับเรียกข้อมูล Position/Project
 //
 // Query params (all optional):
-//   search     -> ILIKE against p.title OR c.name OR c.short_name
+//   search     -> ILIKE against p.title OR c.name OR c.short_name OR p.location
 //   category   -> exact match against p.category
 //   work_mode  -> exact match against p.work_mode
 //   status     -> exact match against p.status
