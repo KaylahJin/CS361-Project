@@ -21,6 +21,25 @@ export async function listPeriods(event) {
     const search = params.search;
 
     // ==========================================================
+    // 0. Fetch all periods (active first) for frontend dropdown
+    // ==========================================================
+    const allPeriodsResult = await getPool().query(`
+      SELECT
+        p.period_id,
+        p.name,
+        p.academic_year,
+        p.semester,
+        p.is_active,
+        p.created_at
+      FROM periods p
+      ORDER BY
+        p.is_active DESC,
+        p.academic_year DESC,
+        p.semester DESC
+    `);
+    const allPeriods = allPeriodsResult.rows;
+
+    // ==========================================================
     // 1. Find the requested period
     // ==========================================================
 
@@ -74,6 +93,7 @@ export async function listPeriods(event) {
     if (periodResult.rows.length === 0) {
       return jsonResponse(200, {
         period: null,
+        all_periods: allPeriods,
         schedules: [],
       });
     }
@@ -84,13 +104,13 @@ export async function listPeriods(event) {
     // 3. Find schedules belonging to this period
     // ==========================================================
 
-    const conditions = [
-      `s.period_id = $1`,
-    ];
-
-    const values = [
-      period.period_id,
-    ];
+    const conditions = [];
+    const values = [];
+    
+    if (isProvided(periodId)) {
+      values.push(period.period_id);
+      conditions.push(`s.period_id = $${values.length}`);
+    }
 
     // ----------------------------------------------------------
     // Filter: activity_type
@@ -117,6 +137,8 @@ export async function listPeriods(event) {
       );
     }
 
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
     const scheduleQuery = `
       SELECT
         s.schedule_id,
@@ -129,7 +151,7 @@ export async function listPeriods(event) {
         s.step_order,
         s.created_at
       FROM coop_schedules s
-      WHERE ${conditions.join(' AND ')}
+      ${whereClause}
       ORDER BY
         s.step_order ASC,
         s.start_date ASC
@@ -146,6 +168,7 @@ export async function listPeriods(event) {
 
     return jsonResponse(200, {
       period,
+      all_periods: allPeriods,
       schedules: scheduleResult.rows,
     });
 

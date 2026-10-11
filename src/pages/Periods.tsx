@@ -190,12 +190,11 @@ export const Periods: React.FC = () => {
                                 className="w-full px-3 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             >
                                 <option value="">ทุกรอบการศึกษา</option>
-
-                                {timelineData?.period && (
-                                    <option value={timelineData.period.period_id}>
-                                        {timelineData.period.name}
+                                {timelineData?.all_periods?.map((p) => (
+                                    <option key={p.period_id} value={p.period_id}>
+                                        {p.name} {p.is_active ? '(กำลังดำเนินการ)' : ''}
                                     </option>
-                                )}
+                                ))}
                             </select>
                         </div>
 
@@ -263,7 +262,7 @@ export const Periods: React.FC = () => {
             </section>
 
             {/* Period Information */}
-            {timelineData?.period && (
+            {Boolean(selectedPeriod) && timelineData?.period && (
                 <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
                     <div className="border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-white shadow-2xs">
 
@@ -312,17 +311,62 @@ export const Periods: React.FC = () => {
                 )}
 
                 {/* Schedule List */}
-                {!loading &&
-                    !error &&
-                    timelineData?.schedules &&
-                    timelineData.schedules.length > 0 &&
-                    timelineData.schedules.map((schedule, index) => (
-                        <ScheduleCard
-                            key={schedule.schedule_id}
-                            schedule={schedule}
-                            index={index}
-                        />
-                    ))}
+                {!loading && !error && timelineData?.schedules && timelineData.schedules.length > 0 && (
+                    !selectedPeriod ? (
+                        timelineData.all_periods?.map((period) => {
+                            const periodSchedules = timelineData.schedules.filter(
+                                (s) => s.period_id === period.period_id
+                            );
+
+                            if (periodSchedules.length === 0) return null;
+
+                            return (
+                                <div key={period.period_id} className="space-y-4 pt-6 first:pt-0">
+                                    {/* การ์ดหัวข้อใหญ่กำกับของแต่ละเทอม */}
+                                    <div className="border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-slate-50/70 shadow-2xs">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            {period.is_active ? (
+                                                <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs sm:text-sm font-medium text-green-700">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    กำลังดำเนินการ
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-2 rounded-full bg-slate-200/70 px-3 py-1 text-xs sm:text-sm font-medium text-slate-600">
+                                                    <CircleMinus className="w-4 h-4" />
+                                                    ไม่ดำเนินการ
+                                                </span>
+                                            )}
+                                            <h2 className="font-bold text-slate-900 text-base sm:text-lg">
+                                                {period.name}
+                                            </h2>
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-slate-500 mt-2">
+                                            ปีการศึกษา {period.academic_year} ภาคเรียนที่ {period.semester}
+                                        </p>
+                                    </div>
+
+                                    {/* รายการกิจกรรมของเทอมนั้น */}
+                                    {periodSchedules.map((schedule, index) => (
+                                        <ScheduleCard
+                                            key={schedule.schedule_id}
+                                            schedule={schedule}
+                                            index={index}
+                                        />
+                                    ))}
+                                </div>
+                            );
+                        })
+                    ) : (
+                        // กรณี: เลือกรอบเจาะจง -> แสดงรายการตามปกติ
+                        timelineData.schedules.map((schedule, index) => (
+                            <ScheduleCard
+                                key={schedule.schedule_id}
+                                schedule={schedule}
+                                index={index}
+                            />
+                        ))
+                    )
+                )}
 
                 {/* Empty */}
                 {!loading &&
