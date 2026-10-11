@@ -273,3 +273,12 @@ FROM (VALUES
 WHERE NOT EXISTS (
     SELECT 1 FROM coop_plans p WHERE p.student_id = v.student_id
 );
+
+INSERT INTO position_periods (position_id, period_id)
+VALUES 
+  ('POS021', '2568-1'),
+  ('POS022', '2568-1'),
+  ('POS023', '2568-1'),
+  ('POS029', '2568-2'),
+  ('POS051', '2568-1')
+ON CONFLICT (position_id, period_id) DO NOTHING;
