@@ -42,7 +42,8 @@ async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
 /**
  * Fetch positions with optional search & filter parameters.
  *
- * @param params - Optional query parameters (search, category, work_mode, status, company_id)
+ * @param params Optional query parameters (search, category, work_mode, status, company_id, period_id)
+ * @param options Optional fetch options including AbortSignal
  * @returns Promise<Position[]> - List of positions
  */
 export async function getPositions(
@@ -55,6 +56,7 @@ export async function getPositions(
   if (params?.work_mode) qs.set('work_mode', params.work_mode);
   if (params?.status) qs.set('status', params.status);
   if (params?.company_id) qs.set('company_id', params.company_id);
+  if (params?.period_id) qs.set('period_id', params.period_id);
 
   const queryStr = qs.toString();
   const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
@@ -64,7 +66,7 @@ export async function getPositions(
 /**
  * Fetch a single position by ID.
  *
- * @param positionId - Position ID (e.g. 'POS001')
+ * @param positionId Position ID (e.g. 'POS001')
  * @returns Promise<Position> - Position details with joined company information
  */
 export async function getPosition(positionId: string): Promise<Position> {

@@ -41,6 +41,12 @@ export interface Position {
   status: PositionStatus;               // open | closed | expired | unknown
   source_url?: string | null;           // Announcement source URL
   created_at?: string;                  // Timestamp
+  periods?: Array<{                     // Period Array
+    period_id: string;                  // Period Array
+    name: string;
+    academic_year: number;
+    semester: string;
+  }>;
 }
 
 /** Query parameters for GET /positions */
@@ -50,6 +56,7 @@ export interface PositionQueryParams {
   work_mode?: WorkMode | string;        // Filter by work mode
   status?: PositionStatus | string;     // Filter by status
   company_id?: string;                  // Filter by company
+  period_id?: string;                   // Filter by period
 }
 
 /** Human-readable category display names */
