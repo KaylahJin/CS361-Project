@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, Search, X } from 'lucide-react';
+import { Calendar, ExternalLink, Search, X } from 'lucide-react';
 import { getCompanies, CompanyApiError } from '../data/companyApi';
 import type { Company, ProvinceOption } from '../types/company';
+import { DATA_CONTEXT } from '../constants/dataContext';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -45,7 +46,7 @@ const EmployerCard: React.FC<{ company: Company; index: number }> = ({ company, 
               {company.name}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
-              {company.location}
+              {company.location || 'ไม่ได้ระบุที่ตั้ง'}
             </p>
           </div>
         </div>
@@ -148,6 +149,13 @@ export const Employers: React.FC = () => {
             {totalCount} companies partner with us for cooperative education!
           </p>
         )}
+
+        <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100/80 text-blue-700 text-xs sm:text-sm font-semibold">
+          <Calendar className="w-3.5 h-3.5" />
+          <span>{DATA_CONTEXT.academicYearLabel}</span>
+          <span className="text-blue-300">·</span>
+          <span>ตรวจสอบล่าสุด {DATA_CONTEXT.lastVerifiedDate}</span>
+        </div>
       </section>
 
       {/* Search + Province Filter */}
@@ -220,7 +228,7 @@ export const Employers: React.FC = () => {
         </div>
         <div>
           <span className="text-xs text-slate-400 tracking-wide">
-            อัปเดตล่าสุด 01/09/2569
+            อัปเดตล่าสุด {DATA_CONTEXT.lastVerifiedDate}
           </span>
         </div>
       </div>
