@@ -4,11 +4,12 @@
 // Issue: #38 — พัฒนา API สำหรับเรียกข้อมูล Position/Project
 //
 // Query params (all optional):
-//   search     -> ILIKE against p.title OR c.name OR c.short_name
+//   search     -> ILIKE against p.title OR c.name OR c.short_name OR p.location
 //   category   -> exact match against p.category
 //   work_mode  -> exact match against p.work_mode
 //   status     -> exact match against p.status
 //   company_id -> exact match against p.company_id
+//   period_id  -> exact match against pp.period_id OR 'unspecified'
 //
 // Response: 200 with a BARE JSON ARRAY of Position objects with joined company info.
 //
@@ -35,9 +36,22 @@ const SELECT_POSITIONS = `SELECT
     p.application_url,
     p.status,
     p.source_url,
-    p.created_at
+    p.created_at,
+    COALESCE(
+      json_agg(
+        json_build_object(
+          'period_id', per.period_id,
+          'name', per.name,
+          'academic_year', per.academic_year,
+          'semester', per.semester
+        )
+      ) FILTER (WHERE per.period_id IS NOT NULL),
+      '[]'
+    ) AS periods
 FROM positions p
-LEFT JOIN companies c ON p.company_id = c.company_id`;
+LEFT JOIN companies c ON p.company_id = c.company_id
+LEFT JOIN position_periods pp ON p.position_id = pp.position_id
+LEFT JOIN periods per ON pp.period_id = per.period_id`;
 
 /**
  * Check if query param is non-empty string.
@@ -57,17 +71,19 @@ function isProvided(value) {
 export async function listPositions(event) {
   try {
     const params = event?.queryStringParameters ?? {};
-    const { search, category, work_mode, status, company_id } = params;
+    const { search, category, work_mode, status, company_id, period_id } = params;
 
     /** @type {string[]} */
     const conditions = [];
-    /** @type {string[]} */
+    /** @type {any[]} */
     const values = [];
 
     if (isProvided(search)) {
-      values.push(`%${search}%`);
+      // trim and escape %, _, \
+      const term = search.trim().replace(/[\\%_]/g, '\\$&');
+      values.push(`%${term}%`);
       const idx = values.length;
-      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx})`);
+      conditions.push(`(p.title ILIKE $${idx} OR c.name ILIKE $${idx} OR c.short_name ILIKE $${idx} OR p.location ILIKE $${idx})`);
     }
 
     if (isProvided(category)) {
@@ -90,8 +106,48 @@ export async function listPositions(event) {
       conditions.push(`p.company_id = $${values.length}`);
     }
 
+    // ฟิลเตอร์รอบสหกิจ (F03)
+    if (isProvided(period_id) && period_id !== 'all') {
+      if (period_id === 'unspecified') {
+        // ตำแหน่งที่ยังไม่ผูกกับรอบใดๆ เลย
+        conditions.push(`NOT EXISTS (
+          SELECT 1 FROM position_periods pp_check 
+          WHERE pp_check.position_id = p.position_id
+        )`);
+      } else {
+        // ตำแหน่งที่เปิดรับในรอบนี้ (แต่ยังคงดึงรอบอื่นๆ ของตำแหน่งนี้มาแสดงครบ)
+        values.push(period_id);
+        conditions.push(`EXISTS (
+          SELECT 1 FROM position_periods pp_check 
+          WHERE pp_check.position_id = p.position_id AND pp_check.period_id = $${values.length}
+        )`);
+      }
+    }
+
     const where = conditions.length > 0 ? `\nWHERE ${conditions.join(' AND ')}` : '';
-    const text = `${SELECT_POSITIONS}${where}\nORDER BY p.position_id ASC`;
+    
+    // ต้อง GROUP BY ทุกคอลัมน์ของ positions และ companies เพราะมีการทำ json_agg(per.*)
+    const groupBy = `
+GROUP BY 
+    p.position_id,
+    p.company_id,
+    c.name,
+    c.short_name,
+    c.logo_filename,
+    c.province,
+    p.title,
+    p.category,
+    p.description,
+    p.qualification,
+    p.location,
+    p.work_mode,
+    p.application_deadline,
+    p.application_url,
+    p.status,
+    p.source_url,
+    p.created_at`;
+
+    const text = `${SELECT_POSITIONS}${where}${groupBy}\nORDER BY p.position_id ASC`;
 
     const result = await getPool().query(text, values);
 

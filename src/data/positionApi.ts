@@ -7,8 +7,6 @@
 
 import type { Position, PositionQueryParams } from '../types/position';
 
-import fallbackPositions from './positionsData.json';
-
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export class PositionApiError extends Error {
@@ -21,99 +19,56 @@ export class PositionApiError extends Error {
   }
 }
 
+async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(url, { signal });
+  } catch (err) {
+    // ถูกยกเลิกโดย AbortController ให้โยนต่อไปตามเดิม
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    // เครือข่ายล้มเหลว (offline / CORS / server ล่ม)
+    throw new PositionApiError(
+      'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+      0
+    );
+  }
+
+  if (!res.ok) {
+    throw new PositionApiError(`โหลดข้อมูลไม่สำเร็จ (รหัส ${res.status})`, res.status);
+  }
+  return res.json() as Promise<T>;
+}
+
 /**
  * Fetch positions with optional search & filter parameters.
  *
- * @param params - Optional query parameters (search, category, work_mode, status, company_id)
+ * @param params Optional query parameters (search, category, work_mode, status, company_id, period_id)
+ * @param options Optional fetch options including AbortSignal
  * @returns Promise<Position[]> - List of positions
  */
 export async function getPositions(
-  params?: PositionQueryParams
+  params?: PositionQueryParams,
+  options?: { signal?: AbortSignal }
 ): Promise<Position[]> {
-  try {
-    const qs = new URLSearchParams();
-    if (params?.search) qs.set('search', params.search);
-    if (params?.category) qs.set('category', params.category);
-    if (params?.work_mode) qs.set('work_mode', params.work_mode);
-    if (params?.status) qs.set('status', params.status);
-    if (params?.company_id) qs.set('company_id', params.company_id);
-
-    const queryStr = qs.toString();
-    const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
-    const res = await fetch(url);
-
-    if (!res.ok) {
-      throw new PositionApiError(
-        `Failed to fetch positions: ${res.statusText}`,
-        res.status
-      );
-    }
-
-    return await res.json();
-  } catch (err) {
-    // If network error (dev server stopped or offline), fallback gracefully to local dataset
-    if (err instanceof TypeError && err.message.includes('fetch')) {
-      console.warn('Backend API unreachable, using local fallback positions data:', err);
-      let filtered = (fallbackPositions || []) as unknown as Position[];
-      if (params?.search) {
-        const rawSearch = params.search.toLowerCase().trim();
-        const tokens = rawSearch.split(/\s+/).filter(Boolean);
-        filtered = filtered.filter((p) => {
-          const searchableText = [
-            p.title,
-            p.company_name,
-            p.company_short_name,
-            p.location,
-            p.description,
-            p.qualification,
-            p.application_url,
-            p.company_url,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          return (
-            searchableText.includes(rawSearch) ||
-            tokens.every((t) => searchableText.includes(t)) ||
-            tokens.some((t) => t.length >= 3 && searchableText.includes(t))
-          );
-        });
-      }
-      if (params?.category) {
-        filtered = filtered.filter((p) => p.category === params.category);
-      }
-      if (params?.work_mode) {
-        filtered = filtered.filter((p) => p.work_mode === params.work_mode);
-      }
-      if (params?.status) {
-        filtered = filtered.filter((p) => p.status === params.status);
-      }
-      if (params?.company_id) {
-        filtered = filtered.filter((p) => p.company_id === params.company_id);
-      }
-      return filtered;
-    }
-    throw err;
-  }
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.category) qs.set('category', params.category);
+  if (params?.work_mode) qs.set('work_mode', params.work_mode);
+  if (params?.status) qs.set('status', params.status);
+  if (params?.company_id) qs.set('company_id', params.company_id);
+  if (params?.period_id) qs.set('period_id', params.period_id);
+  const queryStr = qs.toString();
+  const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
+  return request<Position[]>(url, options?.signal);
 }
 
 /**
  * Fetch a single position by ID.
  *
- * @param positionId - Position ID (e.g. 'POS001')
+ * @param positionId Position ID (e.g. 'POS001')
  * @returns Promise<Position> - Position details with joined company information
  */
 export async function getPosition(positionId: string): Promise<Position> {
   const url = `${API_BASE}/positions/${encodeURIComponent(positionId)}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new PositionApiError(
-      `Failed to fetch position ${positionId}: ${res.statusText}`,
-      res.status
-    );
-  }
-
-  return res.json();
+  return request<Position>(url);
 }

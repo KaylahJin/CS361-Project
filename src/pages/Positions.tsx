@@ -39,8 +39,9 @@ import {
   WORK_MODE_LABELS,
   STATUS_LABELS,
 } from '../types/position';
+import { getPeriodTimeline } from '../data/periodAPI';
+import type { Period } from '../types/period';
 
-// Company logo item with fallback avatar
 // Keyword highlight helper for search matches
 const HighlightMatch: React.FC<{
   text?: string | null;
@@ -73,6 +74,7 @@ const HighlightMatch: React.FC<{
   );
 };
 
+// Company logo item with fallback avatar
 const CompanyLogo: React.FC<{
   logo?: string | null;
   name?: string | null;
@@ -633,6 +635,8 @@ export const Positions: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedWorkMode, setSelectedWorkMode] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
+  const [periodsList, setPeriodsList] = useState<Period[]>([]);
 
   // Modal detail view state & Accessibility refs (Ref: Issue #84 / F10)
   const [activeModalPosition, setActiveModalPosition] = useState<Position | null>(null);
@@ -706,8 +710,25 @@ export const Positions: React.FC = () => {
     };
   }, [activeModalPosition, handleCloseModal]);
 
+  // กันผลลัพธ์เก่าทับผลลัพธ์ใหม่: ยกเลิก request เดิม + เทียบรหัส request
+  const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+  // Fetch periods list on mount
+  useEffect(() => {
+    getPeriodTimeline()
+      .then((res) => {
+        if (res?.all_periods) setPeriodsList(res.all_periods);
+      })
+      .catch((err) => console.error('Failed to load periods:', err));
+  }, []);
+
   // Fetch positions from API
   const fetchPositions = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
+
     setLoading(true);
     setError(null);
     try {
@@ -716,25 +737,35 @@ export const Positions: React.FC = () => {
       if (selectedCategory !== 'all') params.category = selectedCategory as PositionCategory;
       if (selectedWorkMode !== 'all') params.work_mode = selectedWorkMode as WorkMode;
       if (selectedStatus !== 'all') params.status = selectedStatus as PositionStatus;
+      if (selectedPeriod !== 'all') params.period_id = selectedPeriod;
 
-      const data = await getPositions(params);
+      const data = await getPositions(params, { signal: controller.signal });
+      if (requestId !== requestIdRef.current) return; // มี request ใหม่กว่าแล้ว ทิ้งผลนี้
       setPositions(data);
     } catch (err) {
+      // ถูกยกเลิกหรือถูกแทนที่ด้วยคำค้นใหม่ ไม่ต้องแสดง Error
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
       console.error('Failed to fetch positions from API:', err);
+      setPositions([]); // ไม่ให้ค้างรายการเก่าไว้ใต้ Error
       setError(err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อกับ Position API ได้');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [search, selectedCategory, selectedWorkMode, selectedStatus]);
+  }, [search, selectedCategory, selectedWorkMode, selectedStatus, selectedPeriod]);
 
-  // Debounced search / trigger on filter change
+  // Debounced search & filter trigger
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPositions();
-    }, 250);
-
+    const timer = setTimeout(fetchPositions, 250);
     return () => clearTimeout(timer);
   }, [fetchPositions]);
+
+  // ยกเลิก request ที่ค้างอยู่เมื่อออกจากหน้านี้
+  useEffect(() => {
+    return () => {
+      requestIdRef.current++;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Reset all filters
   const handleClearFilters = () => {
@@ -742,18 +773,23 @@ export const Positions: React.FC = () => {
     setSelectedCategory('all');
     setSelectedWorkMode('all');
     setSelectedStatus('all');
+    setSelectedPeriod('all');
   };
 
   const hasActiveFilters =
     search.trim() !== '' ||
     selectedCategory !== 'all' ||
     selectedWorkMode !== 'all' ||
-    selectedStatus !== 'all';
+    selectedStatus !== 'all' ||
+    selectedPeriod !== 'all';
 
-  // Available categories list
   const categoryOptions = useMemo(() => {
     return Object.entries(CATEGORY_LABELS) as [PositionCategory, string][];
   }, []);
+
+  const selectedPeriodObj = useMemo(() => {
+    return periodsList.find((p) => p.period_id === selectedPeriod);
+  }, [periodsList, selectedPeriod]);
 
   return (
     <main className="w-full min-h-screen bg-[#fafbfc]">
@@ -810,7 +846,7 @@ export const Positions: React.FC = () => {
             {/* Results Count & Clear Button */}
             <div className="flex items-center justify-between sm:justify-end gap-3 text-xs sm:text-sm">
               <span className="font-semibold text-slate-600">
-                {!loading && `${positions.length} ตำแหน่งงาน`}
+                  {!loading && !error && `${positions.length} ตำแหน่งงาน`}
               </span>
               {hasActiveFilters && (
                 <button
@@ -832,7 +868,7 @@ export const Positions: React.FC = () => {
                 <Search className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
                   ผลการค้นหาด้วยคำสำคัญ: <strong className="font-bold underline decoration-blue-400">"{search}"</strong>
-                  {!loading && (
+                  {!loading && !error && (
                     <span className="ml-1 text-blue-900 font-bold">
                       (พบ {positions.length} รายการ)
                     </span>
@@ -887,8 +923,8 @@ export const Positions: React.FC = () => {
             </div>
           </div>
 
-          {/* Filter dropdowns & pills */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
+          {/* Filter dropdowns (4 Columns: Category, Work Mode, Status, Period) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
             {/* Category Filter */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="filter-category" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
@@ -946,9 +982,29 @@ export const Positions: React.FC = () => {
                 <option value="unknown">ไม่ระบุสถานะ</option>
               </select>
             </div>
+
+            {/* Period Filter (F03) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400" /> รอบการศึกษา (Period)
+              </label>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              >
+                <option value="all">ทุกรอบการศึกษา</option>
+                <option value="unspecified">ยังไม่ระบุรอบ</option>
+                {periodsList.map((p) => (
+                  <option key={p.period_id} value={p.period_id}>
+                    {p.name} {p.is_active ? '(กำลังดำเนินการ)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Active Filter Tags Bar (Chips with Individual Cancel / Clear) */}
+          {/* Active Filter Tags Bar */}
           {hasActiveFilters && (
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
               <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
@@ -1007,6 +1063,21 @@ export const Positions: React.FC = () => {
                 </span>
               )}
 
+              {selectedPeriod !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                  รอบ: {selectedPeriod === 'unspecified' ? 'ยังไม่ระบุรอบ' : selectedPeriodObj?.name || selectedPeriod}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('all')}
+                    className="hover:text-amber-950 p-0.5 cursor-pointer rounded-full hover:bg-amber-200/50"
+                    title="ยกเลิกตัวกรองรอบนี้"
+                    aria-label="ยกเลิกตัวกรองรอบ"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
               {search.trim() && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
                   คำค้นหา: "{search.trim()}"
@@ -1033,7 +1104,7 @@ export const Positions: React.FC = () => {
           )}
         </div>
 
-        {/* Content Section: Loading / Error / Empty / List */}
+        {/* Content Section */}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4].map((n) => (
@@ -1057,7 +1128,6 @@ export const Positions: React.FC = () => {
             ))}
           </div>
         ) : error ? (
-          /* Error State */
           <div className="bg-rose-50 border border-rose-200 rounded-3xl p-8 text-center max-w-xl mx-auto my-12">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-6 h-6" />
@@ -1068,7 +1138,7 @@ export const Positions: React.FC = () => {
             <p className="text-sm text-slate-600 mb-6">{error}</p>
             <button
               type="button"
-              onClick={fetchPositions}
+              onClick={() => fetchPositions()}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
             >
               <RotateCw className="w-4 h-4" />
@@ -1076,47 +1146,115 @@ export const Positions: React.FC = () => {
             </button>
           </div>
         ) : positions.length === 0 ? (
-          /* Empty State */
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-12 text-center max-w-xl mx-auto my-8 shadow-2xs">
-            <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
-              <Briefcase className="w-8 h-8 stroke-[1.5]" />
+          /* Empty State ตอบโจทย์ TC3: ระบุชัดเจนว่าสถานประกอบการมีอยู่แต่ไม่เปิดรับรอบนี้ พร้อมคงข้อมูลบริษัท */
+          <div className="space-y-6 my-8">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 text-center max-w-2xl mx-auto shadow-2xs">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/70 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                {selectedPeriod !== 'all' ? (
+                  <Calendar className="w-8 h-8 stroke-[1.5]" />
+                ) : (
+                  <Briefcase className="w-8 h-8 stroke-[1.5]" />
+                )}
+              </div>
+
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                {selectedPeriod !== 'all' && selectedPeriod !== 'unspecified'
+                  ? `ไม่มีตำแหน่งงานเปิดรับสมัครใน ${selectedPeriodObj?.name || 'รอบที่เลือก'}`
+                  : search.trim()
+                  ? `ไม่พบตำแหน่งงานสำหรับคำค้นหา "${search.trim()}"`
+                  : 'ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข'}
+              </h3>
+
+              <p className="text-sm text-slate-500 mb-6 leading-relaxed max-w-lg mx-auto">
+                {selectedPeriod !== 'all' && selectedPeriod !== 'unspecified' ? (
+                  <>
+                    สถานประกอบการในระบบยังมีอยู่ตามปกติ แต่ยังไม่มีประกาศรับสมัครตำแหน่งงานสำหรับรอบการศึกษานี้
+                    คุณสามารถเลือกดู <strong>"ทุกรอบการศึกษา"</strong> หรือ <strong>"ยังไม่ระบุรอบ"</strong> เพื่อดูข้อมูลตำแหน่งงานทั้งหมด
+                  </>
+                ) : search.trim() ? (
+                  `ขออภัย ไม่พบรายการตำแหน่งงานที่ตรงกับคำสำคัญ "${search.trim()}" หากบริษัทมีอยู่ในระบบ อาจเป็นเพราะยังไม่มีการเปิดรับสมัครในรอบหรือเงื่อนไขที่เลือก`
+                ) : (
+                  'ขออภัย ไม่พบรายการตำแหน่งหรือโครงการสหกิจศึกษาตามตัวกรองที่คุณเลือก โปรดลองปรับหรือล้างตัวกรองเพื่อดูรายการทั้งหมด'
+                )}
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {selectedPeriod !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('all')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
+                  >
+                    ดูทุกรอบการศึกษา
+                  </button>
+                )}
+                {search.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                    ล้างคำค้นหา
+                  </button>
+                )}
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                    ล้างตัวกรองทั้งหมด
+                  </button>
+                )}
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">
-              {search.trim()
-                ? `ไม่พบตำแหน่งงานสำหรับคำค้นหา "${search.trim()}"`
-                : 'ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข'}
-            </h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              {search.trim()
-                ? `ขออภัย ไม่พบรายการตำแหน่งงานที่ตรงกับคำสำคัญ "${search.trim()}" โปรดตรวจสอบคำสะกด หรือลองค้นหาด้วยคำทั่วไป เช่น Developer, Data, AI, Tester หรือกดปุ่มด้านล่างเพื่อล้างคำค้นหา`
-                : 'ขออภัย ไม่พบรายการตำแหน่งหรือโครงการสหกิจศึกษาตามตัวกรองที่คุณเลือก โปรดลองปรับหรือล้างตัวกรองเพื่อดูรายการทั้งหมด'}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {search.trim() && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                  ล้างคำค้นหา
-                </button>
-              )}
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm shadow-xs transition-colors cursor-pointer ${
-                    search.trim()
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  <X className="w-4 h-4" />
-                  ล้างตัวกรองทั้งหมด
-                </button>
-              )}
-            </div>
+
+            {/* Section คงข้อมูลบริษัท (Company Directory Preview) เมื่อรอบไม่มีตำแหน่ง */}
+            {selectedPeriod !== 'all' && selectedPeriod !== 'unspecified' && (
+              <div className="bg-slate-50/70 border border-slate-200/80 rounded-3xl p-6 sm:p-8 max-w-3xl mx-auto">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 className="w-5 h-5 text-slate-500" />
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                    สถานประกอบการที่มีในฐานข้อมูลระบบ
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 mb-4">
+                  รายชื่อสถานประกอบการเหล่านี้ร่วมโครงการสหกิจศึกษา แต่อาจเปิดรับในรอบการศึกษาอื่น:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+                    <CompanyLogo shortName="SCG" name="บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)" />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-800 block truncate">บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)</span>
+                      <span className="text-xs text-slate-400">กรุงเทพมหานคร</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+                    <CompanyLogo shortName="CUBE" name="Cube SoftTech Co., Ltd." />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-800 block truncate">Cube SoftTech Co., Ltd.</span>
+                      <span className="text-xs text-slate-400">กรุงเทพมหานคร</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+                    <CompanyLogo shortName="XOM" name="ExxonMobil" />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-800 block truncate">ExxonMobil</span>
+                      <span className="text-xs text-slate-400">กรุงเทพมหานคร</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+                    <CompanyLogo shortName="SCBX" name="SCB TechX" />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-slate-800 block truncate">SCB TechX</span>
+                      <span className="text-xs text-slate-400">กรุงเทพมหานคร</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Position Cards Grid / List (Ref: F10, F11, F18) */
@@ -1202,8 +1340,24 @@ export const Positions: React.FC = () => {
                           {/* Work Mode */}
                           <WorkModeBadge mode={pos.work_mode} isSubdued={isInactive} />
 
-                          {/* Status */}
                           <StatusBadge status={pos.status} />
+
+                          {/* แสดง Badge รอบการศึกษา */}
+                          {pos.periods && pos.periods.length > 0 ? (
+                            pos.periods.map((per) => (
+                              <span
+                                key={per.period_id}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                              >
+                                <Calendar className="w-3 h-3 text-slate-500" />
+                                {per.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-400 border border-slate-200/60">
+                              ยังไม่ระบุรอบ
+                            </span>
+                          )}
 
                           {/* Explicit Deadline Date Chip (Pattern DD/MM/YYYY) */}
                           {deadlineInfo.hasExplicitDate && (
@@ -1222,7 +1376,7 @@ export const Positions: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Description / Allowance / Details */}
+                        {/* Description */}
                         {pos.description && (
                           <div className="mt-3 text-xs sm:text-sm text-slate-600 bg-slate-50/80 rounded-xl p-3 border border-slate-100/90 leading-relaxed">
                             <p className="line-clamp-2">
@@ -1371,6 +1525,17 @@ export const Positions: React.FC = () => {
                   <CategoryBadge category={activeModalPosition.category} isSubdued={isModalInactive} />
                   <WorkModeBadge mode={activeModalPosition.work_mode} isSubdued={isModalInactive} />
                   <StatusBadge status={activeModalPosition.status} />
+                  {activeModalPosition.periods && activeModalPosition.periods.length > 0 && (
+                    activeModalPosition.periods.map((per) => (
+                      <span
+                        key={per.period_id}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                      >
+                        <Calendar className="w-3 h-3 text-slate-500" />
+                        {per.name}
+                      </span>
+                    ))
+                  )}
                   <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
                     #{activeModalPosition.position_id}
                   </span>
