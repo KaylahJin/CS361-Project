@@ -29,6 +29,7 @@ import {
 } from '../types/position';
 import { getPeriodTimeline } from '../data/periodAPI';
 import type { Period } from '../types/period';
+import { DATA_CONTEXT } from '../constants/dataContext';
 
 // Keyword highlight helper for search matches
 const HighlightMatch: React.FC<{
@@ -125,9 +126,30 @@ const WorkModeBadge: React.FC<{ mode: WorkMode }> = ({ mode }) => {
   }
 };
 
+// ใกล้ปิดรับ: open อยู่ และเหลือเวลาไม่เกิน 7 วันก่อนปิดรับสมัคร
+const CLOSING_SOON_DAYS = 7;
+const isClosingSoon = (deadline?: string | null): boolean => {
+  if (!deadline) return false;
+  const deadlineDate = new Date(deadline);
+  if (Number.isNaN(deadlineDate.getTime())) return false;
+  const daysLeft = (deadlineDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  return daysLeft >= 0 && daysLeft <= CLOSING_SOON_DAYS;
+};
+
 // Status badge with styling
-const StatusBadge: React.FC<{ status: PositionStatus }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: PositionStatus; deadline?: string | null }> = ({
+  status,
+  deadline,
+}) => {
   const label = STATUS_LABELS[status] || status;
+  if (status === 'open' && isClosingSoon(deadline)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        ใกล้ปิดรับ
+      </span>
+    );
+  }
   switch (status) {
     case 'open':
       return (
@@ -278,6 +300,13 @@ export const Positions: React.FC = () => {
           <p className="mt-3 text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
             ค้นหาและตรวจสอบรายละเอียดตำแหน่งงานโครงการสหกิจศึกษา พร้อมข้อมูลสถานประกอบการและช่องทางการสมัคร
           </p>
+
+          <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100/80 text-blue-700 text-xs sm:text-sm font-semibold">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{DATA_CONTEXT.academicYearLabel}</span>
+            <span className="text-blue-300">·</span>
+            <span>ตรวจสอบล่าสุด {DATA_CONTEXT.lastVerifiedDate}</span>
+          </div>
         </div>
       </section>
 
@@ -697,7 +726,8 @@ export const Positions: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         {/* Company Name & Province */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                          <span className="font-semibold text-xs sm:text-sm text-slate-800 truncate">
+                          <span className="inline-flex items-center gap-1 font-semibold text-xs sm:text-sm text-slate-800 truncate">
+                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <HighlightMatch
                               text={pos.company_name || 'ไม่ระบุชื่อสถานประกอบการ'}
                               query={search}
@@ -708,12 +738,14 @@ export const Positions: React.FC = () => {
                               <HighlightMatch text={pos.company_short_name} query={search} />
                             </span>
                           )}
-                          {pos.company_province && (
-                            <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                              <MapPin className="w-3 h-3 text-slate-400" />
+                          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                            <MapPin className="w-3 h-3 text-slate-400" />
+                            {pos.company_province ? (
                               <HighlightMatch text={pos.company_province} query={search} />
-                            </span>
-                          )}
+                            ) : (
+                              'ไม่ระบุจังหวัด'
+                            )}
+                          </span>
                         </div>
 
                         {/* Position Title */}
@@ -733,7 +765,7 @@ export const Positions: React.FC = () => {
 
                           <WorkModeBadge mode={pos.work_mode} />
 
-                          <StatusBadge status={pos.status} />
+                          <StatusBadge status={pos.status} deadline={pos.application_deadline} />
 
                           {/* แสดง Badge รอบการศึกษา */}
                           {pos.periods && pos.periods.length > 0 ? (
@@ -757,25 +789,39 @@ export const Positions: React.FC = () => {
                           </span>
                         </div>
 
+                        {/* Deadline */}
+                        <div className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>
+                            {pos.application_deadline
+                              ? `ปิดรับสมัคร: ${pos.application_deadline}`
+                              : 'ไม่ได้ระบุวันปิดรับ'}
+                          </span>
+                        </div>
+
                         {/* Description */}
-                        {pos.description && (
-                          <div className="mt-3 text-xs sm:text-sm text-slate-600 bg-slate-50/80 rounded-xl p-3 border border-slate-100/90 leading-relaxed">
-                            <p className="line-clamp-2">
+                        <div className="mt-3 text-xs sm:text-sm text-slate-600 bg-slate-50/80 rounded-xl p-3 border border-slate-100/90 leading-relaxed">
+                          <p className="line-clamp-2">
+                            {pos.description ? (
                               <HighlightMatch text={pos.description} query={search} />
-                            </p>
-                          </div>
-                        )}
+                            ) : (
+                              'ไม่มีรายละเอียดเพิ่มเติม'
+                            )}
+                          </p>
+                        </div>
 
                         {/* Qualifications Snippet */}
-                        {pos.qualification && (
-                          <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-500">
-                            <GraduationCap className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                            <p className="line-clamp-1 italic">
-                              คุณสมบัติ:{' '}
+                        <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-500">
+                          <GraduationCap className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                          <p className="line-clamp-1 italic">
+                            คุณสมบัติ:{' '}
+                            {pos.qualification ? (
                               <HighlightMatch text={pos.qualification} query={search} />
-                            </p>
-                          </div>
-                        )}
+                            ) : (
+                              'ไม่ได้ระบุคุณสมบัติเฉพาะ'
+                            )}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -832,8 +878,9 @@ export const Positions: React.FC = () => {
                   shortName={activeModalPosition.company_short_name}
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {activeModalPosition.company_name}
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    {activeModalPosition.company_name || 'ไม่ระบุชื่อสถานประกอบการ'}
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
                     {activeModalPosition.title}
@@ -853,61 +900,123 @@ export const Positions: React.FC = () => {
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
                 {CATEGORY_LABELS[activeModalPosition.category] || activeModalPosition.category}
               </span>
-              <WorkModeBadge mode={activeModalPosition.work_mode} />
-              <StatusBadge status={activeModalPosition.status} />
               <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-500">
                 #{activeModalPosition.position_id}
               </span>
             </div>
 
+            {/* Fixed section order: สถานที่ → รูปแบบงาน → คุณสมบัติ → รายละเอียด → รอบสหกิจ → สถานะ/วันปิดรับ → แหล่งประกาศ/ตรวจสอบล่าสุด */}
             <div className="space-y-4 text-sm text-slate-700">
-              {activeModalPosition.location && (
-                <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      สถานที่ปฏิบัติงาน:
-                    </span>
-                    <span>{activeModalPosition.location}</span>
-                  </div>
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    สถานที่ปฏิบัติงาน:
+                  </span>
+                  <span>{activeModalPosition.location || 'ประกาศไม่ได้ระบุสถานที่'}</span>
                 </div>
-              )}
+              </div>
 
-              {activeModalPosition.description && (
-                <div className="flex items-start gap-2.5">
-                  <Banknote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      รายละเอียดและเบี้ยเลี้ยง:
-                    </span>
-                    <span className="leading-relaxed">{activeModalPosition.description}</span>
-                  </div>
+              <div className="flex items-start gap-2.5">
+                <Building2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    รูปแบบงาน:
+                  </span>
+                  <WorkModeBadge mode={activeModalPosition.work_mode} />
                 </div>
-              )}
+              </div>
 
-              {activeModalPosition.qualification && (
-                <div className="flex items-start gap-2.5">
-                  <GraduationCap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      คุณสมบัติผู้สมัคร:
-                    </span>
-                    <span className="leading-relaxed">{activeModalPosition.qualification}</span>
-                  </div>
+              <div className="flex items-start gap-2.5">
+                <GraduationCap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    คุณสมบัติผู้สมัคร:
+                  </span>
+                  <span className="leading-relaxed">
+                    {activeModalPosition.qualification || 'ไม่ได้ระบุคุณสมบัติเฉพาะ'}
+                  </span>
                 </div>
-              )}
+              </div>
 
-              {activeModalPosition.application_deadline && (
-                <div className="flex items-start gap-2.5">
-                  <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-slate-900 block text-xs">
-                      กำหนดปิดรับสมัคร:
+              <div className="flex items-start gap-2.5">
+                <Banknote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    รายละเอียดและเบี้ยเลี้ยง:
+                  </span>
+                  <span className="leading-relaxed">
+                    {activeModalPosition.description || 'ไม่มีรายละเอียดเพิ่มเติม'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <Layers className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    รอบสหกิจ:
+                  </span>
+                  {activeModalPosition.periods && activeModalPosition.periods.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {activeModalPosition.periods.map((per) => (
+                        <span
+                          key={per.period_id}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                        >
+                          <Calendar className="w-3 h-3 text-slate-500" />
+                          {per.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span>ยังไม่ระบุรอบ</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    สถานะ/วันปิดรับสมัคร:
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <StatusBadge
+                      status={activeModalPosition.status}
+                      deadline={activeModalPosition.application_deadline}
+                    />
+                    <span>
+                      {activeModalPosition.application_deadline || 'ไม่ได้ระบุวันปิดรับ'}
                     </span>
-                    <span>{activeModalPosition.application_deadline}</span>
                   </div>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <ExternalLink className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-slate-900 block text-xs">
+                    แหล่งประกาศ/ตรวจสอบล่าสุด:
+                  </span>
+                  <span>
+                    {activeModalPosition.source_url ? (
+                      <a
+                        href={activeModalPosition.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        ตรวจสอบประกาศทางการ
+                      </a>
+                    ) : (
+                      'ไม่มีลิงก์แหล่งประกาศ'
+                    )}
+                    {' · '}
+                    ตรวจสอบล่าสุด {DATA_CONTEXT.lastVerifiedDate}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
