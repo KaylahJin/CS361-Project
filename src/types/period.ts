@@ -37,7 +37,8 @@ export interface CoopSchedule {
 
 /** API Response สำหรับหน้า Timeline กำหนดการ */
 export interface ScheduleTimelineResponse {
-  period: Period;
+  period: Period | null;
+  all_periods: Period[];    // รายชื่อทุกรอบเรียงลำดับ active ขึ้นก่อน สำหรับทำ Dropdown
   schedules: CoopSchedule[];
 }
 
@@ -46,4 +47,6 @@ export interface ScheduleQueryParams {
   period_id?: string;
   academic_year?: number;
   activity_type?: ActivityType;
+  search?: string;
+  is_active?: boolean;
 }
