@@ -13,8 +13,11 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
   switch (status) {
     case 'SUBMITTED':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600">
-          <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/90 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-500/30 shadow-2xs">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+          </span>
           <span>รอตรวจ</span>
         </span>
       );
@@ -69,7 +72,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
   onOpen,
 }) => {
   return (
-    <div className="hidden lg:block overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -91,7 +94,11 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                 <tr
                   key={plan.plan_id}
                   onClick={() => onOpen(plan)}
-                  className="group hover:bg-slate-50/80 cursor-pointer transition-colors"
+                  className={`group cursor-pointer transition-colors ${
+                    isPending
+                      ? 'bg-blue-50/25 hover:bg-blue-50/60'
+                      : 'hover:bg-slate-50/80'
+                  }`}
                 >
                   {/* Student */}
                   <td className="py-4 px-4 pl-6">

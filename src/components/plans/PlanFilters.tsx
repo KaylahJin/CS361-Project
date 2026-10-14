@@ -103,6 +103,8 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => {
           const isActive = value === tab.id;
+          const isPendingTab = tab.id === 'SUBMITTED';
+
           return (
             <button
               key={tab.id}
@@ -110,6 +112,8 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
               className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/20'
+                  : isPendingTab
+                  ? 'bg-blue-50/70 text-blue-900 border border-blue-200/90 hover:bg-blue-100/70 hover:shadow-xs'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:shadow-xs'
               }`}
             >
@@ -118,6 +122,8 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
                 className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                   isActive
                     ? 'bg-white/20 text-white'
+                    : isPendingTab
+                    ? 'bg-blue-600 text-white shadow-2xs'
                     : tab.badgeColor
                 }`}
               >

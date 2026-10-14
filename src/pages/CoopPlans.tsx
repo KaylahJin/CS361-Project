@@ -322,16 +322,16 @@ export default function CoopPlans() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Desktop Table View */}
-            <div className="hidden md:block">
+            {/* Desktop Table View (lg and up) */}
+            <div className="hidden lg:block">
               <PlanListTable
                 plans={plans}
                 onOpen={(plan) => setSelectedPlan(plan)}
               />
             </div>
 
-            {/* Mobile / Tablet Cards View */}
-            <div className="block md:hidden">
+            {/* Mobile / Tablet Cards View (below lg) */}
+            <div className="block lg:hidden">
               <PlanListCards
                 plans={plans}
                 onOpen={(plan) => setSelectedPlan(plan)}

@@ -27,7 +27,7 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
   onOpen,
 }) => {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
+    <div className="grid gap-3 sm:grid-cols-2">
       {plans.map((plan) => {
         const isPending = plan.status === 'SUBMITTED';
 
@@ -35,7 +35,11 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
           <div
             key={plan.plan_id}
             onClick={() => onOpen(plan)}
-            className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs transition-all hover:border-blue-300 hover:shadow-sm cursor-pointer"
+            className={`group flex flex-col justify-between rounded-2xl border p-4 shadow-xs transition-all cursor-pointer ${
+              isPending
+                ? 'border-blue-200/90 bg-blue-50/15 ring-1 ring-blue-500/20 hover:border-blue-400 hover:shadow-md'
+                : 'border-slate-200/90 bg-white hover:border-blue-300 hover:shadow-sm'
+            }`}
           >
             <div>
               {/* Header with Student and Status */}
