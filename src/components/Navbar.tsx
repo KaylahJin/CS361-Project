@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 import {
@@ -24,110 +25,66 @@ interface NavbarProps {
   onTabChange: (tab: TabType) => void;
 }
 
+const navItems = [
+  { id: 'home', label: 'หน้าแรก', icon: Home },
+  { id: 'requirements', label: 'เกณฑ์สหกิจ', icon: FileText },
+  { id: 'employers', label: 'สถานประกอบการ', icon: Building2 },
+  { id: 'positions', label: 'ตำแหน่งงาน', icon: Briefcase },
+  { id: 'students', label: 'นักศึกษา', icon: GraduationCap },
+  { id: 'coop-plans', label: 'แผนสหกิจ', icon: ClipboardList },
+  { id: 'periods', label: 'รอบเวลา', icon: RotateCcwClock },
+] as const;
+
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
 }) => {
   return (
-    <header className="w-full bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div
+    <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/90 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-2 py-2 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 lg:px-8">
+        <button
+          type="button"
           onClick={() => onTabChange('home')}
-          className="cursor-pointer select-none"
+          aria-label="กลับหน้าหลัก"
+          className="self-center select-none sm:self-auto"
         >
           <span className="text-2xl font-black tracking-wider text-blue-600">
             CEP
           </span>
-        </div>
+        </button>
 
-        <nav className="flex items-center space-x-1 sm:space-x-2 bg-slate-50/80 p-1 rounded-full border border-slate-200/80 shadow-xs">
-          <button
-            onClick={() => onTabChange('home')}
-            title="หน้าหลัก"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'home'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <Home className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
+        <nav
+          aria-label="เมนูหลัก"
+          className="grid w-full grid-cols-7 gap-1 rounded-xl border border-slate-200/80 bg-slate-50/80 p-1 shadow-xs sm:flex sm:w-auto sm:items-center sm:gap-1 sm:rounded-full sm:p-1"
+        >
+          {navItems.map(({ id, label, icon: Icon }) => {
+            const isActive = activeTab === id;
 
-          <button
-            onClick={() => onTabChange('requirements')}
-            title="เกณฑ์สหกิจ"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'requirements'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
-
-          <button
-            onClick={() => onTabChange('employers')}
-            title="สถานประกอบการ"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'employers'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
-
-          <button
-            onClick={() => onTabChange('positions')}
-            title="ตำแหน่งงานสหกิจ"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'positions'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
-
-          <button
-            onClick={() => onTabChange('students')}
-            title="ข้อมูลนักศึกษา"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'students'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
-
-          {/* Co-op Plans */}
-          <button
-            onClick={() => onTabChange('coop-plans')}
-            title="แผนสหกิจ"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'coop-plans'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
-
-          <button
-            onClick={() => onTabChange('periods')}
-            title="รอบเวลากำหนดการสหกิจ"
-            className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
-              activeTab === 'periods'
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
-            }`}
-          >
-            <RotateCcwClock className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </button>
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onTabChange(id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 transition-colors duration-200 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-2 sm:py-2 ${
+                  isActive
+                    ? 'border border-blue-200 bg-blue-50 text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                }`}
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 stroke-[2.2] sm:h-4 sm:w-4"
+                />
+                <span className="w-full text-center text-[9px] leading-tight break-words sm:w-auto sm:whitespace-nowrap sm:text-xs">
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="w-8 hidden sm:block" />
+        <div className="hidden w-8 sm:block" />
       </div>
     </header>
   );
