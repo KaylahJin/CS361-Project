@@ -230,7 +230,7 @@ stateDiagram-v2
 
 - **Managed Data Source (Single Source of Truth):**
   - ใช้ **PostgreSQL บน AWS RDS** เป็นฐานข้อมูลหลัก
-  - ใช้ **RDS Proxy** เพื่อจัดการ Connection Pooling ลดปัญหา Connection Exhaustion จาก Lambda ในช่วงการใช้งานพร้อมกัน
+  - **การเชื่อมต่อฐานข้อมูล:** ตามข้อตกลงล่าสุดของทีม มีมติ**ถอด RDS Proxy ออก** และใช้การเชื่อมต่อตรงระหว่าง AWS Lambda กับ RDS PostgreSQL โดยตรง เพื่อลดความซับซ้อน ปัญหา Timeout และข้อจำกัดด้านสิทธิ์ IAM ใน AWS Academy Lab
 - **Shared API & Data Specifications:**
   - สมาชิกในทีมที่ทำงานบน Database หรือ API ร่วมกัน ต้องยึดถือ Data Model และ Interface กลางร่วมกันเสมอ
   - **ห้ามเปลี่ยนแปลงโครงสร้างตารางหรือ API Response โดยไม่แจ้งล่วงหน้า** และต้องหารือกับผู้รับผิดชอบฝั่งที่เกี่ยวข้องก่อนทุกครั้ง
