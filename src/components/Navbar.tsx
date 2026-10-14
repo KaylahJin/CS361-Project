@@ -116,10 +116,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
           </button>
 
-          {/* Plan Review (V3-05) */}
+          {/* Plan Review */}
           <button
             onClick={() => onTabChange('plan-reviews')}
-            title="ตรวจแผนสหกิจ (V3-05)"
+            title="ตรวจแผนสหกิจศึกษา"
             className={`flex items-center justify-center w-10 h-8 sm:w-12 sm:h-9 rounded-full transition-all duration-200 ${
               activeTab === 'plan-reviews'
                 ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-xs'

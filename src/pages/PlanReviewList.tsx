@@ -179,14 +179,9 @@ export default function PlanReviewList() {
               <ClipboardCheck className="h-6 w-6" />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="font-heading text-lg font-bold tracking-tight text-white sm:text-xl">
-                  ตรวจแผนฝึกงาน / สหกิจศึกษา
-                </h1>
-                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold text-white uppercase tracking-wider">
-                  V3-05
-                </span>
-              </div>
+              <h1 className="font-heading text-lg font-bold tracking-tight text-white sm:text-xl">
+                ตรวจแผนฝึกงาน / สหกิจศึกษา
+              </h1>
               <p className="mt-0.5 text-xs text-blue-100 sm:text-sm">
                 สำหรับอาจารย์ที่ปรึกษาและเจ้าหน้าที่ผู้พิจารณาแผนสหกิจศึกษา
               </p>
