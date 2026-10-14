@@ -30,6 +30,7 @@ export interface Position {
   company_short_name?: string;          // Joined company short name
   company_logo?: string;                // Joined company logo filename
   company_province?: string;            // Joined company province
+  company_url?: string | null;          // Joined company official website URL
   title: string;                        // Position title
   category: PositionCategory;           // Standardized category
   description?: string | null;          // Details / duration / allowance

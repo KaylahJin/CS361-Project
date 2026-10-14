@@ -57,7 +57,6 @@ export async function getPositions(
   if (params?.status) qs.set('status', params.status);
   if (params?.company_id) qs.set('company_id', params.company_id);
   if (params?.period_id) qs.set('period_id', params.period_id);
-
   const queryStr = qs.toString();
   const url = `${API_BASE}/positions${queryStr ? `?${queryStr}` : ''}`;
   return request<Position[]>(url, options?.signal);

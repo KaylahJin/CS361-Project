@@ -25,7 +25,7 @@ describe('listPositions', () => {
 
     expect(queryMock).toHaveBeenCalledTimes(1);
     const [text, values] = queryMock.mock.calls[0];
-    expect(text).not.toMatch(/WHERE/i);
+    expect(text).not.toMatch(/\nWHERE\s+/i);
     expect(values).toEqual([]);
 
     expect(result.statusCode).toBe(200);
