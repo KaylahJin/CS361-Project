@@ -13,38 +13,38 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
   switch (status) {
     case 'SUBMITTED':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-          รอตรวจ
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600">
+          <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+          <span>รอตรวจ</span>
         </span>
       );
     case 'RETURNED':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
-          <RotateCcw className="h-3 w-3" />
-          ส่งกลับแก้ไข
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>ส่งกลับแก้ไข</span>
         </span>
       );
     case 'APPROVED':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
-          <CheckCircle2 className="h-3 w-3" />
-          อนุมัติแล้ว
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>อนุมัติแล้ว</span>
         </span>
       );
     case 'REJECTED':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700">
-          <XCircle className="h-3 w-3" />
-          ไม่อนุมัติ
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
+          <XCircle className="h-3.5 w-3.5" />
+          <span>ไม่อนุมัติ</span>
         </span>
       );
     case 'DRAFT':
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-          <FileText className="h-3 w-3" />
-          ฉบับร่าง
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+          <FileText className="h-3.5 w-3.5" />
+          <span>ฉบับร่าง</span>
         </span>
       );
   }

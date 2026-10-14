@@ -28,31 +28,31 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
       id: 'ALL',
       label: 'ทั้งหมด',
       count: total,
-      badgeColor: 'bg-slate-100 text-slate-700',
+      badgeColor: 'text-slate-600',
     },
     {
       id: 'SUBMITTED',
       label: 'รอตรวจ',
       count: counts.SUBMITTED || 0,
-      badgeColor: 'bg-blue-100 text-blue-700',
+      badgeColor: 'text-blue-600 font-bold',
     },
     {
       id: 'RETURNED',
       label: 'ส่งกลับแก้ไข',
       count: counts.RETURNED || 0,
-      badgeColor: 'bg-amber-100 text-amber-700',
+      badgeColor: 'text-amber-600 font-semibold',
     },
     {
       id: 'APPROVED',
       label: 'อนุมัติแล้ว',
       count: counts.APPROVED || 0,
-      badgeColor: 'bg-emerald-100 text-emerald-700',
+      badgeColor: 'text-emerald-600 font-semibold',
     },
     {
       id: 'REJECTED',
       label: 'ไม่อนุมัติ',
       count: counts.REJECTED || 0,
-      badgeColor: 'bg-rose-100 text-rose-700',
+      badgeColor: 'text-zinc-500 font-semibold',
     },
   ];
 

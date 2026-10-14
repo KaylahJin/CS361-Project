@@ -278,7 +278,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                 <label
                   className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all ${
                     decision === 'APPROVED'
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-xs'
+                      ? 'border-emerald-600 bg-emerald-50/40 text-emerald-800 shadow-xs ring-1 ring-emerald-300'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >
@@ -326,7 +326,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                 <label
                   className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all ${
                     decision === 'REJECTED'
-                      ? 'border-rose-600 bg-rose-50 text-rose-800 shadow-xs'
+                      ? 'border-zinc-700 bg-zinc-100 text-zinc-900 shadow-xs ring-1 ring-zinc-300'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >
@@ -340,7 +340,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   />
                   <XCircle
                     className={`h-4 w-4 ${
-                      decision === 'REJECTED' ? 'text-rose-600' : 'text-slate-400'
+                      decision === 'REJECTED' ? 'text-zinc-700' : 'text-slate-400'
                     }`}
                   />
                   <span>ไม่อนุมัติ (Reject)</span>

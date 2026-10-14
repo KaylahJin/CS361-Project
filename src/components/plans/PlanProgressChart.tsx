@@ -41,10 +41,34 @@ export const PlanProgressChart = ({
   const circumference = 2 * Math.PI * radius; // ~263.89
 
   const slices = [
-    { key: 'approved', count: approved, percent: approvedPercent, color: '#10b981', label: 'อนุมัติแล้ว' },
-    { key: 'returned', count: returned, percent: returnedPercent, color: '#f59e0b', label: 'ส่งกลับแก้ไข' },
-    { key: 'rejected', count: rejected, percent: rejectedPercent, color: '#f43f5e', label: 'ไม่อนุมัติ' },
-    { key: 'submitted', count: submitted, percent: submittedPercent, color: '#3b82f6', label: 'รอตรวจ' },
+    {
+      key: 'submitted',
+      count: submitted,
+      percent: submittedPercent,
+      color: '#2563eb', // Vibrant Task Blue: Active action required
+      label: 'รอตรวจ',
+    },
+    {
+      key: 'approved',
+      count: approved,
+      percent: approvedPercent,
+      color: '#10b981', // Emerald Green: Approved
+      label: 'อนุมัติแล้ว',
+    },
+    {
+      key: 'returned',
+      count: returned,
+      percent: returnedPercent,
+      color: '#f59e0b', // Soft Amber: Waiting for student
+      label: 'ส่งกลับแก้ไข',
+    },
+    {
+      key: 'rejected',
+      count: rejected,
+      percent: rejectedPercent,
+      color: '#71717a', // Monochrome Zinc: Closed, no action needed
+      label: 'ไม่อนุมัติ',
+    },
   ];
 
   // Close overlay when clicking outside
@@ -179,52 +203,34 @@ export const PlanProgressChart = ({
 
           {/* Detailed Breakdown List */}
           <div className="mt-3 space-y-2.5 text-xs">
-            {/* Approved */}
+            {/* 1. Waiting for Review (Submitted) - Task ที่ต้องทำ */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  อนุมัติแล้ว
+              <div className="flex items-center justify-between text-blue-600">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>รอตรวจ</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
                 </span>
-                <span className="font-bold text-slate-900">
-                  {approved} แผน ({approvedPercent}%)
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  style={{ width: `${approvedPercent}%` }}
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                />
-              </div>
-            </div>
-
-            {/* Waiting for Review (Submitted) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Clock className="h-3.5 w-3.5 text-blue-600" />
-                  รอตรวจพิจารณา
-                </span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold">
                   {submitted} แผน ({submittedPercent}%)
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${submittedPercent}%` }}
-                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
 
-            {/* Returned for Revision */}
+            {/* 2. Returned for Revision (Waiting for Student) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <RotateCcw className="h-3.5 w-3.5 text-amber-600" />
-                  ส่งกลับแก้ไข
+              <div className="flex items-center justify-between text-amber-600">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>ส่งกลับแก้ไข</span>
                 </span>
-                <span className="font-bold text-slate-900">
+                <span className="font-semibold text-slate-800">
                   {returned} แผน ({returnedPercent}%)
                 </span>
               </div>
@@ -236,21 +242,40 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* Rejected */}
+            {/* 3. Approved (Completed - Green as requested) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <XCircle className="h-3.5 w-3.5 text-rose-600" />
-                  ไม่อนุมัติ
+              <div className="flex items-center justify-between text-emerald-600">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>อนุมัติแล้ว</span>
                 </span>
-                <span className="font-bold text-slate-900">
+                <span className="font-semibold text-slate-800">
+                  {approved} แผน ({approvedPercent}%)
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  style={{ width: `${approvedPercent}%` }}
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                />
+              </div>
+            </div>
+
+            {/* 4. Rejected (Closed - Monochrome/Gray as requested) */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-zinc-500">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <XCircle className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>ไม่อนุมัติ</span>
+                </span>
+                <span className="font-semibold text-slate-800">
                   {rejected} แผน ({rejectedPercent}%)
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${rejectedPercent}%` }}
-                  className="h-full bg-rose-500 rounded-full transition-all duration-300"
+                  className="h-full bg-zinc-500 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
