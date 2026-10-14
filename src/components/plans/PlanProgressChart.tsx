@@ -150,11 +150,11 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 2. Returned for Revision (Yellow desaturated to B&W: Lighter silver gray) */}
+            {/* 2. Returned for Revision (Amber/Yellow in details popover) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-zinc-500">
+              <div className="flex items-center justify-between text-amber-600">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
+                  <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
                   <span>ส่งกลับแก้ไข</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -164,16 +164,16 @@ export const PlanProgressChart = ({
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${returnedPercent}%` }}
-                  className="h-full bg-zinc-300 rounded-full transition-all duration-300"
+                  className="h-full bg-amber-400 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
 
-            {/* 3. Rejected (Red desaturated to B&W: Dark charcoal gray) */}
+            {/* 3. Rejected (Rose/Red in details popover) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-zinc-700">
+              <div className="flex items-center justify-between text-rose-600">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+                  <XCircle className="h-3.5 w-3.5 text-rose-500" />
                   <span>ไม่อนุมัติ</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -183,7 +183,7 @@ export const PlanProgressChart = ({
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${rejectedPercent}%` }}
-                  className="h-full bg-zinc-600 rounded-full transition-all duration-300"
+                  className="h-full bg-rose-500 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
