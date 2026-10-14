@@ -3,13 +3,12 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  CheckCircle2,
+  Check,
   GraduationCap,
   Loader2,
   RotateCcw,
   UserCheck,
   X,
-  XCircle,
 } from 'lucide-react';
 import type { PlanReviewItem, ReviewDecision } from '../../types/planReview';
 import { submitPlanReview, getCurrentReviewer } from '../../data/planReviewApi';
@@ -231,7 +230,9 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </h4>
             <div className="mt-2.5 flex items-center justify-between rounded-xl bg-slate-50 p-3 text-xs">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
+                  <Check className="h-2.5 w-2.5 stroke-[3]" />
+                </span>
                 <span className="text-slate-700 font-medium">ยอมรับเงื่อนไขการเตรียมความพร้อมก่อนสหกิจ</span>
               </div>
               <span className="text-slate-400">
@@ -292,11 +293,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                     onChange={() => setDecision('APPROVED')}
                     className="sr-only"
                   />
-                  <CheckCircle2
-                    className={`h-4 w-4 ${
-                      decision === 'APPROVED' ? 'text-emerald-600' : 'text-slate-400'
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      decision === 'APPROVED'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-slate-200 text-slate-500'
                     }`}
-                  />
+                  >
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </span>
                   <span>อนุมัติ (Approve)</span>
                 </label>
 
@@ -318,11 +323,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                     onChange={() => setDecision('RETURNED')}
                     className="sr-only"
                   />
-                  <RotateCcw
-                    className={`h-4 w-4 ${
-                      decision === 'RETURNED' ? 'text-zinc-500' : 'text-slate-400'
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      decision === 'RETURNED'
+                        ? 'bg-zinc-400 text-white shadow-2xs'
+                        : 'bg-slate-200 text-slate-500'
                     }`}
-                  />
+                  >
+                    <RotateCcw className="h-3 w-3 stroke-[2.5]" />
+                  </span>
                   <span>ส่งกลับแก้ไข (Return)</span>
                 </label>
 
@@ -344,11 +353,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                     onChange={() => setDecision('REJECTED')}
                     className="sr-only"
                   />
-                  <XCircle
-                    className={`h-4 w-4 ${
-                      decision === 'REJECTED' ? 'text-zinc-700' : 'text-slate-400'
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      decision === 'REJECTED'
+                        ? 'bg-zinc-700 text-white shadow-2xs'
+                        : 'bg-slate-200 text-slate-500'
                     }`}
-                  />
+                  >
+                    <X className="h-3 w-3 stroke-[3]" />
+                  </span>
                   <span>ไม่อนุมัติ (Reject)</span>
                 </label>
               </div>
