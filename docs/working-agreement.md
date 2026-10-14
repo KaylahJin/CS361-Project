@@ -234,6 +234,10 @@ stateDiagram-v2
 - **Shared API & Data Specifications:**
   - สมาชิกในทีมที่ทำงานบน Database หรือ API ร่วมกัน ต้องยึดถือ Data Model และ Interface กลางร่วมกันเสมอ
   - **ห้ามเปลี่ยนแปลงโครงสร้างตารางหรือ API Response โดยไม่แจ้งล่วงหน้า** และต้องหารือกับผู้รับผิดชอบฝั่งที่เกี่ยวข้องก่อนทุกครั้ง
+- **ข้อจำกัดและข้อกำหนดการใช้งาน AWS Academy Lab (LabRole & voclabs):**
+  - **ห้ามสร้าง IAM Role ใหม่:** บัญชี AWS Academy Learner Lab บล็อกสิทธิ์ `iam:CreateRole` ทุกงาน (เช่น Lambda Execution Role) **ต้องนำบทบาทสำเร็จรูป `LabRole` ที่มีอยู่แล้วมาใช้ซ้ำเสมอ (Reuse existing `LabRole`)**
+  - **การจัดการ Session Token ที่หมดอายุ:** Credential ของ `voclabs` มีอายุจำกัด (ไม่กี่ชั่วโมง) หากพบข้อผิดพลาด `InvalidClientTokenId` หรือ `ExpiredToken` ต้องต่ออายุชั่วคราวด้วยการคัดลอก AWS CLI credentials ใหม่จากหน้า Learner Lab มาใส่ใน `~/.aws/credentials`
+  - **การเลือกใช้บริการและสถาปัตยกรรม:** ต้องคำนึงถึงขอบเขตสิทธิ์ของ Lab เสมอ หลีกเลี่ยง Service ที่เกินสิทธิ์ และลดความซับซ้อนของ Infrastructure เพื่อไม่ให้ติดปัญหา Permission ใน Lab
 - **ความปลอดภัยของ Credentials (Secret Safety):**
   - **ห้าม Commit รหัสผ่าน, Secret Keys หรือ Credentials จริงขึ้น GitHub หรือ Paste ในห้องแชตเด็ดขาด**
   - เก็บค่า Config และรหัสผ่านไว้ใน `.env` ภายในเครื่อง ซึ่งถูก `.gitignore` ไว้เรียบร้อยแล้ว
