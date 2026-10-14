@@ -4,9 +4,7 @@ import {
   Clock,
   RotateCcw,
   XCircle,
-  TrendingUp,
   X,
-  ChevronDown,
 } from 'lucide-react';
 import type { PlanCounts } from '../../types/planReview';
 
@@ -41,6 +39,7 @@ export const PlanProgressChart = ({
   const circumference = 2 * Math.PI * radius; // ~263.89
 
   // Only completed review tasks in the donut slices (ไม่เอารอตรวจมาคิด นับแค่งานที่ทำเสร็จ)
+  // Color for returned uses the centralized feedback token var(--color-feedback)
   const slices = [
     {
       key: 'approved',
@@ -53,7 +52,7 @@ export const PlanProgressChart = ({
       key: 'returned',
       count: returned,
       percent: returnedPercent,
-      color: '#f59e0b', // Soft Amber: Waiting for student
+      color: 'var(--color-feedback)', // Synced Feedback Yellow
       label: 'ส่งกลับแก้ไข',
     },
     {
@@ -89,95 +88,66 @@ export const PlanProgressChart = ({
       ref={containerRef}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs transition-all hover:border-blue-300 hover:shadow-sm"
+      className="relative flex items-center justify-center rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs transition-all hover:border-blue-300 hover:shadow-sm"
     >
-      {/* Compact Main View: Header + Circular Chart + % */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-1.5 text-slate-700">
-            <TrendingUp className="h-4 w-4 text-blue-600 shrink-0" />
-            <h3 className="font-heading text-xs sm:text-sm font-bold">
-              ความคืบหน้าการตรวจ
-            </h3>
-          </div>
-          <p className="mt-0.5 text-[11px] text-slate-400">
-            ตรวจแล้ว {reviewedTotal} จาก {total} แผน
-          </p>
+      {/* Circular Donut Graph Only */}
+      <div
+        id="plan-progress-donut"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="relative flex h-24 w-24 shrink-0 items-center justify-center cursor-pointer group transition-transform duration-200 hover:scale-105 active:scale-95"
+        title="คลิกหรือชี้เพื่อดูรายละเอียดความคืบหน้า"
+      >
+        <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+          {/* Background Circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            className="stroke-slate-100"
+            strokeWidth="9"
+            fill="transparent"
+          />
 
-          <button
-            id="toggle-plan-progress-details"
-            type="button"
-            onClick={() => setIsOpen((prev) => !prev)}
-            className="mt-2.5 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:scale-105 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer shadow-2xs"
-          >
-            <span>{showOverlay ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'}</span>
-            <ChevronDown
-              className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${
-                showOverlay ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-        </div>
+          {/* Render Donut Segments for completed tasks only */}
+          {total > 0 &&
+            slices.map((slice) => {
+              if (slice.count <= 0) return null;
+              const strokeLength = (slice.count / total) * circumference;
+              const offset = accumulatedOffset;
+              accumulatedOffset += strokeLength;
 
-        {/* Circular Donut Graph */}
-        <div
-          id="plan-progress-donut"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="relative flex h-24 w-24 shrink-0 items-center justify-center cursor-pointer group transition-transform duration-200 hover:scale-105 active:scale-95"
-          title="คลิกหรือชี้เพื่อดูรายละเอียดความคืบหน้า"
-        >
-          <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-            {/* Background Circle */}
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              className="stroke-slate-100"
-              strokeWidth="9"
-              fill="transparent"
-            />
+              return (
+                <circle
+                  key={slice.key}
+                  cx="50"
+                  cy="50"
+                  r={radius}
+                  stroke={slice.color}
+                  strokeWidth="9"
+                  strokeDasharray={`${strokeLength} ${circumference}`}
+                  strokeDashoffset={-offset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className="transition-all duration-500 hover:opacity-85"
+                />
+              );
+            })}
+        </svg>
 
-            {/* Render Donut Segments */}
-            {total > 0 &&
-              slices.map((slice) => {
-                if (slice.count <= 0) return null;
-                const strokeLength = (slice.count / total) * circumference;
-                const offset = accumulatedOffset;
-                accumulatedOffset += strokeLength;
-
-                return (
-                  <circle
-                    key={slice.key}
-                    cx="50"
-                    cy="50"
-                    r={radius}
-                    stroke={slice.color}
-                    strokeWidth="9"
-                    strokeDasharray={`${strokeLength} ${circumference}`}
-                    strokeDashoffset={-offset}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="transition-all duration-500 hover:opacity-85"
-                  />
-                );
-              })}
-          </svg>
-
-          {/* Center Text (% and Label) */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-            <span className="font-heading text-lg font-black tracking-tight text-slate-800">
-              {reviewProgress}%
-            </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase -mt-0.5">
-              ตรวจแล้ว
-            </span>
-          </div>
+        {/* Center Text (% and Label) */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <span className="font-heading text-lg font-black tracking-tight text-slate-800">
+            {reviewProgress}%
+          </span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase -mt-0.5">
+            ตรวจแล้ว
+          </span>
         </div>
       </div>
 
       {/* Interactive Popover / Overlay with Full Details */}
       {showOverlay && (
-        <div className="absolute top-full left-0 right-0 z-30 mt-2 rounded-2xl border border-slate-200 bg-white/98 p-4 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-full right-0 z-30 mt-2 w-72 rounded-2xl border border-slate-200 bg-white/98 p-4 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -218,10 +188,10 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 2. Returned for Revision (Waiting for Student) */}
+            {/* 2. Returned for Revision (Synced Feedback Yellow) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-amber-600">
-                <span className="flex items-center gap-1.5 font-semibold">
+              <div className="flex items-center justify-between text-feedback-text">
+                <span className="flex items-center gap-1.5 font-bold">
                   <RotateCcw className="h-3.5 w-3.5" />
                   <span>ส่งกลับแก้ไข</span>
                 </span>
@@ -232,7 +202,7 @@ export const PlanProgressChart = ({
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${returnedPercent}%` }}
-                  className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                  className="h-full bg-feedback rounded-full transition-all duration-300"
                 />
               </div>
             </div>

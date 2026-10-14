@@ -305,7 +305,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   id="label-decision-returned"
                   className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'RETURNED'
-                      ? 'border-amber-600 bg-amber-50 text-amber-800 shadow-xs'
+                      ? 'border-feedback-600 bg-feedback-50 text-feedback-text shadow-xs ring-1 ring-feedback-200'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
@@ -320,7 +320,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   />
                   <RotateCcw
                     className={`h-4 w-4 ${
-                      decision === 'RETURNED' ? 'text-amber-600' : 'text-slate-400'
+                      decision === 'RETURNED' ? 'text-feedback-text' : 'text-slate-400'
                     }`}
                   />
                   <span>ส่งกลับแก้ไข (Return)</span>

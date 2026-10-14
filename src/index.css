@@ -4,6 +4,21 @@
   --font-sans: "Kanit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --color-blue-600: var(--color-blue-950);
   --color-blue-700: oklch(22% 0.08 267.9);
+
+  /* Synced Feedback / Revision Yellow Tokens (Harmonizing with Navy 950) */
+  --color-feedback-50: #fefce8;
+  --color-feedback-100: #fef9c3;
+  --color-feedback-200: #fef08a;
+  --color-feedback-500: #eab308;
+  --color-feedback-600: #ca8a04;
+  --color-feedback-700: #a16207;
+  --color-feedback: #eab308;
+  --color-feedback-text: #a16207;
+}
+
+:root {
+  --color-feedback: #eab308;
+  --color-feedback-text: #a16207;
 }
 
 body {

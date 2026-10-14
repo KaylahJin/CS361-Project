@@ -87,8 +87,8 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
 
               {/* Review Comment Preview if exists */}
               {plan.review_comment && (
-                <div className="mt-3 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">
+                <div className="mt-3 rounded-xl bg-feedback-50/70 border border-feedback-200/60 p-2.5 text-xs text-slate-700">
+                  <span className="font-bold text-feedback-text">
                     {plan.reviewer_name}:{' '}
                   </span>
                   <span className="italic">"{plan.review_comment}"</span>

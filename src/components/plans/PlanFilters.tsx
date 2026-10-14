@@ -40,7 +40,7 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
       id: 'RETURNED',
       label: 'ส่งกลับแก้ไข',
       count: counts.RETURNED || 0,
-      badgeColor: 'text-amber-600 font-semibold',
+      badgeColor: 'text-feedback-text font-bold',
     },
     {
       id: 'APPROVED',

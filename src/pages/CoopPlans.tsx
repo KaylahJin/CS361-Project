@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Check,
-  ClipboardCheck,
   Inbox,
   UserRound,
   ChevronDown,
@@ -173,19 +172,14 @@ export default function CoopPlans() {
         className="border-b border-white/10 text-white shadow-sm from-[oklch(0.38_0.15_266.5)] via-[oklch(0.12_0_0)] to-[oklch(0.37_0.12_245.27)] bg-gradient-to-r"
       >
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          {/* Title & Icon */}
-          <div className="flex min-w-0 items-center gap-3.5">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-inset ring-white/30 shadow-xs">
-              <ClipboardCheck className="h-6 w-6" />
-            </span>
-            <div className="min-w-0">
-              <h1 className="font-heading text-lg font-bold tracking-tight text-white sm:text-xl">
-                แผนสหกิจศึกษาและการพิจารณา
-              </h1>
-              <p className="mt-0.5 text-xs text-blue-100 sm:text-sm">
-                ระบบตรวจสอบ จัดการ และบันทึกผลการพิจารณาแผนสหกิจศึกษา
-              </p>
-            </div>
+          {/* Title */}
+          <div className="min-w-0">
+            <h1 className="font-heading text-lg font-bold tracking-tight text-white sm:text-xl">
+              แผนสหกิจศึกษาและการพิจารณา
+            </h1>
+            <p className="mt-0.5 text-xs text-blue-100 sm:text-sm">
+              ระบบตรวจสอบ จัดการ และบันทึกผลการพิจารณาแผนสหกิจศึกษา
+            </p>
           </div>
 
           {/* Reviewer Role Switcher Dropdown (V3-05.1 requirement) */}
@@ -251,16 +245,13 @@ export default function CoopPlans() {
       {/* Main Container */}
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Top Control Bar & KPI Section */}
-        <div className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h2 className="font-heading text-lg font-bold text-slate-900">
                   รายการแผนสหกิจศึกษา
                 </h2>
-                <p className="mt-0.5 text-xs sm:text-sm text-slate-500">
-                  กรองตามสถานะ แล้วเลือกแผนเพื่ออ่านรายละเอียดและบันทึกผลการพิจารณา
-                </p>
               </div>
 
               {/* Reset Demo Data Button */}
