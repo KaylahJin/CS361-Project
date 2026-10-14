@@ -3,7 +3,6 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  Check,
   CheckCircle2,
   GraduationCap,
   Loader2,
@@ -15,6 +14,7 @@ import {
 import type { PlanReviewItem, ReviewDecision } from '../../types/planReview';
 import { submitPlanReview, getCurrentReviewer } from '../../data/planReviewApi';
 import { PlanStatusBadge } from './PlanListTable';
+import { CircleCheckFill } from './CircleCheckFill';
 
 interface PlanDetailModalProps {
   plan: PlanReviewItem | null;
@@ -293,15 +293,11 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                     onChange={() => setDecision('APPROVED')}
                     className="sr-only"
                   />
-                  <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
-                      decision === 'APPROVED'
-                        ? 'bg-emerald-600 text-white shadow-2xs'
-                        : 'bg-slate-200 text-slate-500'
+                  <CircleCheckFill
+                    className={`h-4 w-4 shrink-0 transition-colors ${
+                      decision === 'APPROVED' ? 'text-emerald-600' : 'text-slate-400'
                     }`}
-                  >
-                    <Check className="h-3 w-3 stroke-[3]" />
-                  </span>
+                  />
                   <span>อนุมัติ (Approve)</span>
                 </label>
 

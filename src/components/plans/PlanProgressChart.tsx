@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Check,
   RotateCcw,
   XCircle,
   X,
 } from 'lucide-react';
 import type { PlanCounts } from '../../types/planReview';
+import { CircleCheckFill } from './CircleCheckFill';
 
 interface PlanProgressChartProps {
   counts: PlanCounts;
@@ -112,9 +112,7 @@ export const PlanProgressChart = ({
         <div className="absolute top-full right-0 z-30 mt-2 w-72 rounded-2xl border border-slate-200 bg-white/98 p-4 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
-                <Check className="h-2.5 w-2.5 stroke-[3]" />
-              </span>
+              <CircleCheckFill className="h-4 w-4 text-emerald-600 shrink-0" />
               <h4 className="font-heading text-xs font-bold text-slate-800">
                 ผลงานที่ตรวจเสร็จแล้ว ({reviewedTotal}/{total} แผน {reviewProgress}%)
               </h4>
@@ -137,9 +135,7 @@ export const PlanProgressChart = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between text-emerald-600">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
-                    <Check className="h-2 w-2 stroke-[3]" />
-                  </span>
+                  <CircleCheckFill className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   <span>อนุมัติแล้ว</span>
                 </span>
                 <span className="font-semibold text-slate-800">

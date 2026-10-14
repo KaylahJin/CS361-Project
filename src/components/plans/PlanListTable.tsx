@@ -1,13 +1,13 @@
 import {
   Building2,
   Calendar,
-  Check,
   ChevronRight,
   FileText,
   RotateCcw,
   XCircle,
 } from 'lucide-react';
 import type { PlanReviewItem } from '../../types/planReview';
+import { CircleCheckFill } from './CircleCheckFill';
 
 interface PlanListTableProps {
   plans: PlanReviewItem[];
@@ -38,9 +38,7 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
     case 'APPROVED':
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
-            <Check className="h-2 w-2 stroke-[3]" />
-          </span>
+          <CircleCheckFill className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
           <span>อนุมัติแล้ว</span>
         </span>
       );
