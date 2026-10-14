@@ -1,40 +1,41 @@
-# V2 Architecture Review
+# สรุปการทบทวนสถาปัตยกรรม V2 สำหรับ V3
 
-## 1. Existing Architecture
+## 1. สถาปัตยกรรมเดิม
 
-V2 uses the following components:
+V2 ใช้ส่วนประกอบหลักดังนี้
 
-- Frontend: React and TypeScript
-- API: Amazon API Gateway HTTP API and AWS Lambda (Node.js)
-- Database: Amazon RDS PostgreSQL with RDS Proxy
+- Frontend: React และ TypeScript
+- API: Amazon API Gateway HTTP API และ AWS Lambda (Node.js)
+- ฐานข้อมูล: Amazon RDS PostgreSQL ผ่าน RDS Proxy
 - Infrastructure: Terraform
-- Main data includes students, companies, positions, periods, and coop plans.
+- ข้อมูลหลัก: นักศึกษา สถานประกอบการ ตำแหน่งงาน รอบรับยื่น และแผนสหกิจศึกษา
 
-## 2. Existing Coop Plan Features
+## 2. ความสามารถด้านแผนสหกิจที่มีอยู่
 
-The repository contains these read APIs:
+Repository มี API สำหรับอ่านข้อมูลดังนี้
 
-- `GET /coop-plans`: list and filter coop plans
-- `GET /coop-plans/{planId}`: get a plan by ID
+- `GET /coop-plans`: ดึงรายการและกรองแผนสหกิจ
+- `GET /coop-plans/{planId}`: ดึงรายละเอียดแผนตาม ID
 
-The `coop_plans` table already stores plan status, reviewer name, review time, and review comment. Existing statuses are `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, and `REJECTED`.
+ตาราง `coop_plans` มีข้อมูลสถานะ ผู้ตรวจ เวลาในการพิจารณา และความเห็นของผู้ตรวจ โดย V2 ใช้สถานะ `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED` และ `REJECTED`
 
-## 3. Reuse and Changes for V3
+จากการตรวจ Repository ไม่พบ API สำหรับสร้าง แก้ไข ยื่น หรือพิจารณาแผน และไม่พบการตั้งค่า Cognito Authentication ในไฟล์ Terraform ที่ตรวจสอบ ข้อมูลนี้อ้างอิงจากไฟล์ใน Repository ไม่ใช่การยืนยันสถานะของ AWS ที่ Deploy อยู่จริง
 
-- Frontend: reuse the existing React structure and add plan submission and review screens.
-- API and Lambda: reuse the existing structure and propose endpoints for creating, updating, submitting, and reviewing plans.
-- Database: reuse existing student and coop plan data; confirm whether additional user and review tables are needed.
-- Authentication: design user authentication and backend authorization for V3.
-- Workflow: define who can submit and review plans, and which status changes are allowed.
+## 3. ส่วนที่ V3 นำมาใช้ต่อและส่วนที่ต้องเพิ่ม
 
-## 4. Findings and Items to Confirm
+- **Frontend:** ใช้โครงสร้าง React และ TypeScript เดิม เพิ่มหน้าสร้าง แก้ไข ยื่น และพิจารณาแผน
+- **API และ Lambda:** ใช้โครงสร้างเดิม เพิ่ม API สำหรับสร้าง แก้ไข ยื่น ยื่นใหม่ และพิจารณาแผน
+- **ฐานข้อมูล:** ใช้ข้อมูลนักศึกษาและแผนสหกิจเดิม เพิ่มหรือปรับโครงสร้างเพื่อเชื่อมบัญชีผู้ใช้และเก็บประวัติการพิจารณา
+- **Authentication:** ใช้ Amazon Cognito เพื่อยืนยันตัวตน โดย Backend ใช้ `sub` จาก Token ที่ตรวจสอบแล้วเพื่อระบุตัวผู้ใช้
+- **Authorization:** ตรวจบทบาท เจ้าของแผน และความสัมพันธ์ระหว่าง Advisor กับนักศึกษาใน Backend
+- **Workflow:** ใช้สถานะ `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED` และ `REJECTED` โดยตัด `UNDER_REVIEW` ออกจาก Workflow ใหม่
+- **สิทธิ์ Staff:** Staff สามารถดูและพิจารณาแผนของนักศึกษาทุกคนในระบบ ส่วน Advisor ดูและพิจารณาได้เฉพาะนักศึกษาที่รับผิดชอบ
+- **การป้องกันผลทับกัน:** บันทึกผลพิจารณาและเปลี่ยนสถานะภายใน Transaction เดียว พร้อมตรวจว่าสถานะยังเป็น `SUBMITTED` เพื่อป้องกันการเขียนทับผลที่มีผู้ตรวจบันทึกไว้แล้ว
 
-- The inspected repository contains read APIs, but no plan submission or review routes were found.
-- Cognito authentication was not found in the inspected Terraform files.
-- The current schema stores `reviewer_name`; the proposed design needs a way to identify reviewers.
-- The team must confirm roles, review steps, submission rules, and resubmission after rejection.
-- These findings describe inspected repository files, not verified live AWS configuration.
+## 4. การรองรับข้อมูลเดิมจาก V2
 
-## 5. Conclusion
+ก่อนใช้ Workflow ใหม่ ต้องปรับแผนที่มีสถานะ `UNDER_REVIEW` ให้เป็น `SUBMITTED` เพื่อให้ผู้ตรวจพิจารณาต่อได้โดยตรง
 
-V3 can reuse the main V2 architecture. Plan management, authentication, authorization, and workflow rules need further design before implementation.
+สถานะ `RETURNED` ใช้สำหรับแผนที่ส่งกลับให้นักศึกษาแก้ไขและยื่นใหม่ ส่วน `REJECTED` เป็นสถานะสิ้นสุดของแผนนั้น หากนักศึกษาต้องการยื่นใหม่หลังไม่อนุมัติ ต้องสร้างแผนใหม่
+
+V3 ใช้สถาปัตยกรรมหลักจาก V2 และเพิ่มการยืนยันตัวตน การตรวจสิทธิ์ API สำหรับจัดการแผน และกติกา Workflow ตามเอกสารออกแบบ V3

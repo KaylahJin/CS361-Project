@@ -1,67 +1,80 @@
 # V3 Data Model Design
 
-## 1. Existing Tables
+## 1. ตารางเดิมจาก V2
 
-Reuse the existing `students` and `coop_plans` tables.
+V3 นำตาราง `students` และ `coop_plans` ที่มีอยู่แล้วกลับมาใช้ โดยไม่สร้างข้อมูลนักศึกษาหรือแผนสหกิจซ้ำโดยไม่จำเป็น
 
-The `coop_plans` table already contains plan status, `reviewer_name`, `reviewed_at`, and `review_comment`. Existing statuses include `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, and `REJECTED`.
+ตาราง `coop_plans` เดิมมีข้อมูลสถานะ `reviewer_name`, `reviewed_at` และ `review_comment` โดย V2 ใช้สถานะ `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED` และ `REJECTED`
 
-## 2. Proposed New Tables
+V3 กำหนดสถานะสำหรับ Workflow ใหม่เป็น `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED` และ `REJECTED` โดย `UNDER_REVIEW` เป็นสถานะเดิมของ V2 ที่ต้องจัดการก่อนเปิดใช้ Workflow ใหม่
 
-These tables are design proposals, not existing database changes.
+## 2. ตารางที่เพิ่มหรือปรับปรุงสำหรับ V3
+
+ตารางและข้อกำหนดในส่วนนี้เป็นแบบออกแบบสำหรับ V3 ยังไม่ใช่การเปลี่ยนแปลงฐานข้อมูลที่ Deploy แล้ว
 
 ### app_users
 
-Links an authenticated account to a system role.
+เชื่อมบัญชีที่ผ่านการยืนยันตัวตนกับบทบาทในระบบ
 
-- `cognito_sub`: unique account identifier from a verified Cognito identity
-- `role`: proposed values `STUDENT`, `ADVISOR`, or `ADMIN`
-- `student_id`: optional reference to `students.student_id`
-- `is_active`: whether the account is active
+- `cognito_sub`: รหัสบัญชีจาก Cognito ที่ผ่านการตรวจสอบแล้ว และต้องไม่ซ้ำกัน
+- `role`: บทบาท `STUDENT`, `ADVISOR`, `STAFF` หรือ `ADMIN`
+- `student_id`: อ้างอิง `students.student_id` สำหรับบัญชีนักศึกษา โดยอนุญาตให้เป็นค่าว่างสำหรับบทบาทอื่น
+- `is_active`: ระบุว่าบัญชีเปิดใช้งานอยู่หรือไม่
+
+ผู้ใช้ที่ไม่มีบัญชีที่ผ่านการยืนยันตัวตนถือเป็น Public และไม่ต้องมีแถวใน `app_users`
+
+`ADMIN` จัดการบัญชี บทบาท และสิทธิ์การเข้าถึง ส่วนการดูหรือพิจารณาแผนต้องมีบทบาท `STAFF` หรือ `ADVISOR` ที่ได้รับมอบหมายอย่างถูกต้อง การเป็น `ADMIN` เพียงอย่างเดียวไม่ให้สิทธิ์พิจารณาแผนโดยอัตโนมัติ
 
 ### advisor_student_assignments
 
-Defines which students an advisor is responsible for.
+กำหนดว่านักศึกษาคนใดอยู่ในความรับผิดชอบของ Advisor
 
-- `advisor_sub`: reference to an advisor account
-- `student_id`: reference to a student
-- `created_at`: assignment creation time
+- `advisor_sub`: อ้างอิงบัญชี Advisor ใน `app_users`
+- `student_id`: อ้างอิง `students.student_id`
+- `created_at`: วันเวลาที่สร้างการมอบหมาย
 
-A combined key on `advisor_sub` and `student_id` can prevent duplicate assignments.
+ใช้ Primary Key หรือ Unique Constraint ร่วมระหว่าง `advisor_sub` และ `student_id` เพื่อป้องกันการมอบหมายซ้ำ
 
 ### plan_reviews
 
-Stores review history if the team requires it.
+เก็บประวัติการพิจารณาแต่ละครั้ง
 
-- `review_id`: primary key
-- `plan_id`: reference to `coop_plans.plan_id`
-- `reviewer_sub`: reference to the reviewer account
-- `decision`: `APPROVED` or `REJECTED`
-- `comment`: review comment or rejection reason
-- `reviewed_at`: review time
+- `review_id`: Primary Key
+- `plan_id`: Foreign Key ไปยัง `coop_plans.plan_id`
+- `reviewer_sub`: อ้างอิงบัญชีผู้พิจารณาใน `app_users`
+- `decision`: `APPROVED`, `REJECTED` หรือ `RETURNED`
+- `comment`: ความเห็นของผู้พิจารณา โดยต้องระบุเมื่อส่งกลับหรือไม่อนุมัติ
+- `reviewed_at`: วันเวลาที่บันทึกผลพิจารณา
 
-## 3. Relationships
+เก็บประวัติการพิจารณาทุกครั้ง เพื่อให้ตรวจสอบผลครั้งก่อนหน้าได้เมื่อมีการส่งแผนกลับมาแก้ไขและยื่นใหม่ ตารางนี้จึงต้องรองรับหลายรายการต่อหนึ่งแผน
 
-- One student can have multiple coop plans.
-- User accounts can be linked to student records.
-- Advisor assignments link advisor accounts to students.
-- A coop plan can have multiple review records if review history is required.
+ฟิลด์เดิมใน `coop_plans` ได้แก่ `reviewer_name`, `reviewed_at` และ `review_comment` ยังคงใช้เก็บผลการพิจารณาล่าสุดเพื่อรองรับการอ่านข้อมูลแผน ส่วน `plan_reviews` ใช้เก็บประวัติการพิจารณาทุกครั้ง โดยข้อมูลผลล่าสุดใน `coop_plans` และประวัติใน `plan_reviews` ต้องบันทึกหรือเปลี่ยนแปลงพร้อมกันภายใน Database Transaction เดียวกัน
 
-## 4. Data Integrity and Migration
+## 3. ความสัมพันธ์ของข้อมูล
 
-- Preserve existing student and coop plan data.
-- Enforce foreign keys and valid role and decision values.
-- Check ownership and advisor assignment in the backend.
-- Save a review decision and its status change in one database transaction.
-- Existing reviewer names cannot be safely mapped to user accounts without matching information.
+- นักศึกษาหนึ่งคนมีแผนสหกิจได้หลายแผน
+- บัญชี `STUDENT` เชื่อมกับข้อมูลนักศึกษาผ่าน `student_id`
+- Advisor เชื่อมกับนักศึกษาที่รับผิดชอบผ่าน `advisor_student_assignments`
+- แผนหนึ่งรายการมีประวัติการพิจารณาได้หลายครั้งผ่าน `plan_reviews`
+- `plan_reviews.reviewer_sub` ต้องอ้างอิงบัญชีผู้พิจารณาที่มีอยู่จริง
 
-## 5. Items to Confirm
+## 4. กฎความถูกต้องและข้อกำหนดของข้อมูล
 
-- Are all three roles required?
-- Will Cognito be used for authentication?
-- Can a student have multiple advisors?
-- Is review history required?
-- Should the latest review remain in `coop_plans` while past reviews are stored separately?
-- How will existing users be linked to accounts?
+- ใช้ Foreign Key เพื่อรักษาความสัมพันธ์ของข้อมูล และกำหนดค่า Role, Status และ Decision ให้ตรงกับค่าที่อนุญาต
+- Backend ต้องตรวจสอบเจ้าของแผน บทบาทผู้ใช้ และการมอบหมาย Advisor ทุกครั้งที่เข้าถึงหรือพิจารณาแผน
+- `STAFF` สามารถดูและพิจารณาแผนของนักศึกษาทุกคน ส่วน `ADVISOR` พิจารณาได้เฉพาะนักศึกษาที่ได้รับมอบหมาย
+- สถานะที่อนุญาตใน Workflow ใหม่ ได้แก่ `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED` และ `REJECTED`
+- นักศึกษาแก้ไขแผนได้เฉพาะสถานะ `PREPARING` หรือ `RETURNED`
+- อนุญาตให้มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อนักศึกษาต่อรอบ โดยสถานะที่นับรวมคือ `PREPARING`, `SUBMITTED` และ `RETURNED`
+- การบันทึกผลพิจารณา การเพิ่มประวัติใน `plan_reviews` และการเปลี่ยนสถานะต้องทำใน Database Transaction เดียวกัน
+- การเปลี่ยนสถานะต้องตรวจสอบว่าสถานะปัจจุบันยังเป็น `SUBMITTED` หากมีผู้พิจารณาคนอื่นบันทึกผลไปก่อน ให้ยกเลิก Transaction และส่ง `409 Conflict` โดยไม่เขียนทับผลเดิม
 
-The proposed tables and constraints must be reviewed before database migration.
+## 5. การย้ายข้อมูลจาก V2
+
+- เก็บข้อมูลนักศึกษาและแผนสหกิจเดิมไว้
+- ก่อนเปิดใช้ Workflow ใหม่ ให้เปลี่ยนแผนที่ยังอยู่ในสถานะ `UNDER_REVIEW` เป็น `SUBMITTED` เพื่อให้เข้าสู่ขั้นตอนพิจารณาใหม่ได้
+- ข้อมูล `reviewer_name` เดิมไม่สามารถจับคู่กับบัญชีผู้ใช้ได้อย่างปลอดภัยหากไม่มีข้อมูลยืนยันตัวตนที่ตรงกัน จึงไม่ควรสร้าง `reviewer_sub` จากชื่อเพียงอย่างเดียว
+- ข้อมูลผู้ตรวจเดิมต้องคงอยู่ตามความเหมาะสม ส่วนการพิจารณาหลังเปิดใช้ V3 ให้บันทึกบัญชีผู้ตรวจและประวัติใน `plan_reviews`
+- ตรวจสอบ Foreign Key, ข้อมูล Role และ Status ก่อนนำ Migration ไปใช้จริง
+
+แบบจำลองนี้เป็นข้อกำหนดร่วมสำหรับการพัฒนา V3 โดยการเพิ่มตารางและการย้ายข้อมูลจะดำเนินการในขั้นตอน Implementation

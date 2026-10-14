@@ -1,33 +1,30 @@
-# V3 API Specification
+# ข้อกำหนด API ของ V3
 
-## 1. Existing V2 APIs
+## 1. API เดิมจาก V2
 
-| Method | Path | Purpose |
+| Method | Path | หน้าที่ |
 |---|---|---|
-| GET | `/coop-plans` | List and filter plans |
-| GET | `/coop-plans/{planId}` | Get plan details |
+| GET | `/coop-plans` | ดึงรายการแผนและค้นหาหรือกรองข้อมูล |
+| GET | `/coop-plans/{planId}` | ดึงรายละเอียดแผนตาม ID |
 
-These endpoints exist in the inspected V2 repository. Access rules must be checked for V3.
+API ทั้งสองรายการมีอยู่ใน Repository ที่ตรวจสอบจาก V2 เมื่อพัฒนา V3 ต้องเพิ่มการตรวจสิทธิ์ให้ตรงกับข้อกำหนดใน `V3-01-workflow-permissions.md`
 
-## 2. Proposed V3 APIs
+## 2. API สำหรับ V3
 
-The following endpoints are proposals and are not confirmed as implemented.
-
-| Method | Path | Permission | Purpose |
+| Method | Path | ผู้มีสิทธิ์ | หน้าที่ |
 |---|---|---|---|
-| POST | `/coop-plans` | Student | Create a plan |
-| PATCH | `/coop-plans/{planId}` | Plan owner | Edit a plan |
-| POST | `/coop-plans/{planId}/submit` | Plan owner | Submit a plan |
-| POST | `/coop-plans/{planId}/start-review` | Assigned Advisor | Start reviewing |
-| POST | `/coop-plans/{planId}/review` | Assigned Advisor | Approve or reject |
+| POST | `/coop-plans` | Student | สร้างแผนของตนเอง |
+| PATCH | `/coop-plans/{planId}` | Student เจ้าของแผน | แก้ไขแผน |
+| POST | `/coop-plans/{planId}/submit` | Student เจ้าของแผน | ยื่นแผนหรือยื่นใหม่หลังแก้ไข |
+| POST | `/coop-plans/{planId}/review` | Advisor ที่รับผิดชอบ หรือ Staff | อนุมัติ ไม่อนุมัติ หรือส่งแผนกลับแก้ไข |
 
-## 3. Request and Response Design
+ไม่มี API `start-review` ผู้ตรวจสามารถพิจารณาแผนที่อยู่ในสถานะ `SUBMITTED` ได้โดยตรง
 
-### Create a plan
+## 3. สร้างแผน
 
 `POST /coop-plans`
 
-Example request:
+ตัวอย่าง Request:
 
 ```json
 {
@@ -36,77 +33,86 @@ Example request:
 }
 ```
 
-The backend identifies the Student from the authenticated account and creates a plan in `PREPARING` status.
+Backend ใช้ `sub` จาก Cognito Token ที่ตรวจสอบแล้วเพื่อระบุตัวนักศึกษา ไม่รับ ID เจ้าของแผนจาก Request มาใช้ยืนยันตัวตน
 
-Expected success: `201 Created`.
+ระบบตรวจสอบข้อมูลอ้างอิงที่จำเป็น แล้วสร้างแผนด้วยสถานะ `PREPARING`
 
-### Edit a plan
+Response เมื่อสำเร็จ: `201 Created`
+
+## 4. แก้ไขแผน
 
 `PATCH /coop-plans/{planId}`
 
-The request contains the fields that can be edited. The backend checks plan ownership and whether the current status allows editing.
+Request ประกอบด้วยฟิลด์ที่อนุญาตให้แก้ไขได้
 
-Expected success: `200 OK`.
+Backend ตรวจสอบว่าแผนเป็นของนักศึกษาที่เข้าสู่ระบบ และอนุญาตให้แก้ไขเฉพาะสถานะ `PREPARING` หรือ `RETURNED`
 
-### Submit a plan
+Response เมื่อสำเร็จ: `200 OK`
+
+## 5. ยื่นแผนหรือยื่นใหม่
 
 `POST /coop-plans/{planId}/submit`
 
-The backend validates required information and changes the status from `PREPARING` to `SUBMITTED`.
+ไม่จำเป็นต้องมี Request Body
 
-Expected success: `200 OK`.
+Backend ตรวจสอบเจ้าของแผน คุณสมบัตินักศึกษา ช่วงเวลารับยื่น ข้อมูลที่จำเป็น และสถานะปัจจุบัน โดยอนุญาตให้ยื่นจาก `PREPARING` หรือ `RETURNED` และเปลี่ยนสถานะเป็น `SUBMITTED`
 
-### Start review
+ระบบต้องบังคับใช้ข้อจำกัดว่านักศึกษามีแผนที่ยังดำเนินการอยู่ได้ไม่เกิน 1 แผนต่อรอบรับยื่น
 
-`POST /coop-plans/{planId}/start-review`
+Response เมื่อสำเร็จ: `200 OK`
 
-The backend checks the Advisor's assignment and changes the status from `SUBMITTED` to `UNDER_REVIEW`.
-
-Expected success: `200 OK`.
-
-### Review a plan
+## 6. พิจารณาแผน
 
 `POST /coop-plans/{planId}/review`
 
-Example request:
+ตัวอย่าง Request:
 
 ```json
 {
-  "decision": "REJECTED",
-  "comment": "Please update the plan."
+  "decision": "RETURNED",
+  "comment": "กรุณาแก้ไขรายละเอียดของแผน"
 }
 ```
 
-The backend checks the reviewer's permission and current plan status. It records the decision and updates the plan in one transaction.
+ค่า `decision` ที่อนุญาต ได้แก่ `APPROVED`, `REJECTED` และ `RETURNED`
 
-Expected success: `200 OK`.
+- `APPROVED` เปลี่ยนสถานะเป็น `APPROVED`
+- `REJECTED` เปลี่ยนสถานะเป็น `REJECTED`
+- `RETURNED` เปลี่ยนสถานะเป็น `RETURNED`
 
-## 4. Common Rules and Errors
+กรณี `REJECTED` และ `RETURNED` ต้องระบุ `comment` ที่ไม่ใช่ค่าว่าง
 
-- Protected endpoints require verified authentication.
-- The backend derives the user's identity from the verified token, not a client-supplied reviewer or owner ID.
-- Check plan ownership and advisor assignment on every relevant request.
-- Validate input and allowed status transitions.
-- Prevent conflicting review decisions from being saved concurrently.
+Backend ใช้ `sub` จาก Token ที่ตรวจสอบแล้วเพื่อระบุตัวผู้ตรวจ และตรวจว่าผู้ตรวจมีบทบาท Staff หรือเป็น Advisor ที่รับผิดชอบนักศึกษาคนนั้น รวมถึงตรวจว่าแผนยังอยู่ในสถานะ `SUBMITTED`
 
-Proposed HTTP error codes:
+การบันทึกผลพิจารณาและเปลี่ยนสถานะต้องทำภายใน Transaction เดียว โดยตรวจเงื่อนไขว่าสถานะเดิมยังเป็น `SUBMITTED` ขณะบันทึก หากมีผู้ตรวจคนอื่นเปลี่ยนสถานะสำเร็จก่อน ต้องตอบกลับ `409 Conflict` และห้ามเขียนทับผลเดิม
 
-| Code | Meaning |
+Response เมื่อสำเร็จ: `200 OK`
+
+## 7. การยืนยันตัวตนและตรวจสิทธิ์
+
+- API สำหรับจัดการแผนและพิจารณาแผนต้องตรวจสอบ Token ก่อนให้เข้าถึงข้อมูล
+- Backend ใช้ `sub` จาก Token ที่ผ่านการตรวจสอบแล้วเพื่อระบุตัวผู้ใช้
+- ห้ามเชื่อถือ ID เจ้าของแผนหรือ ID ผู้ตรวจที่ส่งมาจาก Request เพื่อใช้ยืนยันตัวตน
+- Student เข้าถึงได้เฉพาะแผนของตนเอง
+- Advisor เข้าถึงแผนได้เฉพาะของนักศึกษาที่ตนรับผิดชอบ
+- Staff เข้าถึงและพิจารณาแผนของนักศึกษาทุกคนได้
+- สิทธิ์จัดการบัญชีของ Admin ไม่ได้ให้สิทธิ์พิจารณาแผนโดยอัตโนมัติ
+
+## 8. HTTP Error ที่ต้องรองรับ
+
+| Code | ความหมาย |
 |---|---|
-| 400 | Invalid request |
-| 401 | Missing or invalid authentication |
-| 403 | Permission denied |
-| 404 | Resource not found |
-| 409 | Invalid or conflicting status |
-| 500 | Internal server error |
+| 400 | ข้อมูลไม่ถูกต้อง ข้อมูลจำเป็นไม่ครบ หรือค่า `decision` ไม่ถูกต้อง |
+| 401 | ไม่มี Token หรือ Token ไม่ถูกต้องหรือหมดอายุ |
+| 403 | ผู้ใช้ไม่มีสิทธิ์ทำรายการ |
+| 404 | ไม่พบแผนหรือข้อมูลอ้างอิงที่ร้องขอ |
+| 409 | สถานะไม่อนุญาตให้ทำรายการ หรือมีผู้ตรวจบันทึกผลไปก่อนแล้ว |
+| 500 | เกิดข้อผิดพลาดภายในระบบ |
 
-## 5. Items to Confirm
+Response กรณีผิดพลาดต้องมีรหัสข้อผิดพลาดและข้อความที่อธิบายปัญหาให้เข้าใจได้
 
-- Does review need a separate start-review step?
-- Can plans be resubmitted after rejection?
-- Are multiple reviewers required?
-- What fields and conditions are required to submit a plan?
-- Does Admin need additional endpoints?
-- Should response formats follow existing repository conventions?
+## 9. ข้อกำหนดสำหรับการพัฒนาและทดสอบ
 
-All proposed endpoints require implementation, tests, and authorization checks before use.
+API ของ V3 ต้องมีการทดสอบกรณีสำเร็จ การยืนยันตัวตน สิทธิ์ของแต่ละบทบาท ความเป็นเจ้าของแผน ความสัมพันธ์ของ Advisor การเปลี่ยนสถานะที่ไม่ถูกต้อง และการพิจารณาพร้อมกัน
+
+API, Workflow, สิทธิ์ผู้ใช้ และชื่อสถานะต้องเป็นไปตามข้อกำหนดใน `V3-01-workflow-permissions.md`
