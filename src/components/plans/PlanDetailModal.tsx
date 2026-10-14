@@ -301,12 +301,12 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   <span>อนุมัติ (Approve)</span>
                 </label>
 
-                {/* 2. RETURN (Yellow in B&W: Lighter silver gray) */}
+                {/* 2. RETURN (Amber/Yellow on select) */}
                 <label
                   id="label-decision-returned"
                   className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'RETURNED'
-                      ? 'border-zinc-400 bg-zinc-50 text-zinc-700 shadow-xs ring-1 ring-zinc-200'
+                      ? 'border-amber-500 bg-amber-50/50 text-amber-900 shadow-xs ring-1 ring-amber-300'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
@@ -321,18 +321,18 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   />
                   <RotateCcw
                     className={`h-4 w-4 ${
-                      decision === 'RETURNED' ? 'text-zinc-500' : 'text-slate-400'
+                      decision === 'RETURNED' ? 'text-amber-500' : 'text-slate-400'
                     }`}
                   />
                   <span>ส่งกลับแก้ไข (Return)</span>
                 </label>
 
-                {/* 3. REJECT */}
+                {/* 3. REJECT (Rose/Red on select) */}
                 <label
                   id="label-decision-rejected"
                   className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'REJECTED'
-                      ? 'border-zinc-700 bg-zinc-100 text-zinc-900 shadow-xs ring-1 ring-zinc-300'
+                      ? 'border-rose-600 bg-rose-50/50 text-rose-900 shadow-xs ring-1 ring-rose-300'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
@@ -347,7 +347,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   />
                   <XCircle
                     className={`h-4 w-4 ${
-                      decision === 'REJECTED' ? 'text-zinc-700' : 'text-slate-400'
+                      decision === 'REJECTED' ? 'text-rose-600' : 'text-slate-400'
                     }`}
                   />
                   <span>ไม่อนุมัติ (Reject)</span>
