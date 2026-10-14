@@ -152,7 +152,7 @@ export const PlanProgressChart = ({
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <h4 className="font-heading text-xs font-bold text-slate-800">
-                ผลงานที่ตรวจเสร็จแล้ว ({reviewedTotal}/{total} แผน — {reviewProgress}%)
+                ผลงานที่ตรวจเสร็จแล้ว ({reviewedTotal}/{total} แผน {reviewProgress}%)
               </h4>
             </div>
             {isOpen && (
