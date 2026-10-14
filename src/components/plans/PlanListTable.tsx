@@ -6,7 +6,7 @@ import {
   Clock,
   FileText,
   RotateCcw,
-  X,
+  XCircle,
 } from 'lucide-react';
 import type { PlanReviewItem } from '../../types/planReview';
 
@@ -22,18 +22,18 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
     case 'SUBMITTED':
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/90 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-500/30 shadow-2xs">
-          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xs">
-            <Clock className="h-2 w-2 stroke-[2.5]" />
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
           </span>
+          <Clock className="h-3.5 w-3.5" />
           <span>รอตรวจ</span>
         </span>
       );
     case 'RETURNED':
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
-          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-zinc-400 text-white shadow-2xs">
-            <RotateCcw className="h-2 w-2 stroke-[2.5]" />
-          </span>
+          <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
           <span>ส่งกลับแก้ไข</span>
         </span>
       );
@@ -49,9 +49,7 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
     case 'REJECTED':
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
-          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-white shadow-2xs">
-            <X className="h-2 w-2 stroke-[3]" />
-          </span>
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
           <span>ไม่อนุมัติ</span>
         </span>
       );
@@ -59,9 +57,7 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
     default:
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
-          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-slate-300 text-white shadow-2xs">
-            <FileText className="h-2 w-2 stroke-[2]" />
-          </span>
+          <FileText className="h-3.5 w-3.5" />
           <span>ฉบับร่าง</span>
         </span>
       );

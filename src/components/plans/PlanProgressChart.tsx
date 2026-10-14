@@ -3,6 +3,7 @@ import {
   Check,
   Clock,
   RotateCcw,
+  XCircle,
   X,
 } from 'lucide-react';
 import type { PlanCounts } from '../../types/planReview';
@@ -154,13 +155,11 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 2. Returned for Revision (Solid Light Silver Gray) */}
+            {/* 2. Returned for Revision (Yellow desaturated to B&W: Lighter silver gray) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-zinc-500">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-zinc-400 text-white shadow-2xs">
-                    <RotateCcw className="h-2 w-2 stroke-[2.5]" />
-                  </span>
+                  <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
                   <span>ส่งกลับแก้ไข</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -175,13 +174,11 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 3. Rejected (Solid Dark Charcoal Gray) */}
+            {/* 3. Rejected (Red desaturated to B&W: Dark charcoal gray) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-zinc-700">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-white shadow-2xs">
-                    <X className="h-2 w-2 stroke-[3]" />
-                  </span>
+                  <XCircle className="h-3.5 w-3.5 text-zinc-600" />
                   <span>ไม่อนุมัติ</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -201,9 +198,11 @@ export const PlanProgressChart = ({
           <div className="mt-3.5 pt-2.5 border-t border-slate-100">
             <div className="flex items-center justify-between rounded-xl bg-blue-50/80 border border-blue-200/80 px-3 py-2 text-xs shadow-2xs">
               <div className="flex items-center gap-2 text-blue-700 font-bold">
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xs">
-                  <Clock className="h-2.5 w-2.5 stroke-[2.5]" />
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
                 </span>
+                <Clock className="h-3.5 w-3.5 text-blue-600" />
                 <span>คงเหลือรอตรวจ</span>
               </div>
               <span className="font-extrabold text-blue-700">
