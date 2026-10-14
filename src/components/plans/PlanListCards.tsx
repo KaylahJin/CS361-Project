@@ -104,10 +104,10 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
                   e.stopPropagation();
                   onOpen(plan);
                 }}
-                className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-bold transition-all ${
+                className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                   isPending
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs hover:shadow-md'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-xs'
                 }`}
               >
                 <span>{isPending ? 'ตรวจแผน' : 'ดูรายละเอียด'}</span>

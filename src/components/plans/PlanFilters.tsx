@@ -107,10 +107,10 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/20'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:shadow-xs'
               }`}
             >
               <span>{tab.label}</span>

@@ -174,10 +174,10 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                         e.stopPropagation();
                         onOpen(plan);
                       }}
-                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
                         isPending
-                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs hover:shadow-md'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-xs'
                       }`}
                     >
                       <span>{isPending ? 'ตรวจแผน' : 'ดูรายละเอียด'}</span>

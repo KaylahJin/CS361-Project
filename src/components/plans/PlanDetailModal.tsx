@@ -276,13 +276,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               <div className="grid gap-2.5 sm:grid-cols-3">
                 {/* 1. APPROVE */}
                 <label
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all ${
+                  id="label-decision-approved"
+                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'APPROVED'
                       ? 'border-emerald-600 bg-emerald-50/40 text-emerald-800 shadow-xs ring-1 ring-emerald-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
                   <input
+                    id="radio-decision-approved"
                     type="radio"
                     name="decision"
                     value="APPROVED"
@@ -300,13 +302,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
 
                 {/* 2. RETURN */}
                 <label
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all ${
+                  id="label-decision-returned"
+                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'RETURNED'
                       ? 'border-amber-600 bg-amber-50 text-amber-800 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
                   <input
+                    id="radio-decision-returned"
                     type="radio"
                     name="decision"
                     value="RETURNED"
@@ -324,13 +328,15 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
 
                 {/* 3. REJECT */}
                 <label
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all ${
+                  id="label-decision-rejected"
+                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                     decision === 'REJECTED'
                       ? 'border-zinc-700 bg-zinc-100 text-zinc-900 shadow-xs ring-1 ring-zinc-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-2xs'
                   }`}
                 >
                   <input
+                    id="radio-decision-rejected"
                     type="radio"
                     name="decision"
                     value="REJECTED"
@@ -388,16 +394,18 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
+                id="btn-cancel-modal"
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:scale-105 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer shadow-2xs"
               >
                 ยกเลิก
               </button>
               <button
+                id="btn-submit-decision"
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-blue-700 hover:scale-[1.03] hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] active:translate-y-0 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0 disabled:hover:shadow-none transition-all duration-200 cursor-pointer"
               >
                 {submitting ? (
                   <>

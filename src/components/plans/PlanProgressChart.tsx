@@ -40,14 +40,8 @@ export const PlanProgressChart = ({
   const radius = 42;
   const circumference = 2 * Math.PI * radius; // ~263.89
 
+  // Only completed review tasks in the donut slices (ไม่เอารอตรวจมาคิด นับแค่งานที่ทำเสร็จ)
   const slices = [
-    {
-      key: 'submitted',
-      count: submitted,
-      percent: submittedPercent,
-      color: '#2563eb', // Vibrant Task Blue: Active action required
-      label: 'รอตรวจ',
-    },
     {
       key: 'approved',
       count: approved,
@@ -111,9 +105,10 @@ export const PlanProgressChart = ({
           </p>
 
           <button
+            id="toggle-plan-progress-details"
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="mt-2.5 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            className="mt-2.5 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:scale-105 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer shadow-2xs"
           >
             <span>{showOverlay ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'}</span>
             <ChevronDown
@@ -126,8 +121,9 @@ export const PlanProgressChart = ({
 
         {/* Circular Donut Graph */}
         <div
+          id="plan-progress-donut"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="relative flex h-24 w-24 shrink-0 items-center justify-center cursor-pointer group"
+          className="relative flex h-24 w-24 shrink-0 items-center justify-center cursor-pointer group transition-transform duration-200 hover:scale-105 active:scale-95"
           title="คลิกหรือชี้เพื่อดูรายละเอียดความคืบหน้า"
         >
           <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
@@ -184,16 +180,16 @@ export const PlanProgressChart = ({
         <div className="absolute top-full left-0 right-0 z-30 mt-2 rounded-2xl border border-slate-200 bg-white/98 p-4 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <h4 className="font-heading text-xs font-bold text-slate-800">
-                รายละเอียดผลการตรวจ ({total} แผน)
+                ผลงานที่ตรวจเสร็จแล้ว ({reviewedTotal}/{total} แผน — {reviewProgress}%)
               </h4>
             </div>
             {isOpen && (
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 hover:scale-110 active:scale-95 transition cursor-pointer"
                 title="ปิด"
               >
                 <X className="h-3.5 w-3.5" />
@@ -201,24 +197,23 @@ export const PlanProgressChart = ({
             )}
           </div>
 
-          {/* Detailed Breakdown List */}
+          {/* Detailed Breakdown of Completed Tasks */}
           <div className="mt-3 space-y-2.5 text-xs">
-            {/* 1. Waiting for Review (Submitted) - Task ที่ต้องทำ */}
+            {/* 1. Approved (Completed - Green as requested) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-blue-600">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>รอตรวจ</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+              <div className="flex items-center justify-between text-emerald-600">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>อนุมัติแล้ว</span>
                 </span>
-                <span className="font-bold">
-                  {submitted} แผน ({submittedPercent}%)
+                <span className="font-semibold text-slate-800">
+                  {approved} แผน ({approvedPercent}%)
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  style={{ width: `${submittedPercent}%` }}
-                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${approvedPercent}%` }}
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
@@ -242,26 +237,7 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 3. Approved (Completed - Green as requested) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-emerald-600">
-                <span className="flex items-center gap-1.5 font-semibold">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>อนุมัติแล้ว</span>
-                </span>
-                <span className="font-semibold text-slate-800">
-                  {approved} แผน ({approvedPercent}%)
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  style={{ width: `${approvedPercent}%` }}
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                />
-              </div>
-            </div>
-
-            {/* 4. Rejected (Closed - Monochrome/Gray as requested) */}
+            {/* 3. Rejected (Closed - Monochrome/Gray as requested) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-zinc-500">
                 <span className="flex items-center gap-1.5 font-semibold">
@@ -281,7 +257,21 @@ export const PlanProgressChart = ({
             </div>
           </div>
 
-          <div className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-400 text-center">
+          {/* Pending Section - Remaining tasks waiting for review */}
+          <div className="mt-3.5 pt-2.5 border-t border-slate-100">
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5 text-blue-600 font-bold">
+                <Clock className="h-3.5 w-3.5" />
+                <span>คงเหลือรอตรวจ</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+              </div>
+              <span className="font-bold text-blue-600">
+                {submitted} แผน ({submittedPercent}%)
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[10px] text-slate-400 text-center">
             ชี้เมาส์หรือแตะที่กราฟเพื่อเปิด/ปิดรายละเอียด
           </div>
         </div>
