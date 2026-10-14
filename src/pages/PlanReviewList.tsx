@@ -165,7 +165,13 @@ export default function PlanReviewList() {
       )}
 
       {/* Hero Header */}
-      <header className="border-b border-blue-600/30 bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 text-white shadow-sm">
+      <header
+        style={{
+          background:
+            'linear-gradient(to right, oklch(0.38 0.15 266.5), oklch(0.12 0 0), oklch(0.37 0.12 245.27))',
+        }}
+        className="border-b border-white/10 text-white shadow-sm from-[oklch(0.38_0.15_266.5)] via-[oklch(0.12_0_0)] to-[oklch(0.37_0.12_245.27)] bg-gradient-to-r"
+      >
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           {/* Title & Badge */}
           <div className="flex min-w-0 items-center gap-3.5">
