@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Navbar, { type TabType } from './components/Navbar';
-import Footer from './components/Footer';
 import Home from './pages/Home';
 import Requirements from './pages/Requirements';
 import Employers from './pages/Employers';
@@ -43,7 +42,6 @@ function App() {
       <div className="flex-grow">
         {renderContent()}
       </div>
-      <Footer onTabChange={setActiveTab} />
     </div>
   );
 }
