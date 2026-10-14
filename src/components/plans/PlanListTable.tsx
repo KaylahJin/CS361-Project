@@ -20,8 +20,8 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
       );
     case 'RETURNED':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-feedback-text">
-          <RotateCcw className="h-3.5 w-3.5" />
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
+          <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
           <span>ส่งกลับแก้ไข</span>
         </span>
       );
@@ -34,8 +34,8 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
       );
     case 'REJECTED':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
-          <XCircle className="h-3.5 w-3.5" />
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
           <span>ไม่อนุมัติ</span>
         </span>
       );

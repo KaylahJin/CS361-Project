@@ -38,32 +38,6 @@ export const PlanProgressChart = ({
   const radius = 42;
   const circumference = 2 * Math.PI * radius; // ~263.89
 
-  // Only completed review tasks in the donut slices (ไม่เอารอตรวจมาคิด นับแค่งานที่ทำเสร็จ)
-  // Color for returned uses the centralized feedback token var(--color-feedback)
-  const slices = [
-    {
-      key: 'approved',
-      count: approved,
-      percent: approvedPercent,
-      color: '#10b981', // Emerald Green: Approved
-      label: 'อนุมัติแล้ว',
-    },
-    {
-      key: 'returned',
-      count: returned,
-      percent: returnedPercent,
-      color: 'var(--color-feedback)', // Synced Feedback Yellow
-      label: 'ส่งกลับแก้ไข',
-    },
-    {
-      key: 'rejected',
-      count: rejected,
-      percent: rejectedPercent,
-      color: '#71717a', // Monochrome Zinc: Closed, no action needed
-      label: 'ไม่อนุมัติ',
-    },
-  ];
-
   // Close overlay when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -80,8 +54,6 @@ export const PlanProgressChart = ({
   }, [isOpen]);
 
   const showOverlay = isOpen || isHovered;
-
-  let accumulatedOffset = 0;
 
   return (
     <div
@@ -108,30 +80,21 @@ export const PlanProgressChart = ({
             fill="transparent"
           />
 
-          {/* Render Donut Segments for completed tasks only */}
-          {total > 0 &&
-            slices.map((slice) => {
-              if (slice.count <= 0) return null;
-              const strokeLength = (slice.count / total) * circumference;
-              const offset = accumulatedOffset;
-              accumulatedOffset += strokeLength;
-
-              return (
-                <circle
-                  key={slice.key}
-                  cx="50"
-                  cy="50"
-                  r={radius}
-                  stroke={slice.color}
-                  strokeWidth="9"
-                  strokeDasharray={`${strokeLength} ${circumference}`}
-                  strokeDashoffset={-offset}
-                  strokeLinecap="round"
-                  fill="transparent"
-                  className="transition-all duration-500 hover:opacity-85"
-                />
-              );
-            })}
+          {/* Unified Completed Progress Ring in System Color (Navy 950) */}
+          {total > 0 && reviewedTotal > 0 && (
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              stroke="var(--color-blue-600)"
+              strokeWidth="9"
+              strokeDasharray={`${(reviewedTotal / total) * circumference} ${circumference}`}
+              strokeDashoffset={0}
+              strokeLinecap="round"
+              fill="transparent"
+              className="transition-all duration-500 hover:opacity-85"
+            />
+          )}
         </svg>
 
         {/* Center Text (% and Label) */}
@@ -188,11 +151,11 @@ export const PlanProgressChart = ({
               </div>
             </div>
 
-            {/* 2. Returned for Revision (Synced Feedback Yellow) */}
+            {/* 2. Returned for Revision (Yellow desaturated to B&W: Lighter silver gray) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-feedback-text">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <RotateCcw className="h-3.5 w-3.5" />
+              <div className="flex items-center justify-between text-zinc-500">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
                   <span>ส่งกลับแก้ไข</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -202,16 +165,16 @@ export const PlanProgressChart = ({
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${returnedPercent}%` }}
-                  className="h-full bg-feedback rounded-full transition-all duration-300"
+                  className="h-full bg-zinc-300 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
 
-            {/* 3. Rejected (Closed - Monochrome/Gray as requested) */}
+            {/* 3. Rejected (Red desaturated to B&W: Dark charcoal gray) */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-zinc-500">
+              <div className="flex items-center justify-between text-zinc-700">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <XCircle className="h-3.5 w-3.5 text-zinc-400" />
+                  <XCircle className="h-3.5 w-3.5 text-zinc-600" />
                   <span>ไม่อนุมัติ</span>
                 </span>
                 <span className="font-semibold text-slate-800">
@@ -221,7 +184,7 @@ export const PlanProgressChart = ({
               <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div
                   style={{ width: `${rejectedPercent}%` }}
-                  className="h-full bg-zinc-500 rounded-full transition-all duration-300"
+                  className="h-full bg-zinc-600 rounded-full transition-all duration-300"
                 />
               </div>
             </div>
