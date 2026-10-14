@@ -8,7 +8,6 @@ import Positions from './pages/Positions';
 import Students from './pages/Students';
 import Periods from './pages/Periods';
 import CoopPlans from './pages/CoopPlans';
-import PlanReviewList from './pages/PlanReviewList';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -29,8 +28,6 @@ function App() {
         return <Periods />;
       case 'coop-plans':
         return <CoopPlans />;
-      case 'plan-reviews':
-        return <PlanReviewList />;
       default:
         return <Home onTabChange={setActiveTab} />;
     }
