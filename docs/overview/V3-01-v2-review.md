@@ -1,32 +1,40 @@
-# V2 Architecture Review for V3
+# V2 Architecture Review
 
-## 1. Existing V2 Architecture
+## 1. Existing Architecture
 
-จากเอกสาร `docs/overview/V2.md` และโค้ดที่ตรวจสอบ V2 มีองค์ประกอบหลักดังนี้
+V2 uses the following components:
 
-- **Frontend:** React และ TypeScript สำหรับแสดงข้อมูลและเรียก API
-- **API:** API Gateway และ AWS Lambda สำหรับรับ Request และประมวลผลข้อมูล
-- **Database:** PostgreSQL บน Amazon RDS โดยมี RDS Proxy เป็นตัวกลางในการเชื่อมต่อ
-- **Infrastructure:** ใช้ Terraform สำหรับจัดการโครงสร้างพื้นฐานบน AWS
-- **Data:** มีข้อมูลนักศึกษา สถานประกอบการ ตำแหน่งงาน ปีการศึกษา รอบสหกิจ และแผนสหกิจ
+- Frontend: React and TypeScript
+- API: Amazon API Gateway HTTP API and AWS Lambda (Node.js)
+- Database: Amazon RDS PostgreSQL with RDS Proxy
+- Infrastructure: Terraform
+- Main data includes students, companies, positions, periods, and coop plans.
 
-## 2. Reuse and Required Changes
+## 2. Existing Coop Plan Features
 
-| Component | Reuse from V2 | Changes for V3 |
-|---|---|---|
-| Frontend | โครงสร้าง React และ TypeScript | เพิ่มหน้าสร้าง แก้ไข ยื่นแผน และพิจารณาแผน |
-| API / Lambda | โครงสร้าง API และ Lambda เดิม | เพิ่ม API สำหรับจัดการแผนและบันทึกผลพิจารณา |
-| Database | ข้อมูลและตารางเดิมที่เกี่ยวข้อง | เพิ่มข้อมูลบัญชีผู้ใช้ บทบาท และผลการพิจารณาตาม Data Model ใหม่ |
-| AWS Infrastructure | API Gateway, Lambda, RDS Proxy และ RDS | เพิ่ม Cognito และกำหนดการตรวจสอบ Token กับสิทธิ์ใน API |
-| Workflow | ข้อมูลแผนสหกิจที่มีอยู่ | เพิ่มสถานะ การยื่นแผน ลำดับผู้ตรวจ และการป้องกันผลพิจารณาทับกัน |
+The repository contains these read APIs:
 
-## 3. Findings and Items to Verify
+- `GET /coop-plans`: list and filter coop plans
+- `GET /coop-plans/{planId}`: get a plan by ID
 
-1. เอกสาร V2 ระบุว่า Authentication, Role-based Access Control และ Approval Workflow ยังอยู่นอกขอบเขตของ V2
-2. มี API สำหรับอ่านข้อมูลแผนสหกิจ เช่น `GET /coop-plans` และ `GET /coop-plans/{planId}` แต่ต้องตรวจสอบ API และตารางจริงเพิ่มเติมก่อนกำหนดว่าจะใช้ต่อหรือปรับส่วนใด
-3. ต้องตรวจสอบการตั้งค่า Authorization ของ API Gateway และวิธีตรวจสิทธิ์ใน Lambda ก่อนสรุปว่ามีระบบยืนยันตัวตนอยู่แล้วหรือไม่
-4. Data Model ใน `V2.md` เป็นแบบออกแบบภาพรวม จึงต้องเทียบกับ Schema และฐานข้อมูลจริงก่อนออกแบบส่วนขยายของ V3
+The `coop_plans` table already stores plan status, reviewer name, review time, and review comment. Existing statuses are `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, and `REJECTED`.
 
-## 4. Conclusion
+## 3. Reuse and Changes for V3
 
-V3 สามารถใช้โครงสร้าง Frontend, API, Lambda และฐานข้อมูลของ V2 เป็นพื้นฐานได้ โดยเพิ่มระบบยืนยันตัวตน การตรวจสอบสิทธิ์ การจัดการสถานะแผน และผลการพิจารณา ทั้งนี้ การเปลี่ยนแปลงจริงต้องอ้างอิงโครงสร้างที่มีอยู่ใน Repository และตรวจสอบกับทีมก่อนเริ่มพัฒนา
+- Frontend: reuse the existing React structure and add plan submission and review screens.
+- API and Lambda: reuse the existing structure and propose endpoints for creating, updating, submitting, and reviewing plans.
+- Database: reuse existing student and coop plan data; confirm whether additional user and review tables are needed.
+- Authentication: design user authentication and backend authorization for V3.
+- Workflow: define who can submit and review plans, and which status changes are allowed.
+
+## 4. Findings and Items to Confirm
+
+- The inspected repository contains read APIs, but no plan submission or review routes were found.
+- Cognito authentication was not found in the inspected Terraform files.
+- The current schema stores `reviewer_name`; the proposed design needs a way to identify reviewers.
+- The team must confirm roles, review steps, submission rules, and resubmission after rejection.
+- These findings describe inspected repository files, not verified live AWS configuration.
+
+## 5. Conclusion
+
+V3 can reuse the main V2 architecture. Plan management, authentication, authorization, and workflow rules need further design before implementation.
