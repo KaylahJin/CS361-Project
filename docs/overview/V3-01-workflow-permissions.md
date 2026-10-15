@@ -1,51 +1,73 @@
-# V3 Workflow and Permissions
+# Workflow และสิทธิ์ผู้ใช้ V3
 
-## 1. Proposed Roles
+## 1. บทบาทผู้ใช้
 
-| Role | Main responsibility |
+| บทบาท | สิทธิ์การใช้งาน |
 |---|---|
-| Student | Create, edit, and submit own plan |
-| Advisor | Review assigned students' plans |
-| Admin | Manage system data or access, if required |
+| Public | ดูข้อมูลทั่วไปและตำแหน่งงานที่เปิดเผยได้ แต่ดูแผนสหกิจส่วนตัวไม่ได้ |
+| Student | สร้าง ดู แก้ไข และยื่นแผนของตนเองตามสถานะของแผน |
+| Advisor | ดูและพิจารณาแผนของนักศึกษาที่ตนรับผิดชอบ |
+| Staff | ดูและพิจารณาแผนของนักศึกษาทุกคนในระบบ |
+| Admin | จัดการบัญชีผู้ใช้ บทบาท และสิทธิ์การเข้าถึงระบบ |
 
-These roles are proposed and must be confirmed with the team.
+ระบบต้องตรวจสิทธิ์ใน Backend ทุกครั้งที่เข้าถึงข้อมูลหรือทำรายการที่ต้องมีสิทธิ์ การซ่อนปุ่มใน Frontend ไม่ถือเป็นการตรวจสิทธิ์ที่เพียงพอ
 
-## 2. Permission Rules
+## 2. กติกาการตรวจสิทธิ์
 
-- Student can access and edit only their own plans, subject to the plan status.
-- Advisor can review only plans within their assigned responsibility.
-- Admin permissions must be defined by the team.
-- The backend must check permissions; hiding frontend buttons is not sufficient.
+- Backend ต้องตรวจสอบ Token ให้ผ่านการยืนยันตัวตนก่อน และใช้ค่า `sub` จาก Token ที่ตรวจสอบแล้วเพื่อระบุตัวผู้ใช้
+- Student ดูและแก้ไขได้เฉพาะแผนของตนเอง
+- Advisor ดูและพิจารณาได้เฉพาะแผนของนักศึกษาที่ได้รับมอบหมาย
+- Staff ดูและพิจารณาแผนของนักศึกษาทุกคนในระบบได้
+- Admin จัดการบัญชี บทบาท และสิทธิ์ระบบได้ แต่ไม่ได้รับสิทธิ์พิจารณาแผนโดยอัตโนมัติ เว้นแต่ได้รับบทบาท Staff ด้วย
+- Backend ต้องตรวจสิทธิ์และสถานะปัจจุบันก่อนทำรายการทุกครั้ง
 
-## 3. Proposed Workflow
+## 3. Workflow และสถานะของแผน
 
-Existing statuses in V2 are `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, and `REJECTED`.
+V3 ใช้สถานะ `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED` และ `REJECTED`
 
-| Current status | Action | Proposed next status |
-|---|---|---|
-| PREPARING | Student submits plan | SUBMITTED |
-| SUBMITTED | Advisor starts review | UNDER_REVIEW |
-| UNDER_REVIEW | Advisor approves | APPROVED |
-| UNDER_REVIEW | Advisor rejects | REJECTED |
-| REJECTED | Student edits and resubmits | To be confirmed |
+| สถานะปัจจุบัน | การดำเนินการ | ผู้ดำเนินการ | สถานะถัดไป |
+|---|---|---|---|
+| PREPARING | ยื่นแผน | Student เจ้าของแผน | SUBMITTED |
+| SUBMITTED | อนุมัติแผน | Advisor หรือ Staff | APPROVED |
+| SUBMITTED | ไม่อนุมัติแผน | Advisor หรือ Staff | REJECTED |
+| SUBMITTED | ส่งกลับแก้ไข | Advisor หรือ Staff | RETURNED |
+| RETURNED | แก้ไขแผน | Student เจ้าของแผน | RETURNED |
+| RETURNED | ยื่นแผนอีกครั้ง | Student เจ้าของแผน | SUBMITTED |
 
-## 4. Authorization
+ผู้ตรวจพิจารณาแผนจากสถานะ `SUBMITTED` ได้โดยตรง ไม่ต้องมีขั้นตอนเริ่มตรวจแยก และ V3 จะไม่ใช้สถานะ `UNDER_REVIEW` ใน Workflow ใหม่
 
-- Verify the user's identity before protected actions.
-- Identify the user from a verified token, not from an ID supplied by the client.
-- Check plan ownership for Student actions.
-- Check advisor assignment before allowing review.
-- Validate the current status before changing it.
-- Prevent conflicting review decisions from being saved concurrently.
-- Require a rejection reason if agreed by the team.
+Student แก้ไขแผนได้เฉพาะสถานะ `PREPARING` และ `RETURNED` เมื่อแก้ไขแผนสถานะ `RETURNED` แล้ว แผนจะยังคงอยู่ในสถานะ `RETURNED` จนกว่านักศึกษาจะยื่นใหม่ โดยการยื่นใหม่ต้องผ่านการตรวจข้อมูลอีกครั้ง
 
-## 5. Items to Confirm
+`APPROVED` และ `REJECTED` เป็นสถานะสิ้นสุดของแผนนั้น หากแผนถูก `REJECTED` และนักศึกษาต้องการยื่นใหม่ ต้องสร้างแผนใหม่
 
-- Which roles are required?
-- Who reviews a plan, and are there multiple review steps?
-- When can a Student edit or resubmit a plan?
-- What are the submission requirements and deadlines?
-- Must the system keep a history of every review?
-- What permissions does Admin need?
+ผู้ตรวจต้องระบุเหตุผลเมื่อเลือก `RETURNED` หรือ `REJECTED` เพื่อให้นักศึกษาทราบผลการพิจารณา
 
-All workflow rules above are proposals until confirmed by the team.
+## 4. กติกาการยื่นแผน
+
+- แผนต้องมีข้อมูลที่จำเป็นครบถ้วน และอ้างอิงข้อมูลที่มีอยู่จริงก่อนยื่น
+- นักศึกษาต้องมีคุณสมบัติตามเกณฑ์สหกิจศึกษาที่ระบบกำหนด
+- ต้องยื่นภายในช่วงเวลาที่เปิดรับยื่น
+- นักศึกษามีแผนที่ยังดำเนินการอยู่ได้ไม่เกิน 1 แผนต่อรอบรับยื่น โดยสถานะที่ถือว่ายังดำเนินการอยู่ ได้แก่ `PREPARING`, `SUBMITTED` และ `RETURNED`
+- การยื่นใหม่ทำได้เฉพาะแผนสถานะ `RETURNED` และต้องผ่านการตรวจข้อมูลอีกครั้ง
+- Backend ต้องบังคับใช้กติกาเหล่านี้ ไม่ใช่ตรวจเฉพาะใน Frontend
+
+## 5. การพิจารณาพร้อมกัน
+
+- ผู้ตรวจพิจารณาได้เฉพาะแผนที่มีสถานะ `SUBMITTED`
+- Staff พิจารณาแผนของนักศึกษาทุกคนได้ ส่วน Advisor พิจารณาได้เฉพาะนักศึกษาที่ตนรับผิดชอบ
+- การบันทึกผลพิจารณาและการเปลี่ยนสถานะต้องสำเร็จหรือยกเลิกพร้อมกันภายใน Transaction เดียว
+- การเปลี่ยนสถานะต้องตรวจว่าสถานะเดิมยังเป็น `SUBMITTED` ขณะบันทึกผล
+- หากมีผู้ตรวจคนอื่นบันทึกผลสำเร็จก่อน รายการที่ตามมาต้องไม่เขียนทับผลเดิม และตอบกลับ `409 Conflict`
+- ระบบต้องบันทึกผู้พิจารณา ผลการพิจารณา ความเห็น และเวลาที่ดำเนินการ
+
+## 6. การรองรับข้อมูลเดิมจาก V2
+
+V2 มีสถานะ `PREPARING`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED` และ `REJECTED`
+
+V3 เพิ่มสถานะ `RETURNED` สำหรับแผนที่ส่งกลับให้นักศึกษาแก้ไข และนำ `UNDER_REVIEW` ออกจาก Workflow ใหม่
+
+ก่อนเปิดใช้ Workflow ใหม่ ต้องตรวจสอบแผนที่อยู่ในสถานะ `UNDER_REVIEW` และผลการพิจารณาที่เกี่ยวข้องก่อน Migration โดยเปลี่ยนสถานะเป็น `SUBMITTED` เฉพาะแผนที่ยังต้องเข้าสู่การพิจารณาใหม่ พร้อมเก็บข้อมูลการพิจารณาเดิมตามความเหมาะสม
+
+ต้องทดสอบ Migration กับข้อมูลสำเนาก่อนใช้งานจริง และตรวจสอบจำนวนแผนกับสถานะก่อนและหลัง Migration เพื่อให้แน่ใจว่าข้อมูลเดิมไม่สูญหายหรือเปลี่ยนแปลงโดยไม่ตั้งใจ
+
+ข้อกำหนดเรื่องบทบาท สิทธิ์ สถานะ และการเปลี่ยนสถานะในเอกสารนี้เป็นข้อกำหนดร่วมสำหรับการพัฒนา V3
