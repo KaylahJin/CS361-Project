@@ -2,9 +2,23 @@
 
 ## 1. สถาปัตยกรรมที่ออกแบบสำหรับ V3
 
-V3 นำองค์ประกอบหลักจาก V2 มาใช้ต่อ และเพิ่มการยืนยันตัวตน การตรวจสอบสิทธิ์ และ API สำหรับจัดการแผนสหกิจ
+V3 นำองค์ประกอบหลักจาก V2 มาใช้ต่อ และเพิ่มการยืนยันตัวตน การตรวจสอบสิทธิ์ และ API สำหรับจัดการแผนสหกิจ โดย V3 จะใช้ AWS Lambda เชื่อมต่อกับ RDS PostgreSQL โดยตรง และตัด RDS Proxy ออกจากสถาปัตยกรรมตามข้อตกลงของทีม
 
-\`\`\`mermaid
+### สถาปัตยกรรมปัจจุบันของ V2
+
+V2 ใช้ AWS Lambda เชื่อมต่อกับ RDS PostgreSQL ผ่าน RDS Proxy
+
+```mermaid
+flowchart TD
+    L2[AWS Lambda] --> RP[RDS Proxy]
+    RP --> DB[(RDS PostgreSQL)]
+```
+
+### สถาปัตยกรรมสำหรับ V3
+
+V3 ใช้ Amazon Cognito สำหรับการยืนยันตัวตน และใช้ API Gateway กับ AWS Lambda สำหรับรับคำขอ ตรวจสอบสิทธิ์ และจัดการข้อมูล โดย Lambda เชื่อมต่อกับ RDS PostgreSQL โดยตรง ไม่ผ่าน RDS Proxy
+
+```mermaid
 flowchart TD
     U[Student / Advisor / Staff / Admin] --> FE[React + TypeScript]
     FE -->|Sign in| COG[Amazon Cognito]
@@ -12,15 +26,15 @@ flowchart TD
     FE -->|HTTPS + Token| API[API Gateway HTTP API]
     API -->|Authorized request| L[AWS Lambda]
     L --> AUTH[Backend authorization and validation]
-    AUTH --> RP[RDS Proxy]
-    RP --> DB[(RDS PostgreSQL)]
-    DB --> RP
-    RP --> L
+    AUTH --> DB[(RDS PostgreSQL)]
+    DB --> L
     L --> API
     API --> FE
-\`\`\`
+```
 
-การเชื่อมต่อ Cognito และการตั้งค่า Authorization เป็นส่วนที่ต้องพัฒนาและตรวจสอบก่อนใช้งานจริง แผนภาพนี้เป็นสถาปัตยกรรมที่เสนอ ไม่ใช่การยืนยันว่า AWS ที่ใช้งานอยู่ตั้งค่าไว้แล้ว
+การเชื่อมต่อ Cognito และการตั้งค่า Authorization เป็นส่วนที่ต้องพัฒนาและตรวจสอบก่อนใช้งานจริง แผนภาพ V3 แสดงสถาปัตยกรรมที่ออกแบบไว้ ไม่ใช่การยืนยันว่า AWS ที่ใช้งานอยู่ได้ตั้งค่าครบถ้วนแล้ว
+
+เนื่องจาก V3 เชื่อมต่อฐานข้อมูลโดยตรง จึงต้องคำนึงถึงจำนวนการเชื่อมต่อเมื่อ Lambda ทำงานพร้อมกัน รวมถึงข้อจำกัดของฐานข้อมูล การจัดการ Connection Pool และเวลาในการตอบสนอง เพื่อไม่ให้จำนวนการเชื่อมต่อเกินความสามารถที่ฐานข้อมูลรองรับ
 
 ## 2. หน้าที่ของแต่ละองค์ประกอบ
 
@@ -29,9 +43,10 @@ flowchart TD
 - **API Gateway HTTP API:** รับ API Request ผ่าน HTTPS และตรวจสอบ Token ผ่าน Authorization Mechanism ที่กำหนด
 - **AWS Lambda:** ตรวจสอบข้อมูลคำขอ ใช้กฎทางธุรกิจ ตรวจสอบสิทธิ์ และเรียกใช้ฐานข้อมูล
 - **Backend Authorization:** ใช้ข้อมูลผู้ใช้จาก Token ที่ผ่านการตรวจสอบแล้ว โดยใช้ `sub` ระบุบัญชี และตรวจสอบ Role เจ้าของแผน และความสัมพันธ์ Advisor กับนักศึกษา
-- **RDS Proxy:** ช่วยจัดการการเชื่อมต่อฐานข้อมูลระหว่าง Lambda กับ PostgreSQL
 - **RDS PostgreSQL:** จัดเก็บข้อมูลนักศึกษา แผนสหกิจ บัญชีผู้ใช้ การมอบหมาย Advisor และประวัติการพิจารณา
 - **Terraform:** ใช้จัดการ Infrastructure ตามการตั้งค่าที่กำหนดใน Repository
+
+RDS Proxy เป็นองค์ประกอบที่ใช้ใน V2 แต่ไม่อยู่ในเส้นทางการเชื่อมต่อฐานข้อมูลของ V3 ตามสถาปัตยกรรมที่ทีมตกลงกัน
 
 ## 3. การเข้าสู่ระบบและตรวจสอบสิทธิ์
 
@@ -50,7 +65,7 @@ flowchart TD
 1. Student ส่งคำขอสร้างหรือแก้ไขแผนผ่าน API
 2. Backend ตรวจสอบ Token และยืนยันว่า Student มีสิทธิ์สร้างแผนหรือเป็นเจ้าของแผนที่ต้องการแก้ไข
 3. Backend ตรวจสอบข้อมูลที่จำเป็นและสถานะปัจจุบัน
-4. Lambda บันทึกข้อมูลผ่าน RDS Proxy ไปยัง PostgreSQL
+4. Lambda บันทึกข้อมูลลง PostgreSQL โดยเชื่อมต่อกับฐานข้อมูลโดยตรง
 5. API ส่งผลลัพธ์กลับไปยัง Frontend
 
 การแก้ไขแผนอนุญาตเฉพาะสถานะ `PREPARING` และ `RETURNED`
@@ -83,8 +98,11 @@ Workflow ใหม่ไม่ใช้ขั้นตอน `start-review` แ�
 - จำกัดการเข้าถึงข้อมูลตาม Role เจ้าของแผน และการมอบหมาย Advisor
 - ใช้ Database Transaction เพื่อป้องกันข้อมูลสถานะและประวัติการพิจารณาไม่ตรงกัน
 - จัดการข้อมูลลับและสิทธิ์เชื่อมต่อฐานข้อมูลผ่านการตั้งค่าที่เหมาะสม ไม่ฝังข้อมูลลับไว้ใน Source Code
+- กำหนดค่า Connection Pool และตรวจสอบจำนวนการเชื่อมต่อให้เหมาะสมกับข้อจำกัดของ RDS PostgreSQL และการทำงานพร้อมกันของ Lambda
 - University SSO อาจเชื่อมต่อผ่าน Cognito Federation ในอนาคต หากมี Identity Provider และข้อกำหนดการเชื่อมต่อที่รองรับ
 
 ## 6. ขอบเขตของการออกแบบ
 
-เอกสารนี้กำหนดสถาปัตยกรรมและ Data Flow ที่ V3 ต้องการ โดยยังไม่ถือว่า Cognito, API Authorization, ตารางใหม่ หรือการตั้งค่า Infrastructure ได้ถูก Deploy แล้ว รายละเอียดการพัฒนาต้องเป็นไปตามข้อกำหนดในเอกสาร Workflow, Data Model และ API Specification ของ V3
+เอกสารนี้กำหนดสถาปัตยกรรมและ Data Flow ที่ V3 ต้องการ โดยแยกสถาปัตยกรรมเดิมของ V2 ซึ่งใช้ RDS Proxy ออกจากสถาปัตยกรรมของ V3 ซึ่งให้ Lambda เชื่อมต่อกับ RDS PostgreSQL โดยตรง
+
+การเชื่อมต่อ Cognito, API Authorization, ตารางใหม่ และการตั้งค่า Infrastructure ยังต้องพัฒนาและตรวจสอบก่อนใช้งานจริง รายละเอียดการพัฒนาต้องเป็นไปตามข้อกำหนดในเอกสาร Workflow, Data Model และ API Specification ของ V3
