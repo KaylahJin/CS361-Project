@@ -1,61 +1,155 @@
+
 import React, { useEffect, useState } from 'react';
-import { Calendar, ExternalLink, Search, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Calendar,
+  ExternalLink,
+  Search,
+  X,
+} from 'lucide-react';
 import { getCompanies, CompanyApiError } from '../data/companyApi';
 import type { Company, ProvinceOption } from '../types/company';
 import { DATA_CONTEXT } from '../constants/dataContext';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-const EmployerCard: React.FC<{ company: Company; index: number }> = ({ company, index }) => {
+interface EmployersProps {
+  onViewPositions: (company: Company) => void;
+}
+
+interface EmployerCardProps {
+  company: Company;
+  index: number;
+  onViewPositions: (company: Company) => void;
+}
+
+/**
+ * ตรวจสอบ URL เว็บไซต์ก่อนนำไปใช้เป็นลิงก์
+ * รองรับ URL ที่ขึ้นต้นด้วย https://, http:// หรือไม่มี protocol
+ * ปฏิเสธ protocol อื่นและ URL ที่ไม่ถูกต้อง
+ */
+const getSafeCompanyUrl = (rawUrl?: string | null): string | null => {
+  const value = rawUrl?.trim();
+
+  if (!value) return null;
+
+  // อนุญาตเฉพาะ HTTP และ HTTPS
+  if (
+    /^[a-z][a-z\d+.-]*:/i.test(value) &&
+    !/^https?:\/\//i.test(value)
+  ) {
+    return null;
+  }
+
+  try {
+    const normalizedUrl = /^https?:\/\//i.test(value)
+      ? value
+      : `https://${value}`;
+
+    const parsedUrl = new URL(normalizedUrl);
+
+    if (
+      !['http:', 'https:'].includes(parsedUrl.protocol) ||
+      !parsedUrl.hostname.includes('.')
+    ) {
+      return null;
+    }
+
+    return parsedUrl.toString();
+  } catch {
+    return null;
+  }
+};
+
+const EmployerCard: React.FC<EmployerCardProps> = ({
+  company,
+  index,
+  onViewPositions,
+}) => {
   const [hasError, setHasError] = useState(false);
+  const safeUrl = getSafeCompanyUrl(company.url);
 
   return (
     <div className="flex items-center gap-3 sm:gap-4">
-      {/* Count Number Outside Card */}
-      <span className="w-5 sm:w-7 text-right font-bold text-xs sm:text-sm text-slate-400 shrink-0 select-none">
+      {/* ลำดับรายการ */}
+      <span className="w-5 shrink-0 select-none text-right text-xs font-bold text-slate-400 sm:w-7 sm:text-sm">
         {index + 1}
       </span>
 
-      {/* Card Link */}
-      <a
-        href={company.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group flex-1 block border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-white shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer"
-      >
-        <div className="flex items-center gap-5 sm:gap-8">
-          {/* Logo Container */}
-          <div className="w-24 sm:w-36 h-12 sm:h-14 flex items-center justify-center shrink-0">
+      {/* การ์ดบริษัท ไม่ใช้ทั้งการ์ดเป็นลิงก์ภายนอก */}
+      <article className="min-w-0 flex-1 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition-all duration-200 hover:border-blue-200 hover:shadow-md sm:rounded-3xl sm:p-6">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-8">
+          {/* โลโก้บริษัท */}
+          <div className="flex h-12 w-20 shrink-0 items-center justify-center sm:h-14 sm:w-36">
             {!hasError && company.logo_filename ? (
               <img
                 src={`/images/logos/${company.logo_filename}`}
-                alt={company.name}
+                alt={`โลโก้ ${company.name}`}
                 onError={() => setHasError(true)}
-                className="max-h-10 sm:max-h-12 max-w-full object-contain filter group-hover:scale-105 transition-transform duration-200"
+                className="max-h-10 max-w-full object-contain sm:max-h-12"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-50 border border-slate-200/70 rounded-xl px-2 text-center text-xs font-bold text-slate-700 select-none">
+              <div className="flex h-full w-full items-center justify-center rounded-xl border border-slate-200/70 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700">
                 {company.short_name || company.company_id}
               </div>
             )}
           </div>
 
-          {/* Company Info */}
+          {/* ข้อมูลบริษัท */}
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-blue-600 transition-colors leading-snug">
+            <h3 className="break-words text-sm font-bold leading-snug text-slate-900 sm:text-base">
               {company.name}
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
+
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
               {company.location || 'ไม่ได้ระบุที่ตั้ง'}
             </p>
           </div>
         </div>
-      </a>
+
+        {/* ปุ่มการทำงานของบริษัท */}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            onClick={() => onViewPositions(company)}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2"
+          >
+            ดูตำแหน่งของบริษัทนี้
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          {safeUrl ? (
+            <a
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2"
+            >
+              เว็บไซต์บริษัท
+              <ExternalLink
+                className="h-3.5 w-3.5"
+                aria-hidden="true"
+              />
+            </a>
+          ) : (
+            <span
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-slate-50 px-4 py-2 text-center text-xs text-slate-400"
+              title="ไม่มี URL เว็บไซต์ที่ใช้งานได้"
+            >
+              {company.url?.trim()
+                ? 'เว็บไซต์ไม่พร้อมใช้งาน'
+                : 'ไม่มีเว็บไซต์ในระบบ'}
+            </span>
+          )}
+        </div>
+      </article>
     </div>
   );
 };
 
-export const Employers: React.FC = () => {
+export const Employers: React.FC<EmployersProps> = ({
+  onViewPositions,
+}) => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,44 +159,62 @@ export const Employers: React.FC = () => {
   const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
 
+  // หน่วงเวลาค้นหาเพื่อลดจำนวน request
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(searchTerm.trim()), SEARCH_DEBOUNCE_MS);
+    const timeout = setTimeout(
+      () => setDebouncedSearch(searchTerm.trim()),
+      SEARCH_DEBOUNCE_MS
+    );
+
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  // One-time, unfiltered fetch to build the province dropdown and the
-  // hero's partner count from real company data, rather than a hardcoded
-  // province list or a stale hand-written number.
+  // โหลดข้อมูลบริษัททั้งหมดครั้งแรกเพื่อสร้างตัวกรองจังหวัดและนับจำนวนบริษัท
   useEffect(() => {
     getCompanies()
       .then((data) => {
         setTotalCount(data.length);
 
         const counts = new Map<string, number>();
-        for (const c of data) {
-          counts.set(c.province, (counts.get(c.province) ?? 0) + 1);
+
+        for (const company of data) {
+          counts.set(
+            company.province,
+            (counts.get(company.province) ?? 0) + 1
+          );
         }
-        const provinces = Array.from(counts, ([province, count]) => ({ province, count })).sort(
-          (a, b) => a.province.localeCompare(b.province, 'th')
-        );
+
+        const provinces = Array.from(
+          counts,
+          ([province, count]) => ({ province, count })
+        ).sort((a, b) => a.province.localeCompare(b.province, 'th'));
+
         setProvinceOptions(provinces);
       })
       .catch(() => {
-        // Non-fatal — the dropdown/count just stay empty, search/list still work.
+        // ไม่ใช่ข้อผิดพลาดหลัก หากโหลดข้อมูลสำหรับตัวกรองไม่สำเร็จ
       });
   }, []);
 
+  // โหลดรายการบริษัทตามคำค้นหาและจังหวัดที่เลือก
   useEffect(() => {
     let cancelled = false;
+
     setLoading(true);
     setError(null);
 
-    getCompanies({ search: debouncedSearch || undefined, province: selectedProvince || undefined })
+    getCompanies({
+      search: debouncedSearch || undefined,
+      province: selectedProvince || undefined,
+    })
       .then((data) => {
-        if (!cancelled) setCompanies(data);
+        if (!cancelled) {
+          setCompanies(data);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
+
         setError(
           err instanceof CompanyApiError
             ? `โหลดข้อมูลไม่สำเร็จ (${err.status})`
@@ -110,7 +222,9 @@ export const Employers: React.FC = () => {
         );
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -118,40 +232,46 @@ export const Employers: React.FC = () => {
     };
   }, [debouncedSearch, selectedProvince]);
 
+  // ข้อความเมื่อไม่พบข้อมูล
   const emptyMessage = (() => {
     if (debouncedSearch && selectedProvince) {
       return `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}" ในจังหวัด${selectedProvince}`;
     }
+
     if (debouncedSearch) {
       return `ไม่พบสถานประกอบการที่ตรงกับคำค้น "${debouncedSearch}"`;
     }
+
     if (selectedProvince) {
       return `ไม่พบสถานประกอบการในจังหวัด${selectedProvince}`;
     }
+
     return 'ไม่พบสถานประกอบการ';
   })();
 
   return (
-    <main className="w-full min-h-screen bg-white">
+    <main className="min-h-screen w-full bg-white">
       {/* Hero Section */}
-      <section className="pt-16 pb-6 sm:pt-20 sm:pb-8 text-center px-4">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+      <section className="px-4 pb-6 pt-16 text-center sm:pb-8 sm:pt-20">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
           <span className="text-blue-600">Co-op </span>
           <span className="text-slate-950">Opportunities</span>
         </h1>
-        <p className="mt-3 text-xl sm:text-2xl font-bold text-slate-900">
-          สถานประกอบการและตำแหน่ง<span className="text-blue-600">สหกิจ</span>
+
+        <p className="mt-3 text-xl font-bold text-slate-900 sm:text-2xl">
+          สถานประกอบการและตำแหน่ง
+          <span className="text-blue-600">สหกิจ</span>
         </p>
 
-        {/* Partner Count Slogan */}
+        {/* จำนวนบริษัทจากข้อมูลจริง */}
         {totalCount !== null && (
-          <p className="mt-8 text-xs sm:text-sm font-semibold text-blue-600 tracking-wide">
+          <p className="mt-8 text-xs font-semibold tracking-wide text-blue-600 sm:text-sm">
             {totalCount} companies partner with us for cooperative education!
           </p>
         )}
 
-        <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100/80 text-blue-700 text-xs sm:text-sm font-semibold">
-          <Calendar className="w-3.5 h-3.5" />
+        <div className="mt-5 inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full border border-blue-100/80 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 sm:text-sm">
+          <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{DATA_CONTEXT.academicYearLabel}</span>
           <span className="text-blue-300">·</span>
           <span>ตรวจสอบล่าสุด {DATA_CONTEXT.lastVerifiedDate}</span>
@@ -159,17 +279,22 @@ export const Employers: React.FC = () => {
       </section>
 
       {/* Search + Province Filter */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row gap-3">
+      <section className="mx-auto flex max-w-4xl flex-col gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search
+            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="ค้นหาด้วยชื่อสถานประกอบการ..."
             aria-label="ค้นหาด้วยชื่อสถานประกอบการ"
-            className="w-full pl-11 pr-11 py-3 rounded-2xl border border-slate-200/90 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300"
+            className="w-full rounded-2xl border border-slate-200/90 py-3 pl-11 pr-11 text-sm focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 sm:text-base"
           />
+
           {searchTerm && (
             <button
               type="button"
@@ -177,18 +302,19 @@ export const Employers: React.FC = () => {
               aria-label="ล้างคำค้นหา"
               className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>
 
         <select
           value={selectedProvince}
-          onChange={(e) => setSelectedProvince(e.target.value)}
+          onChange={(event) => setSelectedProvince(event.target.value)}
           aria-label="กรองตามจังหวัด"
-          className="py-3 px-4 rounded-2xl border border-slate-200/90 text-sm sm:text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 sm:w-56"
+          className="rounded-2xl border border-slate-200/90 bg-white px-4 py-3 text-sm focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 sm:w-56 sm:text-base"
         >
           <option value="">ทุกจังหวัด</option>
+
           {provinceOptions.map(({ province, count }) => (
             <option key={province} value={province}>
               {province} ({count})
@@ -197,37 +323,54 @@ export const Employers: React.FC = () => {
         </select>
       </section>
 
-      {/* Employers Card List Container */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">
+      {/* Employers Card List */}
+      <section className="mx-auto max-w-4xl space-y-4 px-4 pb-16 pt-4 sm:px-6 lg:px-8">
         {loading && (
-          <p className="text-center text-slate-400 py-12">กำลังโหลดข้อมูล...</p>
+          <p className="py-12 text-center text-slate-400">
+            กำลังโหลดข้อมูล...
+          </p>
         )}
+
         {error && (
-          <p className="text-center text-red-500 py-12">{error}</p>
+          <p role="alert" className="py-12 text-center text-red-500">
+            {error}
+          </p>
         )}
+
         {!loading && !error && companies.length === 0 && (
-          <p className="text-center text-slate-400 py-12">{emptyMessage}</p>
+          <p className="py-12 text-center text-slate-400">
+            {emptyMessage}
+          </p>
         )}
-        {!loading && !error && companies.map((company, index) => (
-          <EmployerCard key={company.company_id} company={company} index={index} />
-        ))}
+
+        {!loading &&
+          !error &&
+          companies.map((company, index) => (
+            <EmployerCard
+              key={company.company_id}
+              company={company}
+              index={index}
+              onViewPositions={onViewPositions}
+            />
+          ))}
       </section>
 
       {/* Reference & Last Updated Timestamp */}
-      <div className="mt-6 mb-12 text-center space-y-2">
+      <div className="mb-12 mt-6 space-y-2 text-center">
         <div>
           <a
             href="https://docs.google.com/spreadsheets/d/1mrexRW94TkVQUK91wLhqQtbEBResL4OBc9BWzcsvOjE/edit?gid=0#gid=0"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline sm:text-sm"
           >
             แหล่งข้อมูลอ้างอิง: ทะเบียนสถานประกอบการปฏิบัติสหกิจศึกษา_2569 - Google ชีต
-            <ExternalLink className="w-3.5 h-3.5 inline" />
+            <ExternalLink className="inline h-3.5 w-3.5" aria-hidden="true" />
           </a>
         </div>
+
         <div>
-          <span className="text-xs text-slate-400 tracking-wide">
+          <span className="text-xs tracking-wide text-slate-400">
             อัปเดตล่าสุด {DATA_CONTEXT.lastVerifiedDate}
           </span>
         </div>

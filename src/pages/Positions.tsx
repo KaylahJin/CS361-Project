@@ -647,7 +647,17 @@ const PositionCtaButton: React.FC<{
   );
 };
 
-export const Positions: React.FC = () => {
+interface PositionsProps {
+  initialCompanyId?: string;
+  initialCompanyName?: string;
+  onClearCompany?: () => void;
+}
+
+export const Positions: React.FC<PositionsProps> = ({
+    initialCompanyId,
+    initialCompanyName,
+    onClearCompany,
+}) => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -758,8 +768,17 @@ export const Positions: React.FC = () => {
       if (search.trim()) params.search = search.trim();
       if (selectedCategory !== 'all') params.category = selectedCategory as PositionCategory;
       if (selectedWorkMode !== 'all') params.work_mode = selectedWorkMode as WorkMode;
-      if (selectedStatus !== 'all') params.status = selectedStatus as PositionStatus;
-      if (selectedPeriod !== 'all') params.period_id = selectedPeriod;
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus as PositionStatus;
+    }
+
+      if (selectedPeriod !== 'all') {
+        params.period_id = selectedPeriod;
+    }
+
+      if (initialCompanyId) {
+        params.company_id = initialCompanyId;
+    }
 
       const data = await getPositions(params, { signal: controller.signal });
       if (requestId !== requestIdRef.current) return; // มี request ใหม่กว่าแล้ว ทิ้งผลนี้
@@ -773,7 +792,14 @@ export const Positions: React.FC = () => {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [search, selectedCategory, selectedWorkMode, selectedStatus, selectedPeriod]);
+    },[
+      search,
+      selectedCategory,
+      selectedWorkMode,
+      selectedStatus,
+      selectedPeriod,
+      initialCompanyId,
+    ]);
 
   // Debounced search & filter trigger
   useEffect(() => {
@@ -796,6 +822,7 @@ export const Positions: React.FC = () => {
     setSelectedWorkMode('all');
     setSelectedStatus('all');
     setSelectedPeriod('all');
+    onClearCompany?.();
   };
 
   const hasActiveFilters =
@@ -803,7 +830,8 @@ export const Positions: React.FC = () => {
     selectedCategory !== 'all' ||
     selectedWorkMode !== 'all' ||
     selectedStatus !== 'all' ||
-    selectedPeriod !== 'all';
+    selectedPeriod !== 'all' ||
+  Boolean(initialCompanyId);
 
   const categoryOptions = useMemo(() => {
     return Object.entries(CATEGORY_LABELS) as [PositionCategory, string][];
@@ -1106,7 +1134,20 @@ export const Positions: React.FC = () => {
                   </button>
                 </span>
               )}
-
+              {initialCompanyId && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
+                  บริษัท: {initialCompanyName || initialCompanyId}
+                  <button
+                    type="button"
+                    onClick={() => onClearCompany?.()}
+                    className="cursor-pointer rounded-full p-0.5 hover:bg-blue-200/50"
+                    title="ยกเลิกตัวกรองบริษัทนี้"
+                    aria-label="ยกเลิกตัวกรองบริษัท"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
               {search.trim() && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
                   คำค้นหา: "{search.trim()}"
@@ -1185,23 +1226,32 @@ export const Positions: React.FC = () => {
                   <Briefcase className="w-8 h-8 stroke-[1.5]" />
                 )}
               </div>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-2">
-                {selectedPeriod !== 'all' && selectedPeriod !== 'unspecified'
+              <h3 className="mb-2 text-lg font-bold text-slate-900">
+                {initialCompanyId
+                  ? `ยังไม่มีตำแหน่งงานของ ${initialCompanyName || 'บริษัทที่เลือก'} ในระบบตามเงื่อนไขนี้`
+                  : selectedPeriod !== 'all' && selectedPeriod !== 'unspecified'
                   ? `ไม่มีตำแหน่งงานเปิดรับสมัครใน ${selectedPeriodObj?.name || 'รอบที่เลือก'}`
                   : search.trim()
                   ? `ไม่พบตำแหน่งงานสำหรับคำค้นหา "${search.trim()}"`
                   : 'ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข'}
               </h3>
 
-              <p className="text-sm text-slate-500 mb-6 leading-relaxed max-w-lg mx-auto">
-                {selectedPeriod !== 'all' && selectedPeriod !== 'unspecified' ? (
+              <p className="mx-auto mb-6 max-w-lg text-sm leading-relaxed text-slate-500">
+                {initialCompanyId ? (
+                  <>
+                    ยังไม่พบตำแหน่งงานของ{' '}
+                    <strong>{initialCompanyName || 'บริษัทที่เลือก'}</strong>{' '}
+                    ตามตัวกรองปัจจุบัน คุณสามารถล้างตัวกรองบริษัทเพื่อดูตำแหน่งงานจากทุกบริษัทได้
+                  </>
+                ) : selectedPeriod !== 'all' &&
+                  selectedPeriod !== 'unspecified' ? (
                   <>
                     สถานประกอบการในระบบยังมีอยู่ตามปกติ แต่ยังไม่มีประกาศรับสมัครตำแหน่งงานสำหรับรอบการศึกษานี้
-                    คุณสามารถเลือกดู <strong>"ทุกรอบการศึกษา"</strong> หรือ <strong>"ยังไม่ระบุรอบ"</strong> เพื่อดูข้อมูลตำแหน่งงานทั้งหมด
+                    คุณสามารถเลือกดู <strong>"ทุกรอบการศึกษา"</strong> หรือ{' '}
+                    <strong>"ยังไม่ระบุรอบ"</strong> เพื่อดูข้อมูลตำแหน่งงานทั้งหมด
                   </>
                 ) : search.trim() ? (
-                  `ขออภัย ไม่พบรายการตำแหน่งงานที่ตรงกับคำสำคัญ "${search.trim()}" หากบริษัทมีอยู่ในระบบ อาจเป็นเพราะยังไม่มีการเปิดรับสมัครในรอบหรือเงื่อนไขที่เลือก`
+                  `ขออภัย ไม่พบรายการตำแหน่งงานที่ตรงกับคำสำคัญ "${search.trim()}" หากบริษัทมีอยู่ในระบบ อาจเป็นเพราะยังไม่มีการเปิดรับสมัครตามเงื่อนไขที่เลือก`
                 ) : (
                   'ขออภัย ไม่พบรายการตำแหน่งหรือโครงการสหกิจศึกษาตามตัวกรองที่คุณเลือก โปรดลองปรับหรือล้างตัวกรองเพื่อดูรายการทั้งหมด'
                 )}

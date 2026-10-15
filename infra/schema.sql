@@ -246,10 +246,6 @@ CREATE TRIGGER trg_coop_plans_updated_at
     BEFORE UPDATE ON coop_plans
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-CREATE INDEX idx_coop_plans_student  ON coop_plans(student_id);
-CREATE INDEX idx_coop_plans_position ON coop_plans(position_id);
-CREATE INDEX idx_coop_plans_period   ON coop_plans(period_id);
-
 -- 8. position_periods — ตำแหน่งกับรอบสหกิจ
 CREATE TABLE IF NOT EXISTS position_periods (
   position_id VARCHAR(10) NOT NULL REFERENCES positions(position_id) ON DELETE CASCADE,
