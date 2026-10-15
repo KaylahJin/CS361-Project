@@ -24,7 +24,7 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
 
       {/* Main Content Container */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-16">
-        
+
         {/* Announcements & Updates Section */}
         <section className="mt-4">
           {/* Section Header */}
@@ -127,6 +127,37 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
                 </span>
               </div>
             </a>
+            {/* Card: สถานประกอบการในระบบ */}
+            <button
+              type="button"
+              onClick={() => onTabChange?.('employers')}
+              className="group relative flex w-full flex-col justify-between rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-indigo-50/30 p-5 text-left transition-all duration-200 hover:border-indigo-300 hover:shadow-md sm:p-6"
+            >
+              <div>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition-transform group-hover:scale-105">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <span className="p-1 text-slate-400 transition-colors group-hover:text-indigo-600">
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                </div>
+
+                <h4 className="text-base font-bold text-slate-900 transition-colors group-hover:text-indigo-600">
+                  สถานประกอบการ
+                </h4>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                  ค้นหาสถานประกอบการพันธมิตร ดูรายละเอียดบริษัท และตรวจสอบเว็บไซต์ของแต่ละบริษัท
+                </p>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+                <span className="text-slate-400">ข้อมูลบริษัทในระบบ</span>
+                <span className="flex items-center gap-1 font-medium text-indigo-600 group-hover:underline">
+                  ดูสถานประกอบการ <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            </button>
 
             {/* Card 3: ตำแหน่งและโครงการสหกิจ (ไปหน้าตำแหน่งงาน) */}
             <div
@@ -139,7 +170,7 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
                   onTabChange?.('positions');
                 }
               }}
-              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-blue-50/30 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer text-left md:col-span-2"
+              className="group relative flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-blue-50/30 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer text-left"
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-4">
@@ -239,9 +270,7 @@ export const Home: React.FC<HomeProps> = ({ onTabChange }) => {
                   ติดตามกำหนดการจากสถานประกอบการ
                 </p>
                 <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-[220px]">
-                  นักศึกษาต้องดำเนินการสมัครกับสถ<br />
-                  านประกอบการตามที่สถานประกอบ<br />
-                  การกำหนด
+                  นักศึกษาต้องดำเนินการสมัครกับสถานประกอบการตามที่สถานประกอบการกำหนด
                 </p>
               </div>
 
