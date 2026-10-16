@@ -24,9 +24,31 @@ describe('Login page', () => {
     loginMock.mockResolvedValue(undefined);
     render(<Login />);
 
-    await fillAndSubmit('student1@example.com', 'coop1234');
+    await fillAndSubmit('student1@example.com', 'test-password');
 
-    expect(loginMock).toHaveBeenCalledWith('student1@example.com', 'coop1234');
+    expect(loginMock).toHaveBeenCalledWith('student1@example.com', 'test-password');
+  });
+
+  it('reports success so the caller can leave the login page', async () => {
+    // Without this the form stays on screen under a signed-in navbar: the
+    // active page is a tab in App state, and signing in does not move it.
+    loginMock.mockResolvedValue(undefined);
+    const onSuccess = vi.fn();
+    render(<Login onSuccess={onSuccess} />);
+
+    await fillAndSubmit('student1@example.com', 'test-password');
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not report success when login fails', async () => {
+    loginMock.mockRejectedValue(new Error('Incorrect username or password.'));
+    const onSuccess = vi.fn();
+    render(<Login onSuccess={onSuccess} />);
+
+    await fillAndSubmit('student1@example.com', 'wrong');
+
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('shows one generic message when login fails', async () => {
@@ -58,7 +80,7 @@ describe('Login page', () => {
     loginMock.mockImplementation(() => new Promise<void>((resolve) => { release = resolve; }));
     render(<Login />);
 
-    await fillAndSubmit('student1@example.com', 'coop1234');
+    await fillAndSubmit('student1@example.com', 'test-password');
 
     const button = screen.getByRole('button', { name: 'เข้าสู่ระบบ' });
     expect(button).toBeDisabled();

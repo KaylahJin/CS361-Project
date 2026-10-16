@@ -69,14 +69,13 @@ function App() {
         return <CoopPlans />;
 
       case 'login':
-        return <Login />;
+        return <Login onSuccess={() => handleTabChange('account')} />;
 
-      // The fallback is the Login page itself rather than a redirect: with
-      // no router there is no URL to redirect to, and swapping the content
-      // is what "เข้าหน้าที่ป้องกันไว้ไม่ได้" looks like here.
+      // The fallback is the Login page itself: this app tracks the active tab
+      // in state instead of the URL, so there is nowhere to redirect to.
       case 'account':
         return (
-          <ProtectedRoute fallback={<Login />}>
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('account')} />}>
             <Account />
           </ProtectedRoute>
         );
@@ -86,7 +85,7 @@ function App() {
     }
   };
 
-  // AuthProvider wraps Navbar too — the Navbar reads auth status to decide
+  // AuthProvider has to wrap the Navbar too, which reads auth status to choose
   // between the login button and the account/logout pair.
   return (
     <AuthProvider>

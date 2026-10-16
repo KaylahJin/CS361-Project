@@ -1,13 +1,5 @@
-// ============================================================
-// CS361 V3-02.1 — Account page (the protected destination)
-// ============================================================
-// Issue: #99 — ผู้ที่ไม่ได้ Login เข้าหน้าที่ป้องกันไว้ไม่ได้
-//
-// Deliberately minimal: its job in V3-02 is to be a real page behind
-// ProtectedRoute, so "signed-out visitors cannot reach a protected page"
-// is demonstrable. The student / advisor / staff dashboards that actually
-// live behind auth arrive with V3-04 and V3-05.
-// ============================================================
+// Minimal on purpose: for now its job is to be a real page behind
+// ProtectedRoute. The student, advisor and staff dashboards come later.
 
 import { User } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';

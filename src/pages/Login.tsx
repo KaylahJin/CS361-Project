@@ -1,14 +1,17 @@
-// ============================================================
-// CS361 V3-02.1 — Login page
-// ============================================================
-// Issue: #99 — เข้าสู่ระบบและออกจากระบบ
-// ============================================================
-
 import { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  /**
+   * Where to go once sign-in succeeds. Without it the form stays on screen
+   * behind a signed-in navbar: pages are chosen by a tab held in App state,
+   * and nothing moves that tab on its own.
+   */
+  onSuccess?: () => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,12 +25,11 @@ export const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      // On success AuthProvider flips to 'authenticated' and App.tsx swaps
-      // this page out, so there is nothing to navigate to from here.
+      onSuccess?.();
     } catch {
-      // One message for every failure mode on purpose: surfacing Cognito's
-      // own wording ("User does not exist" vs "Incorrect password") would
-      // turn this form into an account-enumeration oracle.
+      // One message for every failure. Showing Cognito's own wording ("User
+      // does not exist" vs "Incorrect password") would let anyone test which
+      // emails have accounts here.
       setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     } finally {
       setSubmitting(false);

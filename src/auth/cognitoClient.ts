@@ -1,19 +1,11 @@
-// ============================================================
-// CS361 V3-02.1 — Cognito sign-in for the SPA
-// ============================================================
-// Issue: #99 — เข้าสู่ระบบและออกจากระบบ
+// Sign-in against Cognito. amazon-cognito-identity-js talks to Cognito
+// directly over SRP, so the password never crosses the wire and there is no
+// Hosted UI redirect to configure. The library keeps the session in
+// localStorage itself, which is what makes a page reload able to pick it back
+// up and what refreshes an expired token.
 //
-// amazon-cognito-identity-js speaks to Cognito directly over SRP, so the
-// password never crosses the wire and there is no Hosted UI redirect to
-// configure (see docs/cognito-setup.md). The library persists the session
-// in localStorage itself; getCurrentSession() is how a page reload picks
-// it back up, and it also refreshes an expired access token using the
-// stored refresh token — the "token หมดอายุ" case issue #99 asks for.
-//
-// This module deliberately exposes only the ID token. The API Gateway JWT
-// authorizer added in V3-02.2 validates it and hands the `sub` claim to
-// the Lambda; nothing in the app needs the access token.
-// ============================================================
+// Only the ID token is exposed: the API Gateway authorizer validates that one
+// and nothing in the app needs the access token.
 
 import {
   AuthenticationDetails,
@@ -34,11 +26,8 @@ const pool = new CognitoUserPool({
 });
 
 /**
- * Sign in with email + password via SRP.
- *
- * Rejects with the raw Cognito error so the caller can tell a wrong
- * password from a network failure; the Login page maps it to one user-facing
- * message rather than leaking which half was wrong.
+ * Rejects with the raw Cognito error so the caller can tell a wrong password
+ * from a network failure. The Login page collapses both into one message.
  */
 export function login(email: string, password: string): Promise<Session> {
   const user = new CognitoUser({ Username: email, Pool: pool });
@@ -54,19 +43,15 @@ export function login(email: string, password: string): Promise<Session> {
   });
 }
 
-/** Clear the stored session. A no-op when nobody is signed in. */
 export function logout(): void {
   pool.getCurrentUser()?.signOut();
 }
 
 /**
- * Restore the session persisted by the library, refreshing the token if the
- * access token has expired but the refresh token has not.
- *
- * Resolves null — never rejects — for every unusable case: nobody signed
- * in, refresh token expired, storage cleared. The caller treats all of
- * them the same way (show the login form), so collapsing them here is what
- * keeps a stale token from rendering a broken page instead of a login prompt.
+ * Restores the stored session, refreshing the token when it has expired but
+ * the refresh token has not. Resolves null — never rejects — for every
+ * unusable case (nobody signed in, refresh token expired, storage cleared),
+ * because the caller answers all of them by showing the login form.
  */
 export function getCurrentSession(): Promise<Session | null> {
   const current = pool.getCurrentUser();
@@ -78,7 +63,15 @@ export function getCurrentSession(): Promise<Session | null> {
         resolve(null);
         return;
       }
-      resolve({ idToken: session.getIdToken().getJwtToken(), email: current.getUsername() });
+
+      const token = session.getIdToken();
+      // Read the email claim, not getUsername(). This pool signs in by email,
+      // so the real username is a generated UUID that the library stores
+      // during sign-in — getUsername() would show that UUID to the user.
+      const email =
+        typeof token.payload?.email === 'string' ? token.payload.email : current.getUsername();
+
+      resolve({ idToken: token.getJwtToken(), email });
     });
   });
 }

@@ -41,9 +41,8 @@ const navItems = [
   { id: 'periods', label: 'รอบเวลา', icon: CalendarClock },
 ] as const;
 
-// 'login' and 'account' are deliberately absent from navItems: they are
-// auth actions, not content destinations, and they render in their own
-// control so the main pill row keeps a fixed set of public pages.
+// 'login' and 'account' are left out of navItems on purpose: they are auth
+// actions, not pages, and render in their own control below.
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   const { status, logout } = useAuth();
@@ -147,9 +146,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
         </nav>
 
         {/*
-          Auth control. Stays w-10 on mobile — the same width as the
-          hamburger on the left — so the absolutely-centred logo keeps its
-          balance; the auth entries live in the drawer at that size instead.
+          Auth control. Stays w-10 on mobile, matching the hamburger on the
+          left, so the centred logo stays centred. Below lg the auth entries
+          move into the drawer instead.
         */}
         <div className="flex w-10 shrink-0 items-center justify-end lg:w-auto">
           {status === 'authenticated' ? (

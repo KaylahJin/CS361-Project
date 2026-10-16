@@ -1,15 +1,17 @@
-// ============================================================
-// CS361 V3-02.1 — app-wide auth state
-// ============================================================
-// Issue: #99 — เข้าสู่ระบบและออกจากระบบ
+// App-wide auth state.
 //
-// Three states, not a boolean: 'loading' exists because restoring the
-// stored session is async, and a boolean would make the first paint claim
-// "anonymous" and flash the login form at an already-signed-in user.
-// ProtectedRoute renders nothing while loading for exactly that reason.
-// ============================================================
+// Three states rather than a boolean: restoring the stored session is async,
+// and a boolean would make the first paint say "anonymous" and flash the login
+// form at a user who is already signed in.
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import * as cognitoClient from './cognitoClient';
 
 type Status = 'loading' | 'authenticated' | 'anonymous';
@@ -17,8 +19,13 @@ type Status = 'loading' | 'authenticated' | 'anonymous';
 interface AuthState {
   status: Status;
   user: { email: string } | null;
-  /** ID token for the `Authorization: Bearer` header on protected API calls. */
-  idToken: string | null;
+  /**
+   * ID token for the `Authorization: Bearer` header on protected API calls.
+   * Call it right before each fetch and never keep the result: the token only
+   * lasts an hour, and this reads it back through Cognito, which is what
+   * refreshes an expired one.
+   */
+  getIdToken: () => Promise<string | null>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -28,11 +35,17 @@ const AuthContext = createContext<AuthState | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUser] = useState<{ email: string } | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
+
+  // Mirrors `status` so getIdToken can read it without being rebuilt on every
+  // status change. Callers put getIdToken in dependency arrays, where a new
+  // function identity would trigger another fetch.
+  const statusRef = useRef<Status>('loading');
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   useEffect(() => {
-    // Same `cancelled` cleanup flag the data fetches in Employers.tsx use —
-    // an unmount mid-restore must not set state on a dead component.
+    // Unmounting mid-restore must not set state on a dead component.
     let cancelled = false;
 
     void cognitoClient.getCurrentSession().then((session) => {
@@ -40,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session) {
         setUser({ email: session.email });
-        setIdToken(session.idToken);
         setStatus('authenticated');
       } else {
         setStatus('anonymous');
@@ -52,26 +64,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Rejections propagate to the caller (the Login page shows the message)
-  // and leave status untouched at 'anonymous' — a failed sign-in must not
-  // half-apply, or a wrong password would strand the app holding no token
-  // while claiming to be authenticated.
+  // Dropping to 'anonymous' on failure matters: once the refresh token is gone
+  // the user has to see the login form, not a signed-in UI where every request
+  // comes back 401.
+  const getIdToken = useCallback(async () => {
+    if (statusRef.current !== 'authenticated') return null;
+
+    const session = await cognitoClient.getCurrentSession();
+    if (!session) {
+      setUser(null);
+      setStatus('anonymous');
+      return null;
+    }
+
+    return session.idToken;
+  }, []);
+
+  // A rejection propagates to the Login page and leaves status at 'anonymous'.
+  // Half-applying it would leave the app claiming to be signed in with no
+  // token after a wrong password.
   const login = useCallback(async (email: string, password: string) => {
     const session = await cognitoClient.login(email, password);
     setUser({ email: session.email });
-    setIdToken(session.idToken);
     setStatus('authenticated');
   }, []);
 
   const logout = useCallback(() => {
     cognitoClient.logout();
     setUser(null);
-    setIdToken(null);
     setStatus('anonymous');
   }, []);
 
   return (
-    <AuthContext.Provider value={{ status, user, idToken, login, logout }}>
+    <AuthContext.Provider value={{ status, user, getIdToken, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -79,9 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export default AuthProvider;
 
 /**
- * Throws rather than returning a null context: a component reading auth
- * state outside the provider is a wiring bug, and silently reporting
- * "anonymous" would hide it behind a login form that never resolves.
+ * Throws instead of returning null: a component reading auth state outside the
+ * provider is a wiring bug, and quietly reporting "anonymous" would hide it
+ * behind a login form that never goes away.
  */
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);

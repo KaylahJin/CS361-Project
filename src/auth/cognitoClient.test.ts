@@ -34,7 +34,7 @@ describe('login', () => {
       });
     });
 
-    const session = await login('student1@example.com', 'coop1234');
+    const session = await login('student1@example.com', 'test-password');
 
     expect(session).toEqual({ idToken: 'fake-id-token', email: 'student1@example.com' });
     expect(authenticateUserMock).toHaveBeenCalledTimes(1);
@@ -85,11 +85,35 @@ describe('getCurrentSession', () => {
     await expect(getCurrentSession()).resolves.toBeNull();
   });
 
-  it('resolves the restored session when the stored token is still valid', async () => {
+  it('takes the email from the ID token claims, not from the Cognito username', async () => {
+    // This pool signs in by email, so the real username is a generated UUID
+    // that the library stores during sign-in. getUsername() would show that
+    // UUID on the Account page instead of the email.
+    getCurrentUserMock.mockReturnValue({
+      getUsername: () => 'a4f1c0e2-7b3d-4c91-8a2f-0d5e6b7c8d9e',
+      getSession: (cb: (err: Error | null, session: unknown) => void) => {
+        cb(null, {
+          getIdToken: () => ({
+            getJwtToken: () => 'restored-token',
+            payload: { email: 'student1@example.com' },
+          }),
+        });
+      },
+    });
+
+    await expect(getCurrentSession()).resolves.toEqual({
+      idToken: 'restored-token',
+      email: 'student1@example.com',
+    });
+  });
+
+  it('falls back to the username when the token carries no email claim', async () => {
     getCurrentUserMock.mockReturnValue({
       getUsername: () => 'student1@example.com',
       getSession: (cb: (err: Error | null, session: unknown) => void) => {
-        cb(null, { getIdToken: () => ({ getJwtToken: () => 'restored-token' }) });
+        cb(null, {
+          getIdToken: () => ({ getJwtToken: () => 'restored-token', payload: {} }),
+        });
       },
     });
 

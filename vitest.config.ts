@@ -1,16 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
-// Two suites with genuinely different needs, so they are two projects
-// rather than one config with per-glob overrides:
-//
-//   backend  — the Lambda and migrate handlers. Plain .mjs, no DOM, and
-//              deliberately no setupFiles: jest-dom's matchers are dead
-//              weight there.
-//   frontend — React components under src/. Needs jsdom and the jest-dom
-//              matchers.
-//
-// `environmentMatchGlobs` would express the same split in fewer lines but
-// is deprecated as of Vitest 3.2 and prints a warning on every run.
+// Two projects because the suites need different environments: the backend
+// handlers are plain .mjs with no DOM, the frontend components need jsdom and
+// the jest-dom matchers. `environmentMatchGlobs` would say the same in fewer
+// lines but is deprecated and warns on every run.
 export default defineConfig({
   test: {
     projects: [
