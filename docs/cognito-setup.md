@@ -61,12 +61,17 @@ fails with `ExpiredToken` once they do.
      --user-attributes Name=email,Value=student1@example.com Name=email_verified,Value=true \
      --message-action SUPPRESS
 
+   # Pick the password here rather than reading one out of the repository:
+   # no credential is committed (#99). Use the same value for all four
+   # accounts, and share it with the team out of band.
+   read -rs TEST_PASSWORD
+
    # Make the password permanent so the login form does not hit the
    # NEW_PASSWORD_REQUIRED challenge (which the SPA does not implement).
    aws cognito-idp admin-set-user-password \
      --user-pool-id "$POOL" \
      --username student1@example.com \
-     --password 'coop1234' \
+     --password "$TEST_PASSWORD" \
      --permanent
    ```
 
@@ -78,12 +83,14 @@ fails with `ExpiredToken` once they do.
    marking. **Tighten `password_policy` in `infra/terraform/cognito.tf`
    before any non-lab use** — the pool's sign-in endpoint is public.
 
-3. Role assignment — inserting the matching `app_users` row — is blocked on
-   issue #98 (V3-03.1), which creates the `app_users` and
-   `advisor_student_assignments` tables. Until that lands, a Cognito account
-   authenticates successfully (API Gateway returns a valid token) but
-   `getAuthenticatedUser` finds no row and the API answers `401`. That is
-   the designed behaviour, not a bug.
+3. Role assignment means inserting the matching `app_users` row. The tables
+   arrived with issue #98 (V3-03.1), and `npm run db:seed-users` writes a row
+   for each demo account. An account with no row authenticates successfully
+   — API Gateway accepts the token — and then the API answers `403`: known
+   caller, no permission yet. That is the designed behaviour, not a bug, and
+   it is the normal state of a new account before an admin grants it a role.
+   `nobody1@example.com` is kept unmapped on purpose so this path stays
+   testable; see `docs/v3-02-auth.md`.
 
 ## AWS Academy Lab limitations
 
