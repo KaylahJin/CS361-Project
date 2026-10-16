@@ -12,9 +12,13 @@
     "migrate:build-positions": "node infra/migrate/build-positions-seed.mjs",
     "db:load": "bash infra/load-db.sh",
     "verify:api": "node infra/verify-api.mjs",
+    "verify:auth": "node infra/verify-auth.mjs",
     "env:sync": "bash infra/sync-env.sh",
     "web:deploy": "bash infra/deploy-web.sh",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:seed-users": "bash infra/seed-app-users.sh",
+    "verify:roles": "node infra/verify-roles.mjs",
+    "verify:scope": "node infra/verify-scope.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

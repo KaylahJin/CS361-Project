@@ -1,0 +1,178 @@
+// Checks the whole auth path against the deployed stack:
+//
+//   npm run verify:auth [email] [password]
+//
+// Reads the API URL and Cognito ids from Terraform outputs, then signs in
+// over SRP with the same library the frontend uses. The AWS CLI cannot stand
+// in here: the app client does not enable USER_PASSWORD_AUTH, so there is no
+// way to trade a password for a token outside this flow.
+
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  AuthenticationDetails,
+  CognitoUser,
+  CognitoUserPool,
+} from 'amazon-cognito-identity-js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TF_DIR = path.join(__dirname, 'terraform');
+
+const tfOutput = (name) =>
+  execFileSync('terraform', ['output', '-raw', name], { cwd: TF_DIR, encoding: 'utf-8' }).trim();
+
+const DEFAULT_EMAIL = 'student1@example.com';
+
+// A confirmed Cognito account deliberately left out of app_users, so the
+// "authenticated but not authorised" path has something to test against.
+const UNMAPPED_EMAIL = process.env.COOP_UNMAPPED_EMAIL || 'nobody1@example.com';
+
+// No password default. Even a throwaway lab password is a credential, and
+// #99 requires that none be committed. Pass it as an argument, or set
+// COOP_TEST_PASSWORD, and the team shares the value out of band.
+function readPassword() {
+  const password = process.argv[3] || process.env.COOP_TEST_PASSWORD;
+  if (password) return password;
+
+  console.error('error: no password given.');
+  console.error();
+  console.error('  node infra/verify-auth.mjs [email] <password>');
+  console.error('  COOP_TEST_PASSWORD=... node infra/verify-auth.mjs');
+  console.error();
+  console.error('The test-account password is shared with the team out of band;');
+  console.error('docs/v3-02-auth.md says who to ask.');
+  process.exit(2);
+}
+
+// Must stay readable with no token at all.
+const PUBLIC_ROUTES = ['/companies', '/positions', '/coop-info', '/periods'];
+
+// Behind the JWT authorizer.
+const PROTECTED_ROUTES = ['/coop-plans', '/coop-plans/1'];
+
+function signIn({ userPoolId, clientId, email, password }) {
+  const pool = new CognitoUserPool({ UserPoolId: userPoolId, ClientId: clientId });
+  const user = new CognitoUser({ Username: email, Pool: pool });
+  const details = new AuthenticationDetails({ Username: email, Password: password });
+
+  return new Promise((resolve, reject) => {
+    user.authenticateUser(details, {
+      onSuccess: (session) => resolve(session.getIdToken().getJwtToken()),
+      onFailure: reject,
+    });
+  });
+}
+
+const status = async (api, route, token) =>
+  (
+    await fetch(`${api}${route}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+  ).status;
+
+async function main() {
+  const email = process.argv[2] || DEFAULT_EMAIL;
+  const password = readPassword();
+
+  const api = tfOutput('api_url');
+  const userPoolId = tfOutput('cognito_user_pool_id');
+  const clientId = tfOutput('cognito_user_pool_client_id');
+
+  let failures = 0;
+  const check = (label, actual, expected) => {
+    const ok = actual === expected;
+    if (!ok) failures++;
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${label}: ${actual} (expected ${expected})`);
+  };
+
+  console.log(`api:  ${api}`);
+  console.log(`pool: ${userPoolId}`);
+  console.log();
+
+  console.log('public routes, no token');
+  for (const route of PUBLIC_ROUTES) {
+    check(`GET ${route}`, await status(api, route), 200);
+  }
+  console.log();
+
+  console.log('protected routes, no token');
+  for (const route of PROTECTED_ROUTES) {
+    check(`GET ${route}`, await status(api, route), 401);
+  }
+  console.log();
+
+  console.log('protected routes, forged token');
+  for (const route of PROTECTED_ROUTES) {
+    check(`GET ${route}`, await status(api, route, 'not.a.real.token'), 401);
+  }
+  console.log();
+
+  console.log(`SRP sign-in as ${email}`);
+  const idToken = await signIn({ userPoolId, clientId, email, password });
+  const claims = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString());
+  console.log(`  ok    token acquired (${idToken.length} chars)`);
+  check('aud equals the SPA client id', claims.aud, clientId);
+  check('email claim', claims.email, email);
+  console.log(`  sub:  ${claims.sub}`);
+
+  // There is no honest way to script "an expired token": one cannot be minted
+  // without Cognito's signing key, and a hand-made one is rejected at the
+  // signature check above rather than on `exp`, so it would prove nothing new.
+  // What can be shown is that every token carries a finite, short lifetime and
+  // that the authorizer is the thing enforcing it. The browser side of the same
+  // rule is captured in docs/evidence/99-09.
+  const lifetimeMin = Math.round((claims.exp - claims.iat) / 60);
+  console.log(`  iat:  ${new Date(claims.iat * 1000).toISOString()}`);
+  console.log(`  exp:  ${new Date(claims.exp * 1000).toISOString()}  (${lifetimeMin} minutes)`);
+  check('token lifetime is finite and <= 60 minutes', lifetimeMin > 0 && lifetimeMin <= 60, true);
+  console.log('  note  an expired token fails the same authorizer check as the forged one above,');
+  console.log('        on `exp` instead of signature; see docs/v3-02-auth.md.');
+  console.log();
+
+  console.log('protected routes, real token');
+  for (const route of PROTECTED_ROUTES) {
+    const code = await status(api, route, idToken);
+    // Not a pass/fail check, because the right answer depends on how far the
+    // app_users table has got: 500 while the table does not exist, 401 once it
+    // does but this account has no row, 200 once it has one.
+    console.log(`  info  GET ${route}: ${code} (500 while app_users is absent; 403 once it exists but this sub is unmapped; 200 when mapped)`);
+  }
+  console.log();
+
+  // A Cognito account that is real and confirmed but has no app_users row.
+  // The token is valid, so the caller is authenticated and simply has no
+  // permission yet: 403, not 401. Acceptance criteria on #100.
+  console.log(`unmapped account: SRP sign-in as ${UNMAPPED_EMAIL}`);
+  try {
+    const unmappedToken = await signIn({
+      userPoolId,
+      clientId,
+      email: UNMAPPED_EMAIL,
+      password,
+    });
+    console.log('  ok    token acquired, so the account itself is valid');
+    for (const route of PROTECTED_ROUTES) {
+      check(`GET ${route}`, await status(api, route, unmappedToken), 403);
+    }
+  } catch (err) {
+    if (err?.code === 'UserNotFoundException' || /User does not exist/i.test(err?.message ?? '')) {
+      console.log(`  skip  ${UNMAPPED_EMAIL} does not exist in this pool.`);
+      console.log('        Create it to cover this case; see docs/v3-02-auth.md.');
+    } else {
+      throw err;
+    }
+  }
+  console.log();
+
+  if (failures > 0) {
+    console.log(`${failures} check(s) FAILED`);
+    process.exit(1);
+  }
+  console.log('all checks passed');
+}
+
+main().catch((err) => {
+  console.error(err.message || err);
+  process.exit(1);
+});
