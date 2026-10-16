@@ -21,6 +21,8 @@
 
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
+import { getAuthenticatedUser } from './auth.mjs';
+import { buildCoopPlanListFilter, ForbiddenError } from './authorize.mjs';
 
 export const VALID_STATUSES = ['PREPARING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
 
@@ -58,6 +60,26 @@ function isValidDate(value) {
  * @returns {Promise<{statusCode: number, headers: Record<string, string>, body: string}>}
  */
 export async function listCoopPlans(event) {
+  // Identity and scope first, before any query parsing: an unauthenticated
+  // request must not reach the database, and the role filter decides which
+  // rows exist for this caller at all.
+  const user = await getAuthenticatedUser(event);
+  if (!user) {
+    return jsonResponse(401, { error: 'Unauthorized' });
+  }
+
+  /** @type {{sql: string, params: unknown[]}} */
+  let roleFilter;
+  try {
+    roleFilter = await buildCoopPlanListFilter(user);
+  } catch (err) {
+    if (err instanceof ForbiddenError) {
+      console.error('listCoopPlans forbidden', err.message);
+      return jsonResponse(403, { error: 'Forbidden' });
+    }
+    throw err;
+  }
+
   const q = event?.queryStringParameters ?? {};
   const { status, studentId, search, curriculum, periodId, companyId, positionId } = q;
   const submittedFrom = q.submittedFrom;
@@ -106,6 +128,18 @@ export async function listCoopPlans(event) {
       conditions.push(
         `p.submitted_at < ((${add(submittedTo.trim())}::date + 1)::timestamp AT TIME ZONE 'Asia/Bangkok')`,
       );
+    }
+
+    // ANDed in last, alongside the caller's own filters. A studentId query
+    // param therefore narrows the caller's scope and can never widen it:
+    // a student asking for ?studentId=SOMEONE_ELSE gets
+    // `p.student_id = 'OWN' AND p.student_id = 'SOMEONE_ELSE'`, i.e. nothing.
+    if (roleFilter.sql) {
+      let sql = roleFilter.sql;
+      for (const param of roleFilter.params) {
+        sql = sql.replace('$PARAM', add(param));
+      }
+      conditions.push(sql);
     }
 
     const where = conditions.length > 0 ? `\nWHERE ${conditions.join(' AND ')}` : '';

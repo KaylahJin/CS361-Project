@@ -16,6 +16,8 @@
 
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
+import { getAuthenticatedUser } from './auth.mjs';
+import { assertCanViewPlan, ForbiddenError } from './authorize.mjs';
 
 const MAX_INT4 = 2147483647;
 
@@ -59,6 +61,11 @@ export async function getCoopPlanById(event) {
     return jsonResponse(400, { error: 'planId must be a positive integer' });
   }
 
+  const user = await getAuthenticatedUser(event);
+  if (!user) {
+    return jsonResponse(401, { error: 'Unauthorized' });
+  }
+
   try {
     const result = await getPool().query(SELECT_BY_ID, [Number(planId.trim())]);
 
@@ -66,7 +73,25 @@ export async function getCoopPlanById(event) {
       return jsonResponse(404, { error: 'Coop plan not found' });
     }
 
-    return jsonResponse(200, result.rows[0]);
+    const plan = result.rows[0];
+
+    // Ownership is checked against the fetched row, which means 404 for a
+    // missing plan is reported before 403 for one the caller may not see.
+    // That ordering tells an authenticated caller which plan ids exist;
+    // accepted here because every caller past this point is a known user of
+    // this system, not an anonymous visitor, and plan ids are sequential and
+    // therefore guessable anyway.
+    try {
+      await assertCanViewPlan(user, plan);
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        console.error('getCoopPlanById forbidden', err.message);
+        return jsonResponse(403, { error: 'Forbidden' });
+      }
+      throw err;
+    }
+
+    return jsonResponse(200, plan);
   } catch (err) {
     console.error('getCoopPlanById failed', err);
     return jsonResponse(500, { error: 'Internal server error' });

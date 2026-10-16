@@ -1,16 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const queryMock = vi.fn();
+const getAuthenticatedUserMock = vi.fn();
 
 vi.mock('./db.mjs', () => ({
   getPool: () => ({ query: queryMock }),
 }));
 
+// Identity is mocked; the real authorize.mjs is NOT, so these cases
+// exercise the actual role-filter SQL rather than a stub of it.
+vi.mock('./auth.mjs', () => ({
+  getAuthenticatedUser: getAuthenticatedUserMock,
+}));
+
 const { listCoopPlans } = await import('./listCoopPlans.mjs');
+
+const STAFF = { sub: 'staff-1', role: 'STAFF', studentId: null };
 
 describe('listCoopPlans', () => {
   beforeEach(() => {
     queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    // STAFF sees every row and adds no filter, so every pre-existing case
+    // below keeps asserting exactly the SQL it always did.
+    getAuthenticatedUserMock.mockResolvedValue(STAFF);
   });
 
   it('with no params, queries with no WHERE clause and returns the raw rows as a bare array', async () => {
@@ -144,5 +157,109 @@ describe('listCoopPlans', () => {
 
     expect(result.statusCode).toBe(500);
     expect(result.body).not.toContain('secret-host');
+  });
+});
+
+describe('listCoopPlans authorization', () => {
+  beforeEach(() => {
+    queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    getAuthenticatedUserMock.mockResolvedValue(STAFF);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('returns 401 without touching the DB when there is no authenticated user', async () => {
+    getAuthenticatedUserMock.mockResolvedValue(null);
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(401);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 without touching the DB for an ADMIN-only account', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({ sub: 'admin-1', role: 'ADMIN', studentId: null });
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('STAFF: queries with no role filter', async () => {
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).not.toContain('WHERE');
+    expect(values).toEqual([]);
+  });
+
+  it('STUDENT: scopes the query to their own student_id', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toContain('p.student_id =');
+    expect(values).toEqual(['S001']);
+  });
+
+  it('STUDENT: a studentId param for someone else narrows, never widens, their scope', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: { studentId: 'S999' } });
+
+    const [text, values] = queryMock.mock.calls[0];
+    // Both conditions survive and are ANDed, so the result set is empty
+    // rather than S999's plans. The caller-supplied value never replaces
+    // the identity-derived one.
+    expect(values).toContain('S001');
+    expect(values).toContain('S999');
+    expect(text.match(/p\.student_id = \$\d+/g)).toHaveLength(2);
+    expect(text).toContain(' AND ');
+  });
+
+  it('STUDENT: leaves no unsubstituted $PARAM placeholder in the SQL', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    expect(queryMock.mock.calls[0][0]).not.toContain('$PARAM');
+  });
+
+  it('ADVISOR: scopes the query to assigned students via advisor_student_assignments', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({
+      sub: 'advisor-1',
+      role: 'ADVISOR',
+      studentId: null,
+    });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toContain('advisor_student_assignments');
+    expect(text).not.toContain('$PARAM');
+    expect(values).toEqual(['advisor-1']);
+  });
+
+  it('ADVISOR: the advisor sub is bound as a parameter, not interpolated', async () => {
+    getAuthenticatedUserMock.mockResolvedValue({
+      sub: "'; DROP TABLE coop_plans; --",
+      role: 'ADVISOR',
+      studentId: null,
+    });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).not.toContain('DROP TABLE');
+    expect(values).toEqual(["'; DROP TABLE coop_plans; --"]);
   });
 });
