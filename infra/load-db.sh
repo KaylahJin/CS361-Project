@@ -79,13 +79,9 @@ fi
 
 if [ "$RESET" = "--reset" ]; then
   echo "--reset: dropping existing tables, then reloading."
-  # Drops the schema rather than a hand-maintained table list. The list this
-  # replaced had gone stale — coop_schedules and position_periods were added
-  # to schema.sql later and never added here, so --reset left them behind and
-  # the very next line failed with 'relation "coop_schedules" already exists'.
-  # Recreating the schema can never fall out of step with schema.sql; the
-  # pg_trgm extension lands in public too and schema.sql recreates it with
-  # CREATE EXTENSION IF NOT EXISTS.
+  # Dropping the schema instead of a hand-written table list: that list went
+  # stale as tables were added to schema.sql, so --reset left them behind and
+  # the reload failed on 'already exists'.
   psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 --quiet \
     -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
   echo
@@ -100,13 +96,9 @@ run_sql_file() {
 }
 
 run_sql_file schema.sql
-# seed-students.sql MUST run before seed.sql: seed.sql inserts coop_plans
-# rows whose student_id references students, and only seed-students.sql
-# populates that table. The other way round the load dies on
-#   violates foreign key constraint "fk_coop_plans_student"
-#   DETAIL: Key (student_id)=(6600000001) is not present in table "students"
-# seed-students.sql touches only students and student_courses, so it has no
-# dependency on seed.sql in return.
+# seed-students.sql has to run first: seed.sql inserts coop_plans rows whose
+# student_id references students, and only seed-students.sql fills that table.
+# The other order fails on fk_coop_plans_student.
 run_sql_file seed-students.sql
 run_sql_file seed.sql
 
