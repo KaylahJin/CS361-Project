@@ -64,3 +64,33 @@ resource "aws_cognito_user_pool_client" "spa" {
     refresh_token = "days"
   }
 }
+
+# ============================================================
+# V3-02.2 — JWT authorizer on the HTTP API
+# ============================================================
+# API Gateway validates signature, issuer, audience and expiry before the
+# Lambda is ever invoked, so a missing/forged/expired token is rejected
+# with 401 at the edge and never reaches our code. That is why
+# infra/lambda/companies/auth.mjs does not verify the token itself.
+#
+# `audience` is the SPA App Client ID because the frontend sends the ID
+# token (whose `aud` is the client id). An access token would need
+# `scope`-based checks instead and carries no email claim.
+#
+# Attached to routes individually in apigateway.tf, not to the whole API:
+# the public content routes (companies / positions / coop-info / periods)
+# must keep working with no token at all, per
+# docs/overview/V3-01-workflow-permissions.md §1 (Public role).
+# ============================================================
+
+resource "aws_apigatewayv2_authorizer" "cognito_jwt" {
+  api_id           = aws_apigatewayv2_api.companies.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "${var.name_prefix}-cognito-jwt"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.spa.id]
+    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.app.id}"
+  }
+}

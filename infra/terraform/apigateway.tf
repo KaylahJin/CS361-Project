@@ -13,7 +13,12 @@ resource "aws_apigatewayv2_api" "companies" {
       local.web_url,
     ]
     allow_methods = ["GET", "OPTIONS"]
-    allow_headers = ["content-type"]
+    # `authorization` is required as of V3-02.2: the browser sends the
+    # Cognito ID token in that header on the coop-plan routes, and a header
+    # missing from this list makes the preflight fail before the real
+    # request is ever sent — which surfaces as an opaque CORS error, not a
+    # 401, so it is easy to misdiagnose as an auth bug.
+    allow_headers = ["content-type", "authorization"]
   }
 }
 
@@ -66,16 +71,24 @@ resource "aws_apigatewayv2_route" "get_student" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# The two coop-plan routes are the only ones carrying personal data, so
+# they are the only ones behind the JWT authorizer (V3-02.2). Every other
+# route above stays public on purpose — ประกาศ / เกณฑ์ / ตำแหน่งงาน must be
+# readable without logging in.
 resource "aws_apigatewayv2_route" "list_coop_plans" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /coop-plans"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_route" "get_coop_plan" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /coop-plans/{planId}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/{planId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_stage" "default" {
