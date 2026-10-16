@@ -24,6 +24,8 @@ import type {
   CoopPlanStatus,
 } from '../types/coopPlan';
 
+import { useAuth } from '../auth/AuthContext';
+
 function StatusBadge({ status }: { status: CoopPlanStatus }) {
   const config = {
     PREPARING: {
@@ -34,8 +36,8 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
       label: 'ยื่นแล้ว',
       className: 'bg-blue-50 text-blue-700 border-blue-200',
     },
-    UNDER_REVIEW: {
-      label: 'กำลังตรวจสอบ',
+    RETURNED: {
+      label: 'ส่งกลับแก้ไข',
       className: 'bg-amber-50 text-amber-700 border-amber-200',
     },
     APPROVED: {
@@ -379,6 +381,10 @@ function CoopPlans() {
   const [curriculum, setCurriculum] = useState('');
   const [periodId, setPeriodId] = useState('');
 
+  // Read right before each request, never at mount: the token expires after an
+  // hour and this is what refreshes it.
+  const { getIdToken } = useAuth();
+
   const loadPlans = async () => {
     setLoading(true);
     setError(null);
@@ -391,7 +397,7 @@ function CoopPlans() {
         periodId: periodId || undefined,
       };
 
-      const data = await getCoopPlans(params);
+      const data = await getCoopPlans(params, await getIdToken());
       setPlans(data);
     } catch (err) {
       if (err instanceof CoopPlanApiError) {
@@ -413,7 +419,7 @@ function CoopPlans() {
     setError(null);
 
     try {
-      const plan = await getCoopPlan(planId);
+      const plan = await getCoopPlan(planId, await getIdToken());
       setSelectedPlan(plan);
     } catch (err) {
       if (err instanceof CoopPlanApiError) {
@@ -513,7 +519,7 @@ function CoopPlans() {
             <option value="">ทุกสถานะ</option>
             <option value="PREPARING">กำลังเตรียม</option>
             <option value="SUBMITTED">ยื่นแล้ว</option>
-            <option value="UNDER_REVIEW">กำลังตรวจสอบ</option>
+            <option value="RETURNED">ส่งกลับแก้ไข</option>
             <option value="APPROVED">อนุมัติแล้ว</option>
             <option value="REJECTED">ไม่อนุมัติ</option>
           </select>

@@ -1,14 +1,13 @@
-// ============================================================
-// CS361 V2 — Coop Plan API Client
-// ============================================================
-// Calls: API Gateway → Lambda → RDS PostgreSQL
+// Coop plan API client: API Gateway, Lambda, then RDS.
 //
-// Fallback:
-// - API timeout after 10 seconds
-// - API error
-// - API unavailable
-// → use local coopPlansData.json
-// ============================================================
+// Both routes are behind the JWT authorizer, so both functions take the
+// Cognito ID token and send it as a Bearer header.
+//
+// The bundled coopPlansData.json is used only when the API cannot be reached
+// at all — network failure or the timeout. Any HTTP status is re-thrown
+// instead, because that file holds every student's name, note and review
+// comments: serving it after a 401 would publish the data the authorizer had
+// just refused.
 
 import type {
   CoopPlan,
@@ -32,15 +31,16 @@ export class CoopPlanApiError extends Error {
   }
 }
 
-// ============================================================
-// Local fallback data
-// ============================================================
-
 const localCoopPlans = coopPlansData as CoopPlan[];
 
-// ============================================================
-// Fetch with timeout
-// ============================================================
+/**
+ * Without this header the request is rejected with 401 before the Lambda
+ * runs. Pass `useAuth().getIdToken()`, read right before the call.
+ */
+function authHeaders(idToken?: string | null): RequestInit | undefined {
+  if (!idToken) return undefined;
+  return { headers: { Authorization: `Bearer ${idToken}` } };
+}
 
 async function fetchWithTimeout(
   url: string,
@@ -62,10 +62,6 @@ async function fetchWithTimeout(
   }
 }
 
-// ============================================================
-// Local fallback — filter
-// ============================================================
-
 function filterLocalCoopPlans(
   params?: CoopPlanQueryParams
 ): CoopPlan[] {
@@ -82,9 +78,6 @@ function filterLocalCoopPlans(
   const positionId = params.positionId?.trim();
 
   return localCoopPlans.filter((plan) => {
-    // --------------------------------------------------------
-    // Search
-    // --------------------------------------------------------
 
     if (search) {
       const searchableText = [
@@ -105,57 +98,36 @@ function filterLocalCoopPlans(
       }
     }
 
-    // --------------------------------------------------------
-    // Status
-    // --------------------------------------------------------
 
     if (status && plan.status !== status) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Student
-    // --------------------------------------------------------
 
     if (studentId && plan.student_id !== studentId) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Curriculum
-    // --------------------------------------------------------
 
     if (curriculum && plan.curriculum !== curriculum) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Period
-    // --------------------------------------------------------
 
     if (periodId && plan.period_id !== periodId) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Company
-    // --------------------------------------------------------
 
     if (companyId && plan.company_id !== companyId) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Position
-    // --------------------------------------------------------
 
     if (positionId && plan.position_id !== positionId) {
       return false;
     }
 
-    // --------------------------------------------------------
-    // Submitted date
-    // --------------------------------------------------------
 
     if (params.submittedFrom && plan.submitted_at) {
       if (
@@ -179,19 +151,9 @@ function filterLocalCoopPlans(
   });
 }
 
-// ============================================================
-// GET /coop-plans
-// ============================================================
-
-/**
- * Fetch coop plans with optional search + filters.
- *
- * API is tried first.
- * If API fails or times out after 10 seconds,
- * local coopPlansData.json is used instead.
- */
 export async function getCoopPlans(
-  params?: CoopPlanQueryParams
+  params?: CoopPlanQueryParams,
+  idToken?: string | null
 ): Promise<CoopPlan[]> {
   const qs = new URLSearchParams();
 
@@ -238,7 +200,7 @@ export async function getCoopPlans(
   }`;
 
   try {
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, authHeaders(idToken));
 
     if (!res.ok) {
       throw new CoopPlanApiError(
@@ -249,8 +211,14 @@ export async function getCoopPlans(
 
     return await res.json();
   } catch (error) {
+    // An answer from the server is never a reason to fall back. A 401 or 403
+    // means the rules worked, and a 5xx is a real fault worth showing.
+    if (error instanceof CoopPlanApiError) {
+      throw error;
+    }
+
     console.warn(
-      'Coop Plan API unavailable. Using local coopPlansData.json.',
+      'Coop Plan API unreachable. Using local coopPlansData.json.',
       error
     );
 
@@ -258,26 +226,16 @@ export async function getCoopPlans(
   }
 }
 
-// ============================================================
-// GET /coop-plans/{planId}
-// ============================================================
-
-/**
- * Fetch a single coop plan by ID.
- *
- * API is tried first.
- * If API fails or times out after 10 seconds,
- * local coopPlansData.json is used instead.
- */
 export async function getCoopPlan(
-  planId: number
+  planId: number,
+  idToken?: string | null
 ): Promise<CoopPlan> {
   const url = `${API_BASE}/coop-plans/${encodeURIComponent(
     planId
   )}`;
 
   try {
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, authHeaders(idToken));
 
     if (!res.ok) {
       throw new CoopPlanApiError(
@@ -288,8 +246,14 @@ export async function getCoopPlan(
 
     return await res.json();
   } catch (error) {
+    // As in getCoopPlans: a status from the server is the answer, never a
+    // reason to serve the bundled copy of someone's plan.
+    if (error instanceof CoopPlanApiError) {
+      throw error;
+    }
+
     console.warn(
-      `Coop Plan API unavailable for plan ${planId}. Using local coopPlansData.json.`,
+      `Coop Plan API unreachable for plan ${planId}. Using local coopPlansData.json.`,
       error
     );
 
