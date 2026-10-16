@@ -15,13 +15,11 @@ data "archive_file" "lambda" {
 }
 
 resource "aws_lambda_function" "companies" {
-  depends_on = [time_sleep.wait_for_proxy_target]
-
   function_name = "${var.name_prefix}-companies-lambda"
   role          = data.aws_iam_role.lab_role.arn
   handler       = "index.handler"
   runtime       = "nodejs22.x"
-  timeout       = 10 # the AWS default of 3s isn't enough for a cold VPC ENI attach + proxy handshake
+  timeout       = 10 # the AWS default of 3s is not enough for a cold VPC ENI attach plus the first connection
   memory_size   = 128
 
   filename         = data.archive_file.lambda.output_path
@@ -34,7 +32,7 @@ resource "aws_lambda_function" "companies" {
 
   environment {
     variables = {
-      DB_HOST     = aws_db_proxy.main.endpoint
+      DB_HOST     = aws_db_instance.coop_db.address
       DB_PORT     = "5432"
       DB_NAME     = var.db_name
       DB_USER     = var.db_username

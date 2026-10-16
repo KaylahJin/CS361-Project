@@ -68,23 +68,21 @@ variable "cors_allow_origin" {
 
 variable "lab_role_name" {
   description = <<-EOT
-    Existing IAM role reused as BOTH the Lambda execution role and the RDS
-    Proxy role. AWS Academy Learner Lab accounts (voclabs) block
+    Existing IAM role reused as the Lambda execution role. AWS Academy
+    Learner Lab accounts (voclabs) block
     iam:CreateRole, so this stack deliberately creates no roles of its own
     and looks this one up instead (data.tf -> data.aws_iam_role.lab_role).
 
     The role must already have:
       - AWSLambdaVPCAccessExecutionRole (or equivalent ENI permissions), or
         every VPC Lambda invocation times out
-      - secretsmanager:GetSecretValue on the proxy's secret
-      - a trust policy allowing both lambda.amazonaws.com and
-        rds.amazonaws.com to assume it
-    LabRole satisfies all three. Check with:
+      - a trust policy allowing lambda.amazonaws.com to assume it
+    LabRole satisfies both. Check with:
       aws iam list-attached-role-policies --role-name LabRole
 
     Not on a Learner Lab and want least-privilege roles created for you?
-    Add your own aws_iam_role resources and point the `role_arn` in
-    proxy.tf and the `role` in lambda.tf at them instead of this lookup.
+    Add your own aws_iam_role resources and point the `role` in lambda.tf at
+    them instead of this lookup.
   EOT
   type        = string
   default     = "LabRole"
