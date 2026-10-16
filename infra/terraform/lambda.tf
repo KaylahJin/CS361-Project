@@ -3,12 +3,15 @@ data "archive_file" "lambda" {
   source_dir  = "${path.module}/../lambda/companies"
   output_path = "${path.module}/.build/function.zip"
 
-  excludes = [
-    "index.test.mjs",
-    "listCompanies.test.mjs",
-    "getCompanyById.test.mjs",
-    "function.zip",
-  ]
+  # Globbed, not hand-listed. The list this replaced named only three test
+  # files, so the seven added since (positions, coop-info, students,
+  # coop-plans, ...) were being packaged into the deployed function along
+  # with vitest imports that can never resolve there. fileset() picks up
+  # every *.test.mjs, including ones added later.
+  excludes = concat(
+    [for f in fileset("${path.module}/../lambda/companies", "*.test.mjs") : f],
+    ["function.zip"],
+  )
 }
 
 resource "aws_lambda_function" "companies" {
