@@ -382,8 +382,9 @@ function CoopPlans() {
   const [periodId, setPeriodId] = useState('');
 
   // Read right before each request, never at mount: the token expires after an
-  // hour and this is what refreshes it.
-  const { getIdToken } = useAuth();
+  // hour and this is what refreshes it. `authStatus` is here so the list
+  // reloads when the session changes — see the effect below.
+  const { getIdToken, status: authStatus } = useAuth();
 
   const loadPlans = async () => {
     setLoading(true);
@@ -400,6 +401,12 @@ function CoopPlans() {
       const data = await getCoopPlans(params, await getIdToken());
       setPlans(data);
     } catch (err) {
+      // Drop whatever the previous caller could see. Leaving their rows on
+      // screen after a refusal would show one person's plans to whoever is at
+      // the keyboard next.
+      setPlans([]);
+      setSelectedPlan(null);
+
       if (err instanceof CoopPlanApiError) {
         setError(err.message);
       } else {
@@ -410,9 +417,17 @@ function CoopPlans() {
     }
   };
 
+  // authStatus belongs in here: signing in or out changes which plans exist
+  // for this caller, and without it the page keeps showing the previous
+  // session's result until something else happens to re-render.
+  //
+  // Nothing is fetched while the stored session is still being restored. A
+  // request sent in that window would carry no token and come back 401, and
+  // the user would watch an error appear and then correct itself.
   useEffect(() => {
+    if (authStatus === 'loading') return;
     loadPlans();
-  }, [search, status, curriculum, periodId]);
+  }, [search, status, curriculum, periodId, authStatus]);
 
   const handleSelectPlan = async (planId: number) => {
     setDetailLoading(true);

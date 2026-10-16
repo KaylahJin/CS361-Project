@@ -57,6 +57,20 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
     closeDrawer();
   };
 
+  // Signing out has to move the user off a page that was only theirs while
+  // signed in. Pages are chosen by a tab held in App state, not by the URL, so
+  // nothing moves on its own: without this the account page is swapped for a
+  // login form underneath an otherwise unchanged screen, and the coop-plan
+  // page just sits there. Public pages are left alone — someone reading the
+  // announcements should stay on the announcements.
+  const SIGNED_IN_ONLY: TabType[] = ['account', 'coop-plans'];
+
+  const handleLogout = () => {
+    logout();
+    if (SIGNED_IN_ONLY.includes(activeTab)) onTabChange('home');
+    closeDrawer();
+  };
+
   // ปิดด้วยปุ่ม Esc + ล็อกการเลื่อนหน้าจอด้านหลังขณะเปิด drawer
   useEffect(() => {
     if (!isOpen) return;
@@ -168,7 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
               </button>
               <button
                 type="button"
-                onClick={logout}
+                onClick={handleLogout}
                 className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs whitespace-nowrap text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-800"
               >
                 <LogOut aria-hidden="true" className="h-4 w-4 shrink-0 stroke-[2.2]" />
@@ -285,10 +299,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                 <li>
                   <button
                     type="button"
-                    onClick={() => {
-                      logout();
-                      closeDrawer();
-                    }}
+                    onClick={handleLogout}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                   >
                     <LogOut aria-hidden="true" className="h-5 w-5 shrink-0 stroke-[2.2]" />
