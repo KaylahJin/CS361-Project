@@ -13,11 +13,10 @@ resource "aws_apigatewayv2_api" "companies" {
       local.web_url,
     ]
     allow_methods = ["GET", "OPTIONS"]
-    # `authorization` is required as of V3-02.2: the browser sends the
-    # Cognito ID token in that header on the coop-plan routes, and a header
-    # missing from this list makes the preflight fail before the real
-    # request is ever sent — which surfaces as an opaque CORS error, not a
-    # 401, so it is easy to misdiagnose as an auth bug.
+    # `authorization` has to be listed: the browser sends the ID token in that
+    # header, and a header missing here fails the preflight before the real
+    # request is sent. That shows up as a CORS error, not a 401, which is easy
+    # to mistake for an auth bug.
     allow_headers = ["content-type", "authorization"]
   }
 }
@@ -59,6 +58,14 @@ resource "aws_apigatewayv2_route" "get_position" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# index.mjs has routed 'GET /periods' to listPeriods for a while, but no API
+# Gateway route pointed at it, so every request 404'd at the edge.
+resource "aws_apigatewayv2_route" "list_periods" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /periods"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_apigatewayv2_route" "list_students" {
   api_id    = aws_apigatewayv2_api.companies.id
   route_key = "GET /students"
@@ -71,10 +78,10 @@ resource "aws_apigatewayv2_route" "get_student" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# The two coop-plan routes are the only ones carrying personal data, so
-# they are the only ones behind the JWT authorizer (V3-02.2). Every other
-# route above stays public on purpose — ประกาศ / เกณฑ์ / ตำแหน่งงาน must be
-# readable without logging in.
+# The coop-plan routes are the only ones carrying personal data, so they are
+# the only ones behind the authorizer. Everything above stays public on
+# purpose: announcements, criteria and job positions must be readable without
+# logging in.
 resource "aws_apigatewayv2_route" "list_coop_plans" {
   api_id             = aws_apigatewayv2_api.companies.id
   route_key          = "GET /coop-plans"
