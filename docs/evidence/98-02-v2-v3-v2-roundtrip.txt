@@ -1,0 +1,51 @@
+npm run db:test-migration
+database: coop_db_migration_test, created and dropped by the run; coop_db untouched
+run: 2026-10-16T16:11:57Z
+
+
+> cs361-project@0.0.0 db:test-migration
+> bash infra/migrate/test-migration-roundtrip.sh
+
+### 0. scratch database
+NOTICE:  database "coop_db_migration_test" does not exist, skipping
+created coop_db_migration_test on coop-portal-coop-db-dev.cljplajslkld.us-east-1.rds.amazonaws.com (coop_db untouched)
+
+### 1. load the V2 schema and seed data
+V2 loaded: 103 companies, 10 plans
+V2 plan_id type: integer
+V2 status constraint: CHECK (((status)::text = ANY ((ARRAY['PREPARING'::character varying, 'SUBMITTED'::character varying, 'UNDER_REVIEW'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying])::text[])))
+
+### 2. put a plan on the V2-only status UNDER_REVIEW
+UNDER_REVIEW rows before upgrade: 2
+
+### 3. run v3_01_upgrade.sql (ON_ERROR_STOP=1)
+upgrade exit: 0 (no FK type conflict, no constraint violation)
+UNDER_REVIEW rows after upgrade:  0
+statuses now: APPROVED=2, PREPARING=2, REJECTED=2, SUBMITTED=4
+V3 status constraint: CHECK (((status)::text = ANY ((ARRAY['PREPARING'::character varying, 'SUBMITTED'::character varying, 'RETURNED'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying])::text[])))
+
+### 4. exercise the new foreign keys with real rows
+plan_reviews insert ok: plan_id=1 (INTEGER) -> coop_plans.plan_id, reviewer_sub -> app_users.cognito_sub
+FK columns as built:
+advisor_student_assignments_advisor_sub_fkey | FOREIGN KEY (advisor_sub) REFERENCES app_users(cognito_sub) ON DELETE CASCADE
+advisor_student_assignments_student_id_fkey | FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+app_users_student_id_fkey | FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE SET NULL
+plan_reviews_plan_id_fkey | FOREIGN KEY (plan_id) REFERENCES coop_plans(plan_id) ON DELETE CASCADE
+plan_reviews_reviewer_sub_fkey | FOREIGN KEY (reviewer_sub) REFERENCES app_users(cognito_sub)
+
+### 5. refuse a bad row (FK must reject an unknown reviewer)
+rejected as expected: unknown reviewer_sub violates the foreign key
+
+### 6. put a plan on RETURNED, the V3-only status
+RETURNED rows before rollback: 1
+
+### 7. run v3_01_rollback.sql (ON_ERROR_STOP=1)
+rollback exit: 0
+RETURNED rows after rollback:  0
+plan 1 status now:      PREPARING
+V3 tables left behind: none
+restored constraint: CHECK (((status)::text = ANY ((ARRAY['PREPARING'::character varying, 'SUBMITTED'::character varying, 'UNDER_REVIEW'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying])::text[])))
+V2 data intact: 103 companies, 10 plans, 10 students
+
+### 8. drop the scratch database
+dropped coop_db_migration_test

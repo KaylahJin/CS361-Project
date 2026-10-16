@@ -1,106 +1,115 @@
-# 🗄️ V3 Database Migration Guide (Issue V3-03.1 #98)
+# คู่มือ Migration ฐานข้อมูล V3 (V3-03.1 #98)
 
-คู่มือสำหรับการ Backup ข้อมูล, รัน Migration อัปเกรดเป็น V3, ตรวจสอบความถูกต้อง (Verify) และการย้อนกลับสู่ V2 (Rollback)  
-*(คำสั่งด้านล่างจะดึงค่าคอนฟิกการเชื่อมต่อจากไฟล์ `.env` ประจำเครื่องโดยอัตโนมัติ)*
+Backup → Upgrade → Verify → Rollback
 
----
+ชื่อตารางและคอลัมน์ทั้งหมดยึดตาม `docs/overview/V3-01-data-model.md` ซึ่งเป็น
+ข้อตกลงร่วมของทีม และเป็นชื่อที่โค้ด Lambda ของ V3-02 เรียกใช้อยู่แล้ว
 
-## 1. การสำรองข้อมูลก่อนทำรายการ (Database Backup)
+| ไฟล์ | ใช้ทำอะไร |
+|---|---|
+| `infra/migrate/migrations/v3_01_upgrade.sql` | สร้างตาราง V3 และปรับสถานะแผน |
+| `infra/migrate/migrations/v3_01_verify.sql` | ตรวจผล อ่านอย่างเดียว ไม่เขียนข้อมูล |
+| `infra/migrate/migrations/v3_01_rollback.sql` | ถอน V3 กลับเป็นโครงสร้าง V2 |
 
-สร้างไฟล์สำรองข้อมูล V2 ก่อนเริ่มดำเนินการทุกครั้ง:
+## 0. ค่าการเชื่อมต่อ
 
-### สำหรับ macOS / Linux (Bash/Zsh):
+ไม่ต้องกรอกเอง ดึงจาก Terraform เหมือนที่ `infra/load-db.sh` ทำ (`.env` ของ repo นี้
+เก็บเฉพาะตัวแปร `VITE_` ของฝั่งหน้าเว็บ ไม่มีค่าฐานข้อมูล)
+
 ```bash
-# โหลดค่าตัวแปรจาก .env และรัน pg_dump ทันที
-export $(grep -v '^#' .env | xargs)
-pg_dump -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -F p -f backup_v2_before_migration.sql
+export PGHOST=$(terraform -chdir=infra/terraform output -raw rds_endpoint)
+export PGDATABASE=$(terraform -chdir=infra/terraform output -raw db_name)
+export PGUSER=$(terraform -chdir=infra/terraform output -raw db_username)
+export PGCLIENTENCODING=UTF8
+# รหัสผ่านอยู่ใน infra/terraform/terraform.tfvars (ตั้งใจไม่ทำเป็น output)
+read -rs PGPASSWORD && export PGPASSWORD
 ```
 
-### สำหรับ Windows (PowerShell):
-```powershell
-# อ่านค่าจาก .env เข้าตัวแปร Environment ของ PowerShell
-Get-Content .env | Where-Object { $_ -notmatch '^#' -and $_ -match '=' } | ForEach-Object {
-    $name, $value = $_.Split('=', 2)
-    [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
-}
-pg_dump -h $env:DB_HOST -p ($env:DB_PORT ?? 5432) -U $env:DB_USER -d $env:DB_NAME -F p -f backup_v2_before_migration.sql
+ต่อตรงไปที่ RDS endpoint เท่านั้น ถ้าต่อไม่ติดและค้างจนหมดเวลา แปลว่า `my_ip_cidr`
+ใน `terraform.tfvars` ยังเป็น IP เดิม ให้แก้เป็น IP ปัจจุบันแล้ว `terraform apply` ก่อน
+
+## 1. สำรองข้อมูลก่อนเสมอ
+
+```bash
+pg_dump -F c -f backup_v2_before_migration.dump
 ```
 
----
+รูปแบบ custom (`-F c`) กู้คืนทีละตารางได้ และไฟล์เล็กกว่า plain SQL
 
-## 2. ขั้นตอนการรัน Migration (Upgrade: V2 -> V3)
+## 2. Upgrade (V2 → V3)
 
-สคริปต์นี้จะสร้างตาราง `users`, `advisor_students`, `plan_reviews`, เพิ่มฟิลด์ `cognito_sub` ในตาราง `students` และปรับปรุง Workflow สถานะแผนสหกิจศึกษา
+```bash
+psql -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_upgrade.sql
+```
 
-### วิธีที่ 1: รันผ่าน VS Code (สะดวกและแนะนำที่สุด)
-1. เปิดไฟล์ `migrate/migrations/v3_01_upgrade.sql`
-2. เลือก Connection ฐานข้อมูลประจำเครื่องตัวเองที่แท็บ **PostgreSQL**
-3. คลุมโค้ดทั้งหมด (`Ctrl + A`) แล้วกด **Execute Query** (`F5` หรือคลิกขวา)
-4. ตรวจสอบแผง Query Results ว่าคำสั่งทำงานสำเร็จครบถ้วน ไม่มี Error สีแดง
+สคริปต์ทั้งไฟล์อยู่ใน transaction เดียว ถ้าพังกลางทางจะไม่มีอะไรค้างครึ่งๆ
+และรันซ้ำได้ไม่พัง
 
-### วิธีที่ 2: รันผ่าน CLI (Terminal)
-* **macOS / Linux:**
-  ```bash
-  export $(grep -v '^#' .env | xargs)
-  psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f migrate/migrations/v3_01_upgrade.sql
-  ```
-* **Windows (PowerShell):**
-  ```powershell
-  psql -h $env:DB_HOST -p ($env:DB_PORT ?? 5432) -U $env:DB_USER -d $env:DB_NAME -f migrate/migrations/v3_01_upgrade.sql
-  ```
+สิ่งที่เกิดขึ้น:
 
----
+- สร้าง `app_users` (`cognito_sub`, `email`, `role`, `student_id`, `is_active`)
+- สร้าง `advisor_student_assignments` (`advisor_sub`, `student_id`)
+- สร้าง `plan_reviews` (`reviewer_sub`, `decision`, `comment`) โดย `plan_id` เป็น
+  `INTEGER` ให้ตรงกับ `coop_plans.plan_id` ของจริง
+- ย้ายแผนสถานะ `UNDER_REVIEW` ไปเป็น `SUBMITTED` แล้วเปลี่ยนชุดสถานะที่อนุญาต
+  เป็น `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED`, `REJECTED`
+- เพิ่ม unique index กันยื่นซ้ำ: หนึ่งแผนที่ยังดำเนินการอยู่ต่อนักศึกษาต่อรอบ
 
-## 3. การตรวจสอบความถูกต้อง (Verification Test)
+## 3. Verify
 
-เปิดไฟล์ `migrate/migrations/v3_01_verify.sql` แล้วเลือกรันทีละชุดคำสั่งเพื่อทดสอบความถูกต้องและเก็บหลักฐาน (Evidence):
+```bash
+psql -f infra/migrate/migrations/v3_01_verify.sql
+```
 
-1. **ตรวจสอบโครงสร้างใหม่:**
-   * ตาราง `users`, `advisor_students`, `plan_reviews` ต้องมีอยู่ในระบบ
-   * คอลัมน์ `cognito_sub` ปรากฏอยู่ในตาราง `students`
-2. **ทดสอบ Constraints ป้องกันข้อผิดพลาด (ต้องถูกระบบปฏิเสธและขึ้น Error สีแดง):**
-   * **ยื่นแผนซ้ำ:** นักศึกษาคนเดิมยื่นแผนในรอบเดียวกัน 2 ครั้ง $\rightarrow$ ต้องติด `uq_coop_plans_active_period`
-   * **สถานะไม่ถูกต้อง:** ใส่สถานะนอกเหนือจาก Enum V3 $\rightarrow$ ต้องติด `chk_coop_plans_status`
-   * **Cognito Sub ซ้ำ:** ผู้ใช้ลงทะเบียน Sub ซ้ำกัน $\rightarrow$ ต้องติด `users_cognito_sub_key`
-3. **ล้างข้อมูลทดสอบ:** รันคำสั่ง `DELETE` ช่วงท้ายไฟล์ เพื่อเคลียร์เรคคอร์ดจำลองออกจากฐานข้อมูล
+ทุกแถวต้องอ่านว่า `ok` ถ้าเจอ `MISSING` หรือ `WRONG:` แปลว่า upgrade ไม่ครบ
+สคริปต์นี้อ่านอย่างเดียว รันกี่ครั้งก็ได้ ไม่ทิ้งข้อมูลทดสอบไว้ในฐานข้อมูล
 
----
+สิ่งที่ควรเห็น: ตาราง V3 ครบสามตาราง, `plan_reviews.plan_id` เป็น integer เท่ากับ
+`coop_plans.plan_id`, constraint สถานะมี `RETURNED` และไม่มี `UNDER_REVIEW`,
+และไม่มีแผนไหนค้างอยู่บนสถานะของ V2
 
-## 4. ขั้นตอนการย้อนกลับสู่ระบบเดิม (Rollback: V3 -> V2)
+ผลรันล่าสุดบนฐานข้อมูลจริงอยู่ใน `docs/evidence/98-01-v3-verify-output.txt`
 
-กรณีเกิดข้อผิดพลาดหรือต้องการย้อนระบบกลับไปเป็นโครงสร้าง V2:
+## 4. Rollback (V3 → V2)
 
-### 4.1 รันสคริปต์ Rollback
-* **ผ่าน VS Code:** เปิดไฟล์ `migrate/migrations/v3_01_rollback.sql` แล้วกด **Execute Query**
-* **ผ่าน CLI:**
-  ```bash
-  psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f migrate/migrations/v3_01_rollback.sql
-  ```
+```bash
+psql -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_rollback.sql
+```
 
-### 4.2 ตรวจสอบผลลัพธ์การ Rollback
-รันคำสั่ง SQL ด้านล่างเพื่อยืนยันว่า Object ทั้งหมดของ V3 ถูกถอนออกเรียบร้อย:
+ถอน `plan_reviews`, `advisor_student_assignments`, `app_users` และ unique index
+ออก แล้วคืนชุดสถานะเดิมของ V2 แผนที่อยู่สถานะ `RETURNED` จะกลับไปเป็น
+`PREPARING` เพราะ V2 ไม่มีสถานะนี้ ส่วนความเห็นของผู้ตรวจยังอยู่ใน
+`coop_plans.review_comment`
+
+ตรวจผล:
+
 ```sql
--- 1. ตาราง V3 ต้องไม่พบในระบบ (ผลลัพธ์ต้องได้ 0 แถว)
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_name IN ('plan_reviews', 'advisor_students', 'users');
+SELECT table_name FROM information_schema.tables
+WHERE table_name IN ('app_users', 'advisor_student_assignments', 'plan_reviews');
+-- ต้องได้ 0 แถว
 
--- 2. คอลัมน์ cognito_sub ใน students ต้องถูกลบออก (0 แถว)
-SELECT column_name 
-FROM information_schema.columns 
-WHERE table_name = 'students' AND column_name = 'cognito_sub';
-
--- 3. ตรวจสอบสถานะ coop_plans (ต้องไม่มี DRAFT หรือ RETURNED หลงเหลือ)
 SELECT DISTINCT status FROM coop_plans;
+-- ต้องไม่มี RETURNED หลงเหลือ
 ```
 
----
-
-## 5. การกู้คืนฉุกเฉิน (Emergency Disaster Recovery)
-
-หากการย้อนกลับด้วยสคริปต์ Rollback เกิดปัญหา ให้กู้คืนฐานข้อมูลกลับมาจากไฟล์สำรองที่สร้างไว้ในข้อ 1:
+## 4.1 ทดสอบทั้งรอบก่อนแตะฐานข้อมูลจริง
 
 ```bash
-# กู้คืนฐานข้อมูลเดิมจากไฟล์ backup
-psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -f backup_v2_before_migration.sql
+npm run db:test-migration
+```
+
+สร้างฐานข้อมูลชั่วคราวบน RDS instance เดิม โหลด schema และ seed ของ V2 ลงไป
+แล้วรัน upgrade → ทดสอบ foreign key ด้วยข้อมูลจริง → rollback → ลบฐานข้อมูลนั้นทิ้ง
+ฐานข้อมูลจริงไม่ถูกแตะต้อง รันซ้ำได้ตลอด
+
+ต่างจาก `v3_01_verify.sql` ที่อ่านฐานข้อมูลที่ migrate แล้ว สคริปต์นี้รัน migration
+เองทั้งรอบ จึงเป็นที่เดียวที่พิสูจน์เส้นทาง rollback ได้ รวมถึงสถานะ `RETURNED`
+ที่ไม่มีใน V2 ผลรันล่าสุดอยู่ใน `docs/evidence/98-02-v2-v3-v2-roundtrip.txt`
+
+## 5. กู้คืนฉุกเฉิน
+
+ถ้า rollback เองก็ยังพัง ให้กู้จากไฟล์สำรองในข้อ 1:
+
+```bash
+pg_restore --clean --if-exists -d "$PGDATABASE" backup_v2_before_migration.dump
 ```

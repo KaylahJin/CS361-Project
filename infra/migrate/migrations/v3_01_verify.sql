@@ -1,43 +1,66 @@
--- ============================================================
--- 1. ตรวจสอบการสร้างตารางและคอลัมน์ใหม่
--- ============================================================
-SELECT table_name FROM information_schema.tables 
-WHERE table_name IN ('users', 'advisor_students', 'plan_reviews');
+-- V3 database migration: verification
+--
+--   psql ... -f infra/migrate/migrations/v3_01_verify.sql
+--
+-- Read-only on purpose. The earlier version inserted test rows and relied on
+-- them failing, which aborts the script under ON_ERROR_STOP and leaves rows
+-- behind when it does not. Every check below is a SELECT: run it against the
+-- real database as often as you like.
+--
+-- Every row should read 'ok'. Anything reading 'MISSING' or a count that does
+-- not match means the upgrade did not fully apply.
 
-SELECT column_name, data_type FROM information_schema.columns 
-WHERE table_name = 'students' AND column_name = 'cognito_sub';
+\echo '== tables =='
+SELECT expected AS table_name,
+       CASE WHEN to_regclass('public.' || expected) IS NULL THEN 'MISSING' ELSE 'ok' END AS status
+FROM (VALUES ('app_users'), ('advisor_student_assignments'), ('plan_reviews')) AS t(expected);
 
--- ============================================================
--- 2. ทดสอบ Constraint: ห้ามยื่นแผนซ้ำในรอบเดียวกัน (uq_coop_plans_active_period)
--- ============================================================
--- 2.1 ส่งแผนแรก (ต้องผ่าน - ใช้ position_id 'POS001')
-INSERT INTO coop_plans (plan_id, student_id, position_id, period_id, status) 
-VALUES ('P-TEST-01', '6600000001', 'POS001', 'P2568-1', 'SUBMITTED');
+\echo '== app_users columns =='
+SELECT expected AS column_name,
+       CASE WHEN c.column_name IS NULL THEN 'MISSING' ELSE 'ok: ' || c.data_type END AS status
+FROM (VALUES ('cognito_sub'), ('email'), ('role'), ('student_id'), ('is_active')) AS e(expected)
+LEFT JOIN information_schema.columns c
+       ON c.table_name = 'app_users' AND c.column_name = e.expected;
 
--- 2.2 ส่งอีกแผนในรอบเดียวกัน (ต้องเกิด ERROR: duplicate key value violates unique constraint "uq_coop_plans_active_period")
-INSERT INTO coop_plans (plan_id, student_id, position_id, period_id, status) 
-VALUES ('P-TEST-02', '6600000001', 'POS001', 'P2568-1', 'DRAFT');
+\echo '== advisor_student_assignments columns =='
+SELECT expected AS column_name,
+       CASE WHEN c.column_name IS NULL THEN 'MISSING' ELSE 'ok: ' || c.data_type END AS status
+FROM (VALUES ('advisor_sub'), ('student_id'), ('created_at')) AS e(expected)
+LEFT JOIN information_schema.columns c
+       ON c.table_name = 'advisor_student_assignments' AND c.column_name = e.expected;
 
--- ============================================================
--- 3. ทดสอบ Check Constraint: ปฏิเสธสถานะที่ไม่ถูกต้อง
--- ============================================================
--- ลองใส่สถานะมั่ว (ต้องเกิด ERROR: check constraint "chk_coop_plans_status")
-INSERT INTO coop_plans (plan_id, student_id, position_id, period_id, status) 
-VALUES ('P-TEST-03', '6600000002', 'POS001', 'P2568-1', 'INVALID_STATUS');
+\echo '== plan_reviews columns =='
+SELECT expected AS column_name,
+       CASE WHEN c.column_name IS NULL THEN 'MISSING' ELSE 'ok: ' || c.data_type END AS status
+FROM (VALUES ('review_id'), ('plan_id'), ('reviewer_sub'), ('decision'), ('comment'), ('reviewed_at')) AS e(expected)
+LEFT JOIN information_schema.columns c
+       ON c.table_name = 'plan_reviews' AND c.column_name = e.expected;
 
--- ============================================================
--- 4. ทดสอบ Constraint: ตรวจสอบ Cognito Sub ห้ามซ้ำ
--- ============================================================
--- ผู้ใช้คนแรก (ต้องผ่าน)
-INSERT INTO users (user_id, cognito_sub, email, role)
-VALUES ('U-TEST-01', 'sub-test-111', 'test1@tu.ac.th', 'STUDENT');
+\echo '== plan_reviews.plan_id matches coop_plans.plan_id type =='
+SELECT (SELECT data_type FROM information_schema.columns
+         WHERE table_name = 'coop_plans' AND column_name = 'plan_id')   AS coop_plans,
+       (SELECT data_type FROM information_schema.columns
+         WHERE table_name = 'plan_reviews' AND column_name = 'plan_id') AS plan_reviews;
 
--- คนที่สองใช้ sub ซ้ำ (ต้องเกิด ERROR: duplicate key value violates unique constraint "users_cognito_sub_key")
-INSERT INTO users (user_id, cognito_sub, email, role)
-VALUES ('U-TEST-02', 'sub-test-111', 'test2@tu.ac.th', 'STUDENT');
+\echo '== constraints and indexes =='
+SELECT 'chk_coop_plans_status' AS name,
+       CASE WHEN pg_get_constraintdef(oid) LIKE '%RETURNED%'
+                 AND pg_get_constraintdef(oid) NOT LIKE '%UNDER_REVIEW%'
+            THEN 'ok' ELSE 'WRONG: ' || pg_get_constraintdef(oid) END AS status
+FROM pg_constraint WHERE conname = 'chk_coop_plans_status';
 
--- ============================================================
--- 5. ล้างข้อมูลทดสอบ (Cleanup)
--- ============================================================
-DELETE FROM coop_plans WHERE plan_id IN ('P-TEST-01', 'P-TEST-02', 'P-TEST-03');
-DELETE FROM users WHERE user_id IN ('U-TEST-01', 'U-TEST-02');
+SELECT 'uq_coop_plans_active_period' AS name,
+       CASE WHEN to_regclass('public.uq_coop_plans_active_period') IS NULL
+            THEN 'MISSING' ELSE 'ok' END AS status;
+
+\echo '== no plan left on a V2-only status =='
+SELECT status, count(*) AS plans
+FROM coop_plans
+GROUP BY status
+ORDER BY status;
+
+\echo '== accounts by role (empty until app_users is seeded) =='
+SELECT role, count(*) FILTER (WHERE is_active) AS active, count(*) AS total
+FROM app_users
+GROUP BY role
+ORDER BY role;

@@ -1,23 +1,26 @@
--- ============================================================
--- CS361 V3 Database Migration: Rollback (V3 -> V2)
--- ============================================================
+-- V3 database migration: rollback (V3 -> V2)
+--
+-- Undoes v3_01_upgrade.sql. The V2 tables and their rows are left untouched;
+-- only what the upgrade added comes out.
+--
+-- RETURNED has no V2 equivalent. Those plans go back to PREPARING, which is
+-- where a student picks a returned plan up anyway — the reviewer's comment
+-- survives in coop_plans.review_comment.
 
--- 1. ลบตาราง Audit Trail และ Index ป้องกันซ้ำ
+BEGIN;
+
 DROP TABLE IF EXISTS plan_reviews;
+DROP TABLE IF EXISTS advisor_student_assignments;
+DROP TABLE IF EXISTS app_users;
+
 DROP INDEX IF EXISTS uq_coop_plans_active_period;
 
--- 2. ย้อนคืนสถานะ coop_plans กลับเป็นของ V2
 ALTER TABLE coop_plans DROP CONSTRAINT IF EXISTS chk_coop_plans_status;
 
-UPDATE coop_plans 
-SET status = 'PREPARING' 
-WHERE status = 'DRAFT';
+UPDATE coop_plans SET status = 'PREPARING' WHERE status = 'RETURNED';
 
-ALTER TABLE coop_plans 
-    ADD CONSTRAINT chk_coop_plans_status 
+ALTER TABLE coop_plans
+    ADD CONSTRAINT chk_coop_plans_status
     CHECK (status IN ('PREPARING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'));
 
--- 3. ลบตารางความสัมพันธ์และข้อมูล Cognito
-DROP TABLE IF EXISTS advisor_students;
-ALTER TABLE students DROP COLUMN IF EXISTS cognito_sub;
-DROP TABLE IF EXISTS users;
+COMMIT;
