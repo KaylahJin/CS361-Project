@@ -8,7 +8,6 @@ vi.mock('./db.mjs', () => ({
 
 const { getAuthenticatedUser } = await import('./auth.mjs');
 
-/** @param {string} sub */
 function eventWithSub(sub) {
   return { requestContext: { authorizer: { jwt: { claims: { sub } } } } };
 }
@@ -18,15 +17,21 @@ describe('getAuthenticatedUser', () => {
     queryMock.mockReset();
   });
 
-  it('returns null without querying when there is no verified sub claim', async () => {
-    expect(await getAuthenticatedUser({ requestContext: {} })).toBeNull();
+  it('denies with 401 without querying when there is no verified sub claim', async () => {
+    const { user, denied } = await getAuthenticatedUser({ requestContext: {} });
+
+    expect(user).toBeNull();
+    expect(denied).toEqual({ status: 401, error: 'Unauthorized' });
     expect(queryMock).not.toHaveBeenCalled();
   });
 
-  it('returns null without querying for a malformed event', async () => {
+  it('denies with 401 without querying for a malformed event', async () => {
     for (const event of [undefined, null, {}, { requestContext: { authorizer: {} } }]) {
       queryMock.mockClear();
-      expect(await getAuthenticatedUser(event)).toBeNull();
+      const { user, denied } = await getAuthenticatedUser(event);
+
+      expect(user).toBeNull();
+      expect(denied.status).toBe(401);
       expect(queryMock).not.toHaveBeenCalled();
     }
   });
@@ -36,24 +41,33 @@ describe('getAuthenticatedUser', () => {
       rows: [{ cognito_sub: 'sub-1', role: 'STUDENT', student_id: 'S001', is_active: true }],
     });
 
-    const result = await getAuthenticatedUser(eventWithSub('sub-1'));
+    const { user, denied } = await getAuthenticatedUser(eventWithSub('sub-1'));
 
-    expect(result).toEqual({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    expect(user).toEqual({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    expect(denied).toBeNull();
     expect(queryMock).toHaveBeenCalledWith(expect.stringContaining('app_users'), ['sub-1']);
   });
 
-  it('returns null when no app_users row matches the sub', async () => {
+  it('denies with 403 when no app_users row matches the sub', async () => {
     queryMock.mockResolvedValue({ rows: [] });
 
-    expect(await getAuthenticatedUser(eventWithSub('unknown'))).toBeNull();
+    const { user, denied } = await getAuthenticatedUser(eventWithSub('unknown'));
+
+    // The token was valid, so the caller is authenticated but not authorised.
+    // Acceptance criteria on #100 require 403 here, not 401.
+    expect(user).toBeNull();
+    expect(denied).toEqual({ status: 403, error: 'Forbidden' });
   });
 
-  it('returns null for a matched but deactivated account, so the caller answers 401 not 403', async () => {
+  it('denies with 403 for a matched but deactivated account', async () => {
     queryMock.mockResolvedValue({
       rows: [{ cognito_sub: 'sub-2', role: 'STAFF', student_id: null, is_active: false }],
     });
 
-    expect(await getAuthenticatedUser(eventWithSub('sub-2'))).toBeNull();
+    const { user, denied } = await getAuthenticatedUser(eventWithSub('sub-2'));
+
+    expect(user).toBeNull();
+    expect(denied).toEqual({ status: 403, error: 'Forbidden' });
   });
 
   it('passes the sub as a bound parameter, never interpolated into the SQL', async () => {
@@ -71,7 +85,9 @@ describe('getAuthenticatedUser', () => {
       rows: [{ cognito_sub: 'sub-3', role: 'ADVISOR', student_id: null, is_active: true }],
     });
 
-    expect(await getAuthenticatedUser(eventWithSub('sub-3'))).toEqual({
+    const { user } = await getAuthenticatedUser(eventWithSub('sub-3'));
+
+    expect(user).toEqual({
       sub: 'sub-3',
       role: 'ADVISOR',
       studentId: null,

@@ -1,30 +1,15 @@
-// ============================================================
-// CS361 V2 — GET /coop-plans
-// ============================================================
-// Query params (all optional, combined with AND):
-//   status        -> exact match; must be one of VALID_STATUSES, else 400
-//   studentId     -> exact match on coop_plans.student_id
-//   search        -> ILIKE on student first/last name, full name or student_id
-//   curriculum    -> exact match on students.curriculum
-//   periodId      -> exact match on coop_plans.period_id
-//   companyId     -> exact match on positions.company_id
-//   positionId    -> exact match on coop_plans.position_id
-//   submittedFrom -> YYYY-MM-DD, inclusive (Asia/Bangkok day), else 400
-//   submittedTo   -> YYYY-MM-DD, inclusive (Asia/Bangkok day), else 400
-//
-// Response: 200 with a BARE JSON ARRAY (no { plans, total } wrapper),
-// newest submission first; drafts (submitted_at NULL) last.
-//
-// SQL safety: every user-supplied value goes through the pg driver's
-// values array ($1/$2/...), never interpolated into the SQL text.
-// ============================================================
+// GET /coop-plans — a bare JSON array, newest submission first, drafts last.
+// Every query param is optional and they combine with AND; the date filters
+// take YYYY-MM-DD and are read as whole Asia/Bangkok days.
 
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
 import { getAuthenticatedUser } from './auth.mjs';
 import { buildCoopPlanListFilter, ForbiddenError } from './authorize.mjs';
 
-export const VALID_STATUSES = ['PREPARING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
+// V3 workflow statuses. UNDER_REVIEW was a V2 state and is gone: reviewers act
+// on SUBMITTED directly, and RETURNED is the plan sent back for edits.
+export const VALID_STATUSES = ['PREPARING', 'SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED'];
 
 const SELECT_COLUMNS = `SELECT p.plan_id, p.student_id, p.period_id, p.position_id, p.status,
        p.acknowledged_pre_course, p.terms_accepted_at, p.student_note,
@@ -40,44 +25,40 @@ LEFT JOIN positions pos ON pos.position_id = p.position_id
 LEFT JOIN companies c ON c.company_id = pos.company_id
 LEFT JOIN periods per ON per.period_id = p.period_id`;
 
-/** @param {unknown} value */
 function isProvided(value) {
   return typeof value === 'string' && value.trim() !== '';
 }
 
-/** @param {string} value  strict YYYY-MM-DD that is a real calendar date */
+// Strict YYYY-MM-DD that is also a real calendar date: the round-trip through
+// Date rejects 2026-02-30, which the regex alone accepts.
 function isValidDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const d = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
-/**
- * GET /coop-plans handler.
- *
- * @param {{queryStringParameters?: Record<string, string> | null}} event
- *   API Gateway HTTP API payload format 2.0 event.
- * @returns {Promise<{statusCode: number, headers: Record<string, string>, body: string}>}
- */
 export async function listCoopPlans(event) {
-  // Identity and scope first, before any query parsing: an unauthenticated
-  // request must not reach the database, and the role filter decides which
-  // rows exist for this caller at all.
-  const user = await getAuthenticatedUser(event);
-  if (!user) {
-    return jsonResponse(401, { error: 'Unauthorized' });
-  }
-
-  /** @type {{sql: string, params: unknown[]}} */
+  // Identity and scope come before query parsing: the role decides which rows
+  // exist for this caller at all. A throw from either call is a server fault
+  // (app_users missing, DB unreachable) and answers 500 — reporting it as 401
+  // would tell a signed-in user their credentials were rejected.
+  //
+  // getAuthenticatedUser decides between 401 and 403 itself; see auth.mjs.
   let roleFilter;
   try {
+    const { user, denied } = await getAuthenticatedUser(event);
+    if (denied) {
+      return jsonResponse(denied.status, { error: denied.error });
+    }
+
     roleFilter = await buildCoopPlanListFilter(user);
   } catch (err) {
     if (err instanceof ForbiddenError) {
       console.error('listCoopPlans forbidden', err.message);
       return jsonResponse(403, { error: 'Forbidden' });
     }
-    throw err;
+    console.error('listCoopPlans auth failed', err);
+    return jsonResponse(500, { error: 'Internal server error' });
   }
 
   const q = event?.queryStringParameters ?? {};
@@ -85,7 +66,6 @@ export async function listCoopPlans(event) {
   const submittedFrom = q.submittedFrom;
   const submittedTo = q.submittedTo;
 
-  // Validate before touching the pool.
   if (isProvided(status) && !VALID_STATUSES.includes(status.trim())) {
     return jsonResponse(400, { error: `status must be one of ${VALID_STATUSES.join(', ')}` });
   }
@@ -96,11 +76,10 @@ export async function listCoopPlans(event) {
   }
 
   try {
-    /** @type {string[]} */
     const conditions = [];
-    /** @type {string[]} */
     const values = [];
-    /** @param {string} v @returns {string} placeholder like $1 */
+    // Pushes a value and hands back its placeholder ($1, $2, ...), so the
+    // numbering stays in step with the values array as filters are added.
     const add = (v) => {
       values.push(v);
       return `$${values.length}`;
@@ -130,10 +109,10 @@ export async function listCoopPlans(event) {
       );
     }
 
-    // ANDed in last, alongside the caller's own filters. A studentId query
-    // param therefore narrows the caller's scope and can never widen it:
-    // a student asking for ?studentId=SOMEONE_ELSE gets
-    // `p.student_id = 'OWN' AND p.student_id = 'SOMEONE_ELSE'`, i.e. nothing.
+    // The role filter is ANDed in alongside the caller's own filters, so a
+    // query param can only narrow the caller's scope, never widen it: a
+    // student asking for ?studentId=SOMEONE_ELSE ends up with
+    // `p.student_id = 'OWN' AND p.student_id = 'SOMEONE_ELSE'` — no rows.
     if (roleFilter.sql) {
       let sql = roleFilter.sql;
       for (const param of roleFilter.params) {

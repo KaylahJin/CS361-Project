@@ -7,8 +7,18 @@ vi.mock('./db.mjs', () => ({
   getPool: () => ({ query: queryMock }),
 }));
 
-// Identity is mocked; the real authorize.mjs is NOT, so these cases
-// exercise the actual role-filter SQL rather than a stub of it.
+// getAuthenticatedUser returns { user, denied }: see auth.mjs. These two
+// helpers build that shape so the tests below read as intent, not plumbing.
+function signedInAs(user) {
+  getAuthenticatedUserMock.mockResolvedValue({ user, denied: null });
+}
+
+function deniedWith(status, error) {
+  getAuthenticatedUserMock.mockResolvedValue({ user: null, denied: { status, error } });
+}
+
+// Identity is mocked, authorize.mjs is not, so these cases run the real
+// role-filter SQL.
 vi.mock('./auth.mjs', () => ({
   getAuthenticatedUser: getAuthenticatedUserMock,
 }));
@@ -21,9 +31,9 @@ describe('listCoopPlans', () => {
   beforeEach(() => {
     queryMock.mockReset();
     getAuthenticatedUserMock.mockReset();
-    // STAFF sees every row and adds no filter, so every pre-existing case
-    // below keeps asserting exactly the SQL it always did.
-    getAuthenticatedUserMock.mockResolvedValue(STAFF);
+    // STAFF adds no filter, so the cases below assert the same SQL as before
+    // authorization existed.
+    signedInAs(STAFF);
   });
 
   it('with no params, queries with no WHERE clause and returns the raw rows as a bare array', async () => {
@@ -164,12 +174,12 @@ describe('listCoopPlans authorization', () => {
   beforeEach(() => {
     queryMock.mockReset();
     getAuthenticatedUserMock.mockReset();
-    getAuthenticatedUserMock.mockResolvedValue(STAFF);
+    signedInAs(STAFF);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('returns 401 without touching the DB when there is no authenticated user', async () => {
-    getAuthenticatedUserMock.mockResolvedValue(null);
+    deniedWith(401, 'Unauthorized');
 
     const result = await listCoopPlans({ queryStringParameters: null });
 
@@ -177,8 +187,34 @@ describe('listCoopPlans authorization', () => {
     expect(queryMock).not.toHaveBeenCalled();
   });
 
+  it('returns 403 for a valid token whose account has no app_users row', async () => {
+    // A Cognito account that exists but was never mapped, or was deactivated.
+    // auth.mjs answers 403 there, and the handler forwards it unchanged
+    // instead of flattening every refusal to 401. Required by #100.
+    deniedWith(403, 'Forbidden');
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(403);
+    expect(JSON.parse(result.body)).toEqual({ error: 'Forbidden' });
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500, never 401, when identity resolution itself fails', async () => {
+    // app_users missing or the DB unreachable is a server fault, not a
+    // rejected credential.
+    getAuthenticatedUserMock.mockRejectedValue(
+      new Error('relation "app_users" does not exist: secret-host'),
+    );
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).not.toContain('secret-host');
+  });
+
   it('returns 403 without touching the DB for an ADMIN-only account', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({ sub: 'admin-1', role: 'ADMIN', studentId: null });
+    signedInAs({ sub: 'admin-1', role: 'ADMIN', studentId: null });
 
     const result = await listCoopPlans({ queryStringParameters: null });
 
@@ -197,7 +233,7 @@ describe('listCoopPlans authorization', () => {
   });
 
   it('STUDENT: scopes the query to their own student_id', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
     queryMock.mockResolvedValue({ rows: [] });
 
     await listCoopPlans({ queryStringParameters: null });
@@ -208,15 +244,14 @@ describe('listCoopPlans authorization', () => {
   });
 
   it('STUDENT: a studentId param for someone else narrows, never widens, their scope', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
     queryMock.mockResolvedValue({ rows: [] });
 
     await listCoopPlans({ queryStringParameters: { studentId: 'S999' } });
 
     const [text, values] = queryMock.mock.calls[0];
-    // Both conditions survive and are ANDed, so the result set is empty
-    // rather than S999's plans. The caller-supplied value never replaces
-    // the identity-derived one.
+    // Both conditions are ANDed, so the result is empty rather than S999's
+    // plans: the query param cannot replace the identity-derived filter.
     expect(values).toContain('S001');
     expect(values).toContain('S999');
     expect(text.match(/p\.student_id = \$\d+/g)).toHaveLength(2);
@@ -224,7 +259,7 @@ describe('listCoopPlans authorization', () => {
   });
 
   it('STUDENT: leaves no unsubstituted $PARAM placeholder in the SQL', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
     queryMock.mockResolvedValue({ rows: [] });
 
     await listCoopPlans({ queryStringParameters: null });
@@ -233,7 +268,7 @@ describe('listCoopPlans authorization', () => {
   });
 
   it('ADVISOR: scopes the query to assigned students via advisor_student_assignments', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({
+    signedInAs({
       sub: 'advisor-1',
       role: 'ADVISOR',
       studentId: null,
@@ -249,7 +284,7 @@ describe('listCoopPlans authorization', () => {
   });
 
   it('ADVISOR: the advisor sub is bound as a parameter, not interpolated', async () => {
-    getAuthenticatedUserMock.mockResolvedValue({
+    signedInAs({
       sub: "'; DROP TABLE coop_plans; --",
       role: 'ADVISOR',
       studentId: null,

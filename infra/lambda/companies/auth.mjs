@@ -1,28 +1,23 @@
-// ============================================================
-// CS361 V3-02.2 — resolve the verified Cognito sub to an app_users row
-// ============================================================
-// Issue: #100 — ตรวจสอบตัวตนที่ API (JWT Authorizer และการจับคู่บัญชี)
+// Maps the verified Cognito `sub` to a row in app_users.
 //
-// API Gateway's JWT authorizer (infra/terraform/cognito.tf) has already
-// verified the token's signature, issuer, audience and expiry before this
-// Lambda runs. This module does NOT re-validate the token — it only maps
-// the already-verified `sub` claim to our own notion of a user.
+// API Gateway's JWT authorizer already checked the token's signature, issuer,
+// audience and expiry before this Lambda ran, so nothing here re-validates it.
+// The `sub` claim is the only thing trusted as identity — a student_id in a
+// query string is caller-supplied data and may only be used as a filter.
 //
-// Per docs/overview/V3-01-api-spec.md §7 the `sub` claim is the ONLY
-// accepted proof of identity. A student_id in the request body or query
-// string is caller-supplied data; it may be used as a filter, never as
-// evidence of who is calling.
+// Two different denials come out of here, and the distinction is the point:
 //
-// Returns null for every "not a usable identity" case — no claim, no row,
-// row present but is_active false. All three must answer 401 to the
-// caller, so collapsing them to one return value is what makes a single
-// `if (!user) return 401` at the call site correct instead of three
-// separate checks that a future handler could forget one of.
+//   401  the request carries no usable identity at all. In practice the
+//        authorizer answers this at the edge; reaching here means a route was
+//        wired without one.
+//   403  the token is valid and the caller is who they say, but the account
+//        has no app_users row or has been deactivated. They are authenticated
+//        and simply not authorised, which is what 403 means. Required by the
+//        acceptance criteria on #100.
 //
-// The deactivated case is deliberately 401 rather than 403: 403 means
-// "we know who you are, you may not do this", which would confirm to an
-// attacker that a given Cognito account is registered in this system.
-// ============================================================
+// The status lives here rather than in each handler so the two cannot drift
+// apart, and so a new handler cannot accidentally answer 401 for an account
+// that merely lacks a row.
 
 import { getPool } from './db.mjs';
 
@@ -30,25 +25,31 @@ const SELECT_BY_SUB = `SELECT cognito_sub, role, student_id, is_active
 FROM app_users
 WHERE cognito_sub = $1`;
 
+const UNAUTHENTICATED = { status: 401, error: 'Unauthorized' };
+const NOT_AUTHORIZED = { status: 403, error: 'Forbidden' };
+
 /**
- * Resolve the caller from the verified JWT claims.
+ * Resolves the caller against app_users.
  *
- * @param {{requestContext?: {authorizer?: {jwt?: {claims?: Record<string, string>}}}} | null | undefined} event
- *   API Gateway HTTP API payload format 2.0 event.
- * @returns {Promise<{sub: string, role: string, studentId: string | null} | null>}
- *   null whenever the request has no usable identity (caller answers 401).
+ * @returns {Promise<{user: {sub: string, role: string, studentId: string|null}, denied: null}
+ *                  | {user: null, denied: {status: number, error: string}}>}
+ *   `user` is set on success and `denied` is null. On refusal `user` is null
+ *   and `denied` carries the status and body the handler should answer with,
+ *   so a handler needs one `if (denied)` check and never picks the code.
  */
 export async function getAuthenticatedUser(event) {
   const sub = event?.requestContext?.authorizer?.jwt?.claims?.sub;
 
-  // Short-circuit before touching the pool: an unauthenticated request must
-  // not cost a database round trip.
-  if (!sub) return null;
+  // No claim, no database round trip.
+  if (!sub) return { user: null, denied: UNAUTHENTICATED };
 
   const result = await getPool().query(SELECT_BY_SUB, [sub]);
 
   const row = result.rows[0];
-  if (!row || !row.is_active) return null;
+  if (!row || !row.is_active) return { user: null, denied: NOT_AUTHORIZED };
 
-  return { sub: row.cognito_sub, role: row.role, studentId: row.student_id };
+  return {
+    user: { sub: row.cognito_sub, role: row.role, studentId: row.student_id },
+    denied: null,
+  };
 }
