@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "amazon-cognito-identity-js": "^6.3.22",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -25,6 +26,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
@@ -36,6 +40,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
     "pg": "^8.23.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
