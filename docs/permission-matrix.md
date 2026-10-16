@@ -24,8 +24,8 @@ The two coop-plan read routes, both behind the API Gateway JWT authorizer:
 | Role | `GET /coop-plans` (list) | `GET /coop-plans/{planId}` (view) |
 |---|---|---|
 | no token | **401** (rejected at API Gateway, Lambda never runs) | **401** |
-| token, no `app_users` row | **401** | **401** |
-| token, `is_active = false` | **401** | **401** |
+| token, no `app_users` row | **403** | **403** |
+| token, `is_active = false` | **403** | **403** |
 | `STUDENT` | **200** — rows scoped to own `student_id` | **200** if owner, **403** otherwise |
 | `STUDENT`, no linked `student_id` | **403** | **403** |
 | `ADVISOR` | **200** — rows scoped to assigned students | **200** if assigned, **403** otherwise |
@@ -37,12 +37,23 @@ Every row above has a test. `infra/lambda/companies/authorize.test.mjs`
 covers the module directly; `listCoopPlans.test.mjs` and
 `getCoopPlanById.test.mjs` cover it through the handlers.
 
-### Why 401 and not 403 for an unmapped or deactivated account
+### Why 403 for an unmapped or deactivated account
 
-403 means "we know who you are, and you may not do this" — which confirms to
-whoever holds the token that the account exists in this system. An
-unrecognised or deactivated account is indistinguishable from no account, so
-all three answer 401.
+The acceptance criteria on #100 call for it: "บัญชี Cognito ที่ไม่มีข้อมูลผู้ใช้ใน
+ฐานข้อมูลหรือยังไม่ได้รับสิทธิ์ ได้ 403". The caller holds a token the authorizer
+accepted, so they are authenticated; they simply have no permission yet. That
+is what 403 means, and it is also the more useful answer — a new account that
+has not been granted a role sees "not authorised" rather than "your login
+failed", which would send them back to re-enter a password that was fine.
+
+The trade-off: 403 confirms to whoever holds the token that the account exists
+in this system. An earlier revision answered 401 for that reason. Since the
+token must already be a valid signed Cognito token for this pool to reach the
+Lambda at all, the holder knows the account exists regardless, so little is
+given away.
+
+401 is still the answer when there is no usable identity at all. `auth.mjs`
+owns that distinction so the two handlers cannot drift apart.
 
 ### Why ADMIN is 403
 
