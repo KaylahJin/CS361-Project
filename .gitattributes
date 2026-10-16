@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings. Git on Windows checks files out as CRLF
+# by default, and bash then fails on the first line with
+#   $'\r': command not found
+*.sh text eol=lf
