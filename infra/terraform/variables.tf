@@ -101,3 +101,14 @@ variable "db_username" {
   type        = string
   default     = "postgres"
 }
+
+# terraform.tfvars has been setting this since 2026-10-06 but no variable
+# declared it, so `terraform validate` warned and rds.tf kept its hardcoded
+# db.t4g.micro — the exact class the tfvars comment says hit
+# InsufficientDBInstanceCapacity in us-east-1. Declaring it makes the
+# tfvars override actually take effect.
+variable "db_instance_class" {
+  description = "RDS instance class. t4g (ARM) and t3 (x86) are separate capacity pools — switch if one is exhausted in the region."
+  type        = string
+  default     = "db.t4g.micro"
+}

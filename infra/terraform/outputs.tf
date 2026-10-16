@@ -52,3 +52,23 @@ output "web_url" {
 output "aws_region" {
   value = var.aws_region
 }
+
+# ---- Auth (cognito.tf) ----
+
+# The first two go into .env as VITE_COGNITO_USER_POOL_ID and
+# VITE_COGNITO_CLIENT_ID (see docs/cognito-setup.md). Neither is a secret:
+# a public SPA client has no secret, and both ship inside the built bundle.
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID — set this as VITE_COGNITO_USER_POOL_ID"
+  value       = aws_cognito_user_pool.app.id
+}
+
+output "cognito_user_pool_client_id" {
+  description = "Cognito SPA App Client ID — set this as VITE_COGNITO_CLIENT_ID"
+  value       = aws_cognito_user_pool_client.spa.id
+}
+
+output "cognito_issuer" {
+  description = "Token issuer URL — what the API Gateway JWT authorizer validates against"
+  value       = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.app.id}"
+}
