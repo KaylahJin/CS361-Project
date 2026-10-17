@@ -18,6 +18,7 @@ vi.mock('../data/coopPlanApi', async () => {
   };
 });
 
+const { CoopPlanApiError } = await import('../data/coopPlanApi');
 const { default: CoopPlans } = await import('./CoopPlans');
 
 const PLAN = {
@@ -105,5 +106,60 @@ describe('CoopPlans and the signed-in session', () => {
     rerender(<CoopPlans />);
 
     expect(await screen.findByText('6600000001')).toBeInTheDocument();
+  });
+});
+
+describe('CoopPlans says why the list is empty', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    getCoopPlansMock.mockReset();
+    getCoopPlanMock.mockReset();
+  });
+
+  it('asks a signed-out caller to sign in, with no retry button', async () => {
+    // Retrying a 401 can only fail again. The answer is to sign in, so that
+    // is what the page says, and the button that cannot help is not offered.
+    signedOut();
+    getCoopPlansMock.mockRejectedValue(new CoopPlanApiError('no token', 401));
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText(/ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ลองอีกครั้ง/ })).not.toBeInTheDocument();
+  });
+
+  it('tells a signed-in caller without permission that the account lacks it', async () => {
+    // What an ADMIN sees: the token is fine, the account simply has no plan
+    // access. "Failed to fetch" would send them to debug a network problem
+    // that does not exist.
+    signedIn();
+    getCoopPlansMock.mockRejectedValue(new CoopPlanApiError('forbidden', 403));
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText(/ไม่มีสิทธิ์เข้าถึงแผนสหกิจ/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ลองอีกครั้ง/ })).not.toBeInTheDocument();
+  });
+
+  it('offers a retry when the request actually failed', async () => {
+    signedIn();
+    getCoopPlansMock.mockRejectedValue(new Error('network down'));
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText(/ไม่สามารถโหลดข้อมูลได้/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ลองอีกครั้ง/ })).toBeInTheDocument();
+  });
+
+  it('does not leak the raw API message into the page', async () => {
+    signedIn();
+    getCoopPlansMock.mockRejectedValue(
+      new CoopPlanApiError('Failed to fetch coop plans: Forbidden', 403),
+    );
+
+    render(<CoopPlans />);
+
+    await screen.findByText(/ไม่มีสิทธิ์เข้าถึงแผนสหกิจ/);
+    expect(screen.queryByText(/Failed to fetch coop plans/)).not.toBeInTheDocument();
   });
 });
