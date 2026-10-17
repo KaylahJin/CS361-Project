@@ -61,3 +61,36 @@ describe('Navbar sign-out', () => {
     expect(screen.queryByRole('button', { name: /บัญชีของฉัน/ })).not.toBeInTheDocument();
   });
 });
+
+describe('Navbar and the student tab', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    logout.mockReset();
+  });
+
+  it('hides the student tab from a visitor who is not signed in', () => {
+    useAuthMock.mockReturnValue({ status: 'anonymous', logout });
+
+    renderNavbar('home');
+
+    expect(screen.queryByRole('button', { name: /นักศึกษา/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the student tab to a signed-in user', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', logout });
+
+    renderNavbar('home');
+
+    expect(screen.getAllByRole('button', { name: /นักศึกษา/ }).length).toBeGreaterThan(0);
+  });
+
+  it('leaves the student page when signing out', async () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', logout });
+
+    const { onTabChange } = renderNavbar('students');
+
+    await userEvent.click(screen.getAllByRole('button', { name: /ออกจากระบบ/ })[0]);
+
+    expect(onTabChange).toHaveBeenCalledWith('home');
+  });
+});

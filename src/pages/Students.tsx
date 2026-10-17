@@ -18,6 +18,8 @@ import {
   StudentApiError,
 } from '../data/studentApi';
 
+import { useAuth } from '../auth/AuthContext';
+
 import type {
   Student,
   StudentDetail,
@@ -60,13 +62,17 @@ import type {
 
 const fetchStudentList = async (
   searchValue: string,
-  curriculumValue: string
+  curriculumValue: string,
+  idToken: string | null
 ): Promise<Student[]> =>
   fetchWithTimeout(
-    getStudents({
-      search: searchValue.trim() || undefined,
-      curriculum: curriculumValue || undefined,
-    }),
+    getStudents(
+      {
+        search: searchValue.trim() || undefined,
+        curriculum: curriculumValue || undefined,
+      },
+      idToken
+    ),
     10000
   );
 
@@ -99,6 +105,16 @@ const messageForDetailError = (err: unknown): string => {
 };
 
 function Students() {
+  /* ============================================================
+     Session
+
+     Which students exist for this caller depends on their role, so the
+     page reloads when the session changes and asks for the token right
+     before each request instead of holding on to one.
+     ============================================================ */
+
+  const { status: authStatus, getIdToken } = useAuth();
+
   /* ============================================================
      Student List State
      ============================================================ */
@@ -138,7 +154,11 @@ function Students() {
     setError('');
 
     try {
-      const data = await fetchStudentList(searchValue, curriculumValue);
+      const data = await fetchStudentList(
+        searchValue,
+        curriculumValue,
+        await getIdToken()
+      );
       setStudents(data);
     } catch (err) {
       setStudents([]);
@@ -157,10 +177,25 @@ function Students() {
      an unmounted component.
      ============================================================ */
 
+  // authStatus belongs in here: signing in or out changes which students
+  // exist for this caller, and without it one person's rows stay on screen
+  // for whoever is at the keyboard next. Nothing is fetched while a stored
+  // session is still being restored — that request would carry no token, come
+  // back 401, and show an error that then corrects itself.
+  //
+  // The filters are deliberately not dependencies. `search` updates on every
+  // keystroke, and a request per character is worse than the explicit reload
+  // the search and filter handlers already do.
   useEffect(() => {
+    if (authStatus === 'loading') return;
+
     let cancelled = false;
 
-    fetchStudentList('', '')
+    setLoading(true);
+    setError('');
+
+    getIdToken()
+      .then((token) => fetchStudentList(search, curriculum, token))
       .then((data) => {
         if (cancelled) return;
         setStudents(data);
@@ -168,6 +203,8 @@ function Students() {
       .catch((err) => {
         if (cancelled) return;
         setStudents([]);
+        setSelectedStudent(null);
+        setIsDetailOpen(false);
         setError(messageForListError(err));
       })
       .finally(() => {
@@ -178,7 +215,8 @@ function Students() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus]);
 
   /* ============================================================
      Search
@@ -217,7 +255,7 @@ function Students() {
 
     try {
       const data = await fetchWithTimeout(
-        getStudent(studentId),
+        getStudent(studentId, await getIdToken()),
         10000
       );
 
@@ -756,13 +794,13 @@ function Students() {
                       </div>
 
                       <span className="text-xs font-semibold text-slate-500">
-                        {selectedStudent.courses.length}{' '}
+                        {(selectedStudent.courses ?? []).length}{' '}
                         รายวิชา
                       </span>
 
                     </div>
 
-                    {selectedStudent.courses.length === 0 ? (
+                    {(selectedStudent.courses ?? []).length === 0 ? (
 
                       <div className="px-6 pb-8 text-center">
 
@@ -800,7 +838,7 @@ function Students() {
 
                           <tbody className="divide-y divide-slate-100">
 
-                            {selectedStudent.courses.map(
+                            {(selectedStudent.courses ?? []).map(
                               (course: StudentCourse) => (
                                 <tr key={course.course_code}>
 

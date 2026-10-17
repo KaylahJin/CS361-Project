@@ -31,12 +31,15 @@ interface NavbarProps {
   onTabChange: (tab: TabType) => void;
 }
 
+// `requiresAuth` hides a tab from a visitor who cannot use it. Hiding is not
+// the access control — that is the authorizer and the rules in authorize.mjs —
+// it only keeps the navbar from offering a page that would refuse the click.
 const navItems = [
   { id: 'home', label: 'หน้าแรก', icon: Home },
   { id: 'requirements', label: 'เกณฑ์สหกิจ', icon: FileText },
   { id: 'employers', label: 'สถานประกอบการ', icon: Building2 },
   { id: 'positions', label: 'ตำแหน่งงาน', icon: Briefcase },
-  { id: 'students', label: 'นักศึกษา', icon: GraduationCap },
+  { id: 'students', label: 'นักศึกษา', icon: GraduationCap, requiresAuth: true },
   { id: 'coop-plans', label: 'แผนสหกิจ', icon: ClipboardList },
   { id: 'periods', label: 'รอบเวลา', icon: CalendarClock },
 ] as const;
@@ -63,7 +66,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // login form underneath an otherwise unchanged screen, and the coop-plan
   // page just sits there. Public pages are left alone — someone reading the
   // announcements should stay on the announcements.
-  const SIGNED_IN_ONLY: TabType[] = ['account', 'coop-plans'];
+  const SIGNED_IN_ONLY: TabType[] = ['account', 'coop-plans', 'students'];
+
+  // Student records need a token, so the tab is no use to a signed-out
+  // visitor. Everything else in navItems is public content.
+  const visibleNavItems = navItems.filter(
+    (item) => !('requiresAuth' in item && item.requiresAuth) || status === 'authenticated',
+  );
 
   const handleLogout = () => {
     logout();
@@ -137,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
           aria-label="เมนูหลัก"
           className="hidden items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50/80 p-1 shadow-xs lg:flex"
         >
-          {navItems.map(({ id, label, icon: Icon }) => {
+          {visibleNavItems.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
 
             return (
@@ -250,7 +259,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
           className="flex-1 overflow-y-auto overscroll-contain p-3"
         >
           <ul className="flex flex-col gap-1">
-            {navItems.map(({ id, label, icon: Icon }) => {
+            {visibleNavItems.map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id;
 
               return (

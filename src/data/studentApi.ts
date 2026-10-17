@@ -6,6 +6,17 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+/**
+ * Both student routes are behind the JWT authorizer, so without this header
+ * the request is refused with 401 before the Lambda runs. Pass
+ * `useAuth().getIdToken()`, read right before the call and never cached: a
+ * token read once and kept would outlive the session it belongs to.
+ */
+function authHeaders(idToken?: string | null): RequestInit | undefined {
+  if (!idToken) return undefined;
+  return { headers: { Authorization: `Bearer ${idToken}` } };
+}
+
 export class StudentApiError extends Error {
   status: number;
 
@@ -20,7 +31,8 @@ export class StudentApiError extends Error {
  * Fetch students with optional search and curriculum filter.
  */
 export async function getStudents(
-  params?: StudentQueryParams
+  params?: StudentQueryParams,
+  idToken?: string | null
 ): Promise<Student[]> {
   const qs = new URLSearchParams();
 
@@ -38,7 +50,7 @@ export async function getStudents(
     queryString ? `?${queryString}` : ''
   }`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, authHeaders(idToken));
 
   if (!res.ok) {
     throw new StudentApiError(
@@ -54,11 +66,12 @@ export async function getStudents(
  * Fetch a single student with course history.
  */
 export async function getStudent(
-  studentId: string
+  studentId: string,
+  idToken?: string | null
 ): Promise<StudentDetail> {
   const url = `${API_BASE}/students/${encodeURIComponent(studentId)}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, authHeaders(idToken));
 
   if (!res.ok) {
     throw new StudentApiError(

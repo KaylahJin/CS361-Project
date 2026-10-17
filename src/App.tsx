@@ -59,8 +59,15 @@ function App() {
           />
         );
 
+      // The navbar hides this tab when signed out, and the gate here is what
+      // catches a session that ends while the page is open: the active page is
+      // a tab in state, so nothing navigates away on its own.
       case 'students':
-        return <Students />;
+        return (
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('students')} />}>
+            <Students />
+          </ProtectedRoute>
+        );
 
       case 'periods':
         return <Periods />;
