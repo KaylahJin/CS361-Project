@@ -16,6 +16,11 @@ import {
   CognitoUserPool,
 } from 'amazon-cognito-identity-js';
 
+import {
+  PRIVATE_ROUTES as PRIVATE_ROUTES_DECLARED,
+  PUBLIC_ROUTES as PUBLIC_ROUTES_DECLARED,
+} from './terraform/route-policy.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TF_DIR = path.join(__dirname, 'terraform');
 
@@ -45,11 +50,27 @@ function readPassword() {
   process.exit(2);
 }
 
+// Both lists come from infra/terraform/route-policy.mjs, the same declaration
+// apigateway.tf is checked against, so this script cannot be left testing a
+// route set the API no longer has. Path parameters are filled with ids that
+// exist in the seeded data.
+const SAMPLE_IDS = {
+  '{planId}': process.env.OWN_PLAN || '1',
+  '{studentId}': process.env.OWN_STUDENT || '6600000001',
+  '{companyId}': process.env.SAMPLE_COMPANY || 'C01',
+  '{positionId}': process.env.SAMPLE_POSITION || 'POS001',
+};
+
+const toPath = (routeKey) =>
+  routeKey
+    .replace(/^GET\s+/, '')
+    .replace(/\{[a-zA-Z]+\}/g, (match) => SAMPLE_IDS[match] ?? match);
+
 // Must stay readable with no token at all.
-const PUBLIC_ROUTES = ['/companies', '/positions', '/coop-info', '/periods'];
+const PUBLIC_ROUTES = PUBLIC_ROUTES_DECLARED.map(toPath);
 
 // Behind the JWT authorizer.
-const PROTECTED_ROUTES = ['/coop-plans', '/coop-plans/1'];
+const PROTECTED_ROUTES = PRIVATE_ROUTES_DECLARED.map(toPath);
 
 function signIn({ userPoolId, clientId, email, password }) {
   const pool = new CognitoUserPool({ UserPoolId: userPoolId, ClientId: clientId });
