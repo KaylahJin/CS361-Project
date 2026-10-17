@@ -33,6 +33,8 @@ export interface CoopPlan {
   first_name: string;
   last_name: string;
   curriculum: string;
+  gpa?: number | null;
+  advisor_name?: string | null;
 
   // Position / Company
   position_title: string | null;
