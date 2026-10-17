@@ -3,18 +3,16 @@
 // Both routes are behind the JWT authorizer, so both functions take the
 // Cognito ID token and send it as a Bearer header.
 //
-// The bundled coopPlansData.json is used only when the API cannot be reached
-// at all — network failure or the timeout. Any HTTP status is re-thrown
-// instead, because that file holds every student's name, note and review
-// comments: serving it after a 401 would publish the data the authorizer had
-// just refused.
+// There is no bundled fallback. coopPlansData.json used to serve that role,
+// but it carried every student's id, name, note and review comments, and
+// anything imported here is compiled into the public JS bundle — readable
+// without signing in, which is exactly what the authorizer exists to stop.
+// A request that cannot be answered now fails, and the page says so.
 
 import type {
   CoopPlan,
   CoopPlanQueryParams,
 } from '../types/coopPlan';
-
-import coopPlansData from './coopPlansData.json';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -30,8 +28,6 @@ export class CoopPlanApiError extends Error {
     this.status = status;
   }
 }
-
-const localCoopPlans = coopPlansData as CoopPlan[];
 
 /**
  * Without this header the request is rejected with 401 before the Lambda
@@ -60,95 +56,6 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-function filterLocalCoopPlans(
-  params?: CoopPlanQueryParams
-): CoopPlan[] {
-  if (!params) {
-    return localCoopPlans;
-  }
-
-  const search = params.search?.trim().toLowerCase();
-  const status = params.status?.trim();
-  const studentId = params.studentId?.trim();
-  const curriculum = params.curriculum?.trim();
-  const periodId = params.periodId?.trim();
-  const companyId = params.companyId?.trim();
-  const positionId = params.positionId?.trim();
-
-  return localCoopPlans.filter((plan) => {
-
-    if (search) {
-      const searchableText = [
-        plan.student_id,
-        plan.first_name,
-        plan.last_name,
-        `${plan.first_name} ${plan.last_name}`,
-        plan.company_name,
-        plan.company_short_name,
-        plan.position_title,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      if (!searchableText.includes(search)) {
-        return false;
-      }
-    }
-
-
-    if (status && plan.status !== status) {
-      return false;
-    }
-
-
-    if (studentId && plan.student_id !== studentId) {
-      return false;
-    }
-
-
-    if (curriculum && plan.curriculum !== curriculum) {
-      return false;
-    }
-
-
-    if (periodId && plan.period_id !== periodId) {
-      return false;
-    }
-
-
-    if (companyId && plan.company_id !== companyId) {
-      return false;
-    }
-
-
-    if (positionId && plan.position_id !== positionId) {
-      return false;
-    }
-
-
-    if (params.submittedFrom && plan.submitted_at) {
-      if (
-        plan.submitted_at <
-        `${params.submittedFrom}T00:00:00`
-      ) {
-        return false;
-      }
-    }
-
-    if (params.submittedTo && plan.submitted_at) {
-      if (
-        plan.submitted_at >
-        `${params.submittedTo}T23:59:59`
-      ) {
-        return false;
-      }
-    }
-
-    return true;
-  });
 }
 
 export async function getCoopPlans(
@@ -211,18 +118,13 @@ export async function getCoopPlans(
 
     return await res.json();
   } catch (error) {
-    // An answer from the server is never a reason to fall back. A 401 or 403
-    // means the rules worked, and a 5xx is a real fault worth showing.
     if (error instanceof CoopPlanApiError) {
       throw error;
     }
 
-    console.warn(
-      'Coop Plan API unreachable. Using local coopPlansData.json.',
-      error
-    );
+    console.warn('Coop Plan API unreachable.', error);
 
-    return filterLocalCoopPlans(params);
+    throw error;
   }
 }
 
@@ -246,28 +148,12 @@ export async function getCoopPlan(
 
     return await res.json();
   } catch (error) {
-    // As in getCoopPlans: a status from the server is the answer, never a
-    // reason to serve the bundled copy of someone's plan.
     if (error instanceof CoopPlanApiError) {
       throw error;
     }
 
-    console.warn(
-      `Coop Plan API unreachable for plan ${planId}. Using local coopPlansData.json.`,
-      error
-    );
+    console.warn(`Coop Plan API unreachable for plan ${planId}.`, error);
 
-    const localPlan = localCoopPlans.find(
-      (plan) => plan.plan_id === planId
-    );
-
-    if (!localPlan) {
-      throw new CoopPlanApiError(
-        `Coop plan ${planId} not found`,
-        404
-      );
-    }
-
-    return localPlan;
+    throw error;
   }
 }

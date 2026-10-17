@@ -60,14 +60,19 @@ describe('getCoopPlans', () => {
     await expect(getCoopPlans({})).rejects.toMatchObject({ status: 500 });
   });
 
-  it('still falls back to local data when the network itself fails', async () => {
-    // An offline dev machine is what the fallback exists for, and it says
-    // nothing about authorization.
+  it('throws when the network fails rather than serving bundled plan data', async () => {
+    // The fallback copy was itself the leak: coopPlansData.json carried every
+    // student's id, name, note and review comment into the public JS bundle,
+    // readable without signing in. An offline dev machine is not worth that.
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    const plans = await getCoopPlans({});
+    await expect(getCoopPlans({})).rejects.toThrow();
+  });
 
-    expect(Array.isArray(plans)).toBe(true);
+  it('throws when the network fails on a single plan too', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(getCoopPlan(1)).rejects.toThrow();
   });
 });
 
