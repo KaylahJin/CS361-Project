@@ -2,6 +2,29 @@
 
 @theme {
   --font-sans: "Kanit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --color-blue-600: var(--color-blue-950);
+  --color-blue-700: oklch(22% 0.08 267.9);
+
+  /* Synced Feedback / Revision: Yellow converted to Grayscale (Lighter Silver Gray) */
+  --color-feedback-50: #fafafa;
+  --color-feedback-100: #f4f4f5;
+  --color-feedback-200: #e4e4e7;
+  --color-feedback-300: #d4d4d8;
+  --color-feedback-400: #a1a1aa;
+  --color-feedback-500: #71717a;
+  --color-feedback: #d4d4d8;      /* Lighter bar (Yellow in B&W) */
+  --color-feedback-text: #71717a; /* Lighter text (Yellow in B&W) */
+
+  /* Synced Rejected: Red converted to Grayscale (Dark Charcoal Gray) */
+  --color-rejected-bar: #52525b;  /* Dark bar (Red in B&W) */
+  --color-rejected-text: #3f3f46; /* Dark text (Red in B&W) */
+}
+
+:root {
+  --color-feedback: #d4d4d8;
+  --color-feedback-text: #71717a;
+  --color-rejected-bar: #52525b;
+  --color-rejected-text: #3f3f46;
 }
 
 body {

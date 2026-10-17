@@ -15,7 +15,7 @@ const SELECT_COLUMNS = `SELECT p.plan_id, p.student_id, p.period_id, p.position_
        p.acknowledged_pre_course, p.terms_accepted_at, p.student_note,
        p.submitted_at, p.reviewer_name, p.reviewed_at, p.review_comment,
        p.created_at, p.updated_at,
-       s.first_name, s.last_name, s.curriculum,
+       s.first_name, s.last_name, s.curriculum, s.gpa::float8 AS gpa,
        pos.title AS position_title, pos.company_id,
        c.name AS company_name, c.short_name AS company_short_name,
        per.name AS period_name

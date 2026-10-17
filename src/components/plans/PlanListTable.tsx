@@ -1,0 +1,212 @@
+import React from 'react';
+import {
+  Building2,
+  Calendar,
+  ChevronRight,
+  FileText,
+  RotateCcw,
+  XCircle,
+} from 'lucide-react';
+import type { PlanReviewItem } from '../../types/planReview';
+import { CircleCheckFill } from './CircleCheckFill';
+
+interface PlanListTableProps {
+  plans: PlanReviewItem[];
+  onOpen: (plan: PlanReviewItem) => void;
+}
+
+export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = ({
+  status,
+}) => {
+  switch (status) {
+    case 'SUBMITTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/90 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-500/30 shadow-2xs">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+          </span>
+          <span>รอตรวจ</span>
+        </span>
+      );
+    case 'RETURNED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
+          <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
+          <span>ส่งกลับแก้ไข</span>
+        </span>
+      );
+    case 'APPROVED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+          <CircleCheckFill className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          <span>อนุมัติแล้ว</span>
+        </span>
+      );
+    case 'REJECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่อนุมัติ</span>
+        </span>
+      );
+    case 'PREPARING':
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
+          <FileText className="h-3.5 w-3.5" />
+          <span>ฉบับร่าง</span>
+        </span>
+      );
+  }
+};
+
+function formatDate(isoString: string | null): string {
+  if (!isoString) return '-';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return isoString;
+  }
+}
+
+export const PlanListTable: React.FC<PlanListTableProps> = ({
+  plans,
+  onOpen,
+}) => {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <th className="py-3.5 px-4 pl-6">นักศึกษา</th>
+              <th className="py-3.5 px-4">หลักสูตร</th>
+              <th className="py-3.5 px-4">ตำแหน่ง / สถานประกอบการ</th>
+              <th className="py-3.5 px-4">วันที่ยื่น</th>
+              <th className="py-3.5 px-4">สถานะ</th>
+              <th className="py-3.5 px-4">ผลการพิจารณา</th>
+              <th className="py-3.5 px-4 pr-6 text-right">ดำเนินการ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-sm">
+            {plans.map((plan) => {
+              const isPending = plan.status === 'SUBMITTED';
+
+              return (
+                <tr
+                  key={plan.plan_id}
+                  onClick={() => onOpen(plan)}
+                  className={`group cursor-pointer transition-colors ${
+                    isPending
+                      ? 'bg-blue-50/25 hover:bg-blue-50/60'
+                      : 'hover:bg-slate-50/80'
+                  }`}
+                >
+                  {/* Student */}
+                  <td className="py-4 px-4 pl-6">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 font-bold text-xs ring-1 ring-blue-100">
+                        {plan.first_name.slice(0, 2)}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                          {plan.first_name} {plan.last_name}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          {plan.student_id}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Curriculum & GPA */}
+                  <td className="py-4 px-4">
+                    <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                      หลักสูตร {plan.curriculum}
+                    </span>
+                    {plan.gpa !== undefined && plan.gpa !== null && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        GPA: {Number(plan.gpa).toFixed(2)}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Position & Company */}
+                  <td className="py-4 px-4">
+                    <div className="font-medium text-slate-800">
+                      {plan.position_title || 'ยังไม่ระบุตำแหน่ง'}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                      <Building2 className="h-3 w-3 shrink-0 text-slate-400" />
+                      <span className="truncate max-w-[200px]">
+                        {plan.company_short_name || plan.company_name || 'ยังไม่ระบุสถานประกอบการ'}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Submitted Date */}
+                  <td className="py-4 px-4 text-xs text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{formatDate(plan.submitted_at)}</span>
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="py-4 px-4">
+                    <PlanStatusBadge status={plan.status} />
+                  </td>
+
+                  {/* Review Info */}
+                  <td className="py-4 px-4 text-xs">
+                    {plan.reviewer_name ? (
+                      <div>
+                        <span className="font-medium text-slate-700">
+                          {plan.reviewer_name}
+                        </span>
+                        {plan.review_comment && (
+                          <p className="mt-0.5 max-w-[200px] truncate text-slate-500" title={plan.review_comment}>
+                            {plan.review_comment}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-4 px-4 pr-6 text-right">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpen(plan);
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
+                        isPending
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs hover:shadow-md'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-xs'
+                      }`}
+                    >
+                      <span>{isPending ? 'ตรวจแผน' : 'ดูรายละเอียด'}</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default PlanListTable;

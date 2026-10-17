@@ -73,7 +73,11 @@ function App() {
         return <Periods />;
 
       case 'coop-plans':
-        return <CoopPlans />;
+        return (
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('coop-plans')} />}>
+            <CoopPlans onNavigateLogin={() => handleTabChange('login')} />
+          </ProtectedRoute>
+        );
 
       case 'login':
         return <Login onSuccess={() => handleTabChange('account')} />;
