@@ -66,22 +66,28 @@ resource "aws_apigatewayv2_route" "list_periods" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# Student records are personal data in every column, so these two require a
+# token like the coop-plan routes do. Which routes must is declared in
+# route-policy.mjs and checked by route-policy.test.mjs — add a route here
+# without declaring it there and that test fails.
 resource "aws_apigatewayv2_route" "list_students" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /students"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /students"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_route" "get_student" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /students/{studentId}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /students/{studentId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
-# The coop-plan routes are the only ones carrying personal data, so they are
-# the only ones behind the authorizer. Everything above stays public on
-# purpose: announcements, criteria and job positions must be readable without
-# logging in.
+# Everything above the student routes stays public on purpose: announcements,
+# criteria and job positions must be readable without logging in.
 resource "aws_apigatewayv2_route" "list_coop_plans" {
   api_id             = aws_apigatewayv2_api.companies.id
   route_key          = "GET /coop-plans"

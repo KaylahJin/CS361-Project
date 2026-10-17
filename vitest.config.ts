@@ -11,7 +11,13 @@ export default defineConfig({
         test: {
           name: 'backend',
           environment: 'node',
-          include: ['infra/migrate/**/*.test.mjs', 'infra/lambda/**/*.test.mjs'],
+          // Listed one directory at a time on purpose. An 'infra/**' glob also
+          // walks infra/lambda/companies/node_modules.
+          include: [
+            'infra/migrate/**/*.test.mjs',
+            'infra/lambda/**/*.test.mjs',
+            'infra/terraform/**/*.test.mjs',
+          ],
         },
       },
       {
