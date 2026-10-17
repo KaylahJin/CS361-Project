@@ -17,6 +17,11 @@ and `docs/overview/V3-01-data-model.md` §2.
 | `STAFF` | All plans in the programme. |
 | `ADMIN` | Accounts, roles, assignments. **No plan access on its own.** |
 
+Any other value in `app_users.role` is refused with **403** everywhere. The
+course brief lists a fifth role, ผู้ประสานงานสถานประกอบการ, which the `CHECK`
+constraint does not accept yet; when it is added it starts with no access and
+has to be granted it here, rather than inheriting any by accident.
+
 ## Implemented in V3-02.3
 
 The two coop-plan read routes, both behind the API Gateway JWT authorizer:
@@ -74,6 +79,102 @@ caller-supplied id is a filter, never evidence of identity.
 `assertCanViewPlan` queries `advisor_student_assignments` on every call. No
 cache, in the module or in the token: an assignment revoked between two
 requests must take effect on the next one.
+
+## Which code a refusal gets
+
+Two refusals mean different things, and the choice is made by the kind of
+identifier the route is keyed on — not by the route, and not by whatever was
+convenient in the handler:
+
+- An identifier that is **itself personal data** — `student_id` is issued to a
+  real person, is enumerable, and names them — answers **404** when the row is
+  outside the caller's scope. Confirming that a student id exists is itself a
+  disclosure, so "not found" and "not yours" must be indistinguishable.
+- An identifier that is an **internal surrogate** — `plan_id` is a sequence
+  number that means nothing outside this system — answers **403**. Nothing is
+  given away by admitting the row exists, and 403 is the more useful answer.
+
+`V3-01-api-spec.md` §8 allows both codes and does not cover `/students`, so
+this is the rule that decides it. The asymmetry between the two route families
+is deliberate; see "Why the plan routes answer 403" below.
+
+One case is neither: when the caller's scope **cannot be computed at all** the
+answer is **403**, never 404. A `STUDENT` whose `app_users` row has no
+`student_id` is a broken account link, and 404 would disguise a configuration
+fault as a missing student.
+
+## Student data routes (V3-02.4)
+
+`GET /students` and `GET /students/{studentId}`, both behind the API Gateway
+JWT authorizer. These began as public V2 endpoints (#34, #35) and served every
+field to anyone; V3 requires access control over them.
+
+### Row layer
+
+| Role | `GET /students` (list) | `GET /students/{studentId}` |
+|---|---|---|
+| no token | **401** (rejected at API Gateway, Lambda never runs) | **401** |
+| token, no `app_users` row | **403** | **403** |
+| token, `is_active = false` | **403** | **403** |
+| `STUDENT` | **200** — own row only | **200** own row, **404** any other |
+| `STUDENT`, no linked `student_id` | **403** | **403** |
+| `ADVISOR` | **200** — assigned students only | **200** if assigned, **404** otherwise |
+| `STAFF` | **200** — every student | **200** |
+| `ADMIN` | **200** — every student, identity fields only | **200**, identity fields only |
+| unknown role value | **403** | **403** |
+| id does not exist | — | **404** |
+
+Scope lives in the `WHERE` clause, never in an `if` after the read. Zero rows
+is the single path for both "no such student" and "not yours", so the two
+cannot drift apart and an out-of-scope row never leaves the database.
+
+### Field layer
+
+| Group | Fields |
+|---|---|
+| identity | `student_id`, `first_name`, `last_name`, `curriculum` |
+| contact | `email`, `phone` |
+| personal | `birth_date` |
+| academic | `gpa`, `courses[]` |
+
+| Role | identity | contact | personal | academic |
+|---|---|---|---|---|
+| `STUDENT` (own row) | ✓ | ✓ | ✓ | ✓ |
+| `ADVISOR` | ✓ | ✓ | ✗ | ✓ |
+| `STAFF` | ✓ | ✓ | ✗ | ✓ |
+| `ADMIN` | ✓ | ✗ | ✗ | ✗ |
+
+A field the caller may not see is **absent from the response**, not null. The
+column list is built from the role before the query runs, and
+`student_courses` is not joined at all when the role has no academic rights —
+the data is never fetched, so it cannot be leaked by a later change to the
+serializer. Tests assert the key is missing (`not.toHaveProperty('gpa')`), not
+that it is null.
+
+`src/types/student.ts` marks the role-dependent fields optional, so every use
+site in the web app must handle their absence and `tsc` catches the ones that
+do not. Rendering `student.courses.length` against a response that omits
+`courses` is a blank page for an admin, and the type is what prevents it.
+
+### Why `ADMIN` reads student identity but no plans
+
+`V3-01-data-model.md` §2 gives `ADMIN` accounts, roles and access. Setting
+`app_users.student_id` means resolving a student id to a person, which needs
+`student_id` and a name and nothing more. That is the whole grant: no contact
+details, no GPA, no courses, and still no plan access.
+
+### Why `birth_date` stops at the student's own row
+
+Nothing in V3 reads it — not a filter, not a test, not a verify script, only
+the detail panel. A field with no consumer is a field with no justification,
+so only the student sees their own.
+
+### Why the plan routes answer 403 and the student routes answer 404
+
+`plan_id` is a surrogate key; `student_id` identifies a person. The rule at
+the top of this file decides it. Changing the coop-plan routes to 404 for
+symmetry would gain no privacy — the ids are sequential and meaningless — and
+would invalidate the evidence already posted on #103.
 
 ## Not yet implemented — for V3-04 / V3-05
 

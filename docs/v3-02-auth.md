@@ -188,11 +188,14 @@ editing it.
 
 ### `infra/terraform/apigateway.tf`
 
-Routes opt into the authorizer one at a time. Today only `GET /coop-plans` and
-`GET /coop-plans/{planId}` do, because they are the only routes carrying
-personal data. Adding `authorizer_id` + `authorization_type = "JWT"` to a route
-makes it require a token; companies, positions, coop-info and periods stay
-public on purpose.
+Routes opt into the authorizer one at a time, and which ones must is declared
+in `infra/terraform/route-policy.mjs` rather than left to whoever edits the
+Terraform: `GET /coop-plans`, `GET /coop-plans/{planId}`, `GET /students` and
+`GET /students/{studentId}` all carry personal data and all require a token.
+`route-policy.test.mjs` reads this file and fails if a route declared private
+is missing `authorizer_id`. Adding `authorizer_id` + `authorization_type =
+"JWT"` to a route makes it require a token; companies, positions, coop-info
+and periods stay public on purpose.
 
 ### `infra/lambda/companies/authorize.mjs`
 
