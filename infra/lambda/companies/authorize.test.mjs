@@ -6,8 +6,13 @@ vi.mock('./db.mjs', () => ({
   getPool: () => ({ query: queryMock }),
 }));
 
-const { buildCoopPlanListFilter, assertCanViewPlan, ForbiddenError } =
-  await import('./authorize.mjs');
+const {
+  buildCoopPlanListFilter,
+  assertCanViewPlan,
+  buildStudentScope,
+  studentColumnsFor,
+  ForbiddenError,
+} = await import('./authorize.mjs');
 
 const STUDENT = { sub: 'sub-1', role: 'STUDENT', studentId: 'S001' };
 const ADVISOR = { sub: 'advisor-1', role: 'ADVISOR', studentId: null };
@@ -118,5 +123,113 @@ describe('assertCanViewPlan', () => {
     await expect(
       assertCanViewPlan({ sub: 'x', role: 'SUPERUSER', studentId: null }, { student_id: 'S001' }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe('buildStudentScope', () => {
+  beforeEach(() => queryMock.mockReset());
+
+  it('STUDENT: narrows to their own student_id', async () => {
+    const scope = await buildStudentScope(STUDENT);
+
+    expect(scope.sql).toContain('s.student_id =');
+    expect(scope.params).toEqual(['S001']);
+  });
+
+  it('STUDENT with no linked student record: refused, not silently empty', async () => {
+    const orphan = { sub: 'sub-9', role: 'STUDENT', studentId: null };
+
+    await expect(buildStudentScope(orphan)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('ADVISOR: narrows to the students assigned to their sub', async () => {
+    const scope = await buildStudentScope(ADVISOR);
+
+    expect(scope.sql).toContain('advisor_student_assignments');
+    expect(scope.params).toEqual(['advisor-1']);
+  });
+
+  it('STAFF: no narrowing', async () => {
+    const scope = await buildStudentScope(STAFF);
+
+    expect(scope.sql).toBe('');
+    expect(scope.params).toEqual([]);
+  });
+
+  it('ADMIN: no narrowing — the limit on an admin is which fields, not which rows', async () => {
+    const scope = await buildStudentScope(ADMIN);
+
+    expect(scope.sql).toBe('');
+    expect(scope.params).toEqual([]);
+  });
+
+  it('a role this module has never heard of is refused', async () => {
+    const stranger = { sub: 'sub-x', role: 'EMPLOYER_COORDINATOR', studentId: null };
+
+    await expect(buildStudentScope(stranger)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe('studentColumnsFor', () => {
+  const sql = (user) => studentColumnsFor(user).columns.join(', ');
+
+  it('STUDENT: their own row, every field', () => {
+    const text = sql(STUDENT);
+
+    expect(text).toContain('s.email');
+    expect(text).toContain('birth_date');
+    expect(text).toContain('gpa');
+    expect(studentColumnsFor(STUDENT).includeCourses).toBe(true);
+  });
+
+  it('ADVISOR: contact and grades, but not a birth date', () => {
+    const text = sql(ADVISOR);
+
+    expect(text).toContain('s.email');
+    expect(text).toContain('s.phone');
+    expect(text).toContain('gpa');
+    expect(text).not.toContain('birth_date');
+    expect(studentColumnsFor(ADVISOR).includeCourses).toBe(true);
+  });
+
+  it('STAFF: contact and grades, but not a birth date either', () => {
+    const text = sql(STAFF);
+
+    expect(text).toContain('s.email');
+    expect(text).toContain('gpa');
+    expect(text).not.toContain('birth_date');
+    expect(studentColumnsFor(STAFF).includeCourses).toBe(true);
+  });
+
+  it('ADMIN: identity only — no contact, no birth date, no grades', () => {
+    const text = sql(ADMIN);
+
+    expect(text).toContain('s.student_id');
+    expect(text).toContain('s.first_name');
+    expect(text).toContain('s.curriculum');
+    expect(text).not.toContain('email');
+    expect(text).not.toContain('phone');
+    expect(text).not.toContain('birth_date');
+    expect(text).not.toContain('gpa');
+  });
+
+  it('ADMIN: the courses table is not joined at all', () => {
+    expect(studentColumnsFor(ADMIN).includeCourses).toBe(false);
+  });
+
+  it('every role gets the identity columns', () => {
+    for (const user of [STUDENT, ADVISOR, STAFF, ADMIN]) {
+      const text = sql(user);
+      expect(text).toContain('s.student_id');
+      expect(text).toContain('s.first_name');
+      expect(text).toContain('s.last_name');
+      expect(text).toContain('s.curriculum');
+    }
+  });
+
+  it('a role this module has never heard of is refused', () => {
+    const stranger = { sub: 'sub-x', role: 'EMPLOYER_COORDINATOR', studentId: null };
+
+    expect(() => studentColumnsFor(stranger)).toThrow(ForbiddenError);
   });
 });
