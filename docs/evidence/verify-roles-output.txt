@@ -1,0 +1,31 @@
+COOP_TEST_PASSWORD=... npm run verify:roles
+run: 2026-10-16T17:00:33Z  (after the Lambda deploy that made an unmapped account answer 403)
+
+
+> cs361-project@0.0.0 verify:roles
+> node infra/verify-roles.mjs
+
+api:        https://z9ly6malij.execute-api.us-east-1.amazonaws.com
+own plan:   1
+other plan: 2
+
+  ROLE     ACTION                             RESULT         expected      
+  STUDENT  GET /coop-plans                    200 (1 rows)   expected 200  ok
+  STUDENT  GET /coop-plans/1 (own)            200            expected 200  ok
+  STUDENT  GET /coop-plans/2 (other student)  403            expected 403  ok
+  ADVISOR  GET /coop-plans                    200 (1 rows)   expected 200  ok
+  ADVISOR  GET /coop-plans/1 (own)            200            expected 200  ok
+  ADVISOR  GET /coop-plans/2 (other student)  403            expected 403  ok
+  STAFF    GET /coop-plans                    200 (10 rows)  expected 200  ok
+  STAFF    GET /coop-plans/1 (own)            200            expected 200  ok
+  STAFF    GET /coop-plans/2 (other student)  200            expected 200  ok
+  ADMIN    GET /coop-plans                    403            expected 403  ok
+  ADMIN    GET /coop-plans/1 (own)            403            expected 403  ok
+  ADMIN    GET /coop-plans/2 (other student)  403            expected 403  ok
+
+  STUDENT  sees only their own plan
+  ADVISOR  sees only assigned students
+  STAFF    sees every plan
+  ADMIN    manages accounts, may not read plans
+
+every row matches docs/permission-matrix.md

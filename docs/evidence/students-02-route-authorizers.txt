@@ -1,0 +1,34 @@
+Which deployed API Gateway routes require a token, read back from AWS.
+Captured: 2026-10-17 02:53 UTC
+
+$ aws apigatewayv2 get-routes --api-id z9ly6malij
+-----------------------------------------
+|               GetRoutes               |
++------+--------------------------------+
+| auth |             route              |
++------+--------------------------------+
+|  NONE|  GET /companies                |
+|  NONE|  GET /companies/{companyId}    |
+|  NONE|  GET /coop-info                |
+|  JWT |  GET /coop-plans               |
+|  JWT |  GET /coop-plans/{planId}      |
+|  NONE|  GET /periods                  |
+|  NONE|  GET /positions                |
+|  NONE|  GET /positions/{positionId}   |
+|  JWT |  GET /students                 |
+|  JWT |  GET /students/{studentId}     |
++------+--------------------------------+
+
+Declared in infra/terraform/route-policy.mjs, which route-policy.test.mjs
+checks apigateway.tf against:
+
+  PRIVATE  GET /coop-plans
+  PRIVATE  GET /coop-plans/{planId}
+  PRIVATE  GET /students
+  PRIVATE  GET /students/{studentId}
+  PUBLIC   GET /companies
+  PUBLIC   GET /companies/{companyId}
+  PUBLIC   GET /positions
+  PUBLIC   GET /positions/{positionId}
+  PUBLIC   GET /coop-info
+  PUBLIC   GET /periods

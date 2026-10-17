@@ -1,0 +1,45 @@
+COOP_TEST_PASSWORD=... npm run verify:auth
+run: 2026-10-16T17:35:54Z
+
+
+> cs361-project@0.0.0 verify:auth
+> node infra/verify-auth.mjs
+
+api:  https://z9ly6malij.execute-api.us-east-1.amazonaws.com
+pool: us-east-1_D93BBwsP2
+
+public routes, no token
+  ok    GET /companies: 200 (expected 200)
+  ok    GET /positions: 200 (expected 200)
+  ok    GET /coop-info: 200 (expected 200)
+  ok    GET /periods: 200 (expected 200)
+
+protected routes, no token
+  ok    GET /coop-plans: 401 (expected 401)
+  ok    GET /coop-plans/1: 401 (expected 401)
+
+protected routes, forged token
+  ok    GET /coop-plans: 401 (expected 401)
+  ok    GET /coop-plans/1: 401 (expected 401)
+
+SRP sign-in as student1@example.com
+  ok    token acquired (1082 chars)
+  ok    aud equals the SPA client id: 2gugh06c795eua4ecgbuq7jreg (expected 2gugh06c795eua4ecgbuq7jreg)
+  ok    email claim: student1@example.com (expected student1@example.com)
+  sub:  f46814e8-e0d1-7045-7d85-be40d988a00a
+  iat:  2026-10-16T17:36:12.000Z
+  exp:  2026-10-16T18:36:12.000Z  (60 minutes)
+  ok    token lifetime is finite and <= 60 minutes: true (expected true)
+  note  an expired token fails the same authorizer check as the forged one above,
+        on `exp` instead of signature; see docs/v3-02-auth.md.
+
+protected routes, real token
+  info  GET /coop-plans: 200 (500 while app_users is absent; 403 once it exists but this sub is unmapped; 200 when mapped)
+  info  GET /coop-plans/1: 200 (500 while app_users is absent; 403 once it exists but this sub is unmapped; 200 when mapped)
+
+unmapped account: SRP sign-in as nobody1@example.com
+  ok    token acquired, so the account itself is valid
+  ok    GET /coop-plans: 403 (expected 403)
+  ok    GET /coop-plans/1: 403 (expected 403)
+
+all checks passed
