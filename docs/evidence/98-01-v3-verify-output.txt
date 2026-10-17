@@ -1,0 +1,76 @@
+psql -f infra/migrate/migrations/v3_01_verify.sql
+database: coop_db (the live dev database, after npm run db:migrate-v3 and npm run db:seed-users)
+run: 2026-10-16T16:07:18Z
+
+== tables ==
+         table_name          | status 
+-----------------------------+--------
+ app_users                   | ok
+ advisor_student_assignments | ok
+ plan_reviews                | ok
+(3 rows)
+
+== app_users columns ==
+ column_name |        status         
+-------------+-----------------------
+ is_active   | ok: boolean
+ cognito_sub | ok: character varying
+ email       | ok: text
+ role        | ok: character varying
+ student_id  | ok: character varying
+(5 rows)
+
+== advisor_student_assignments columns ==
+ column_name |            status            
+-------------+------------------------------
+ created_at  | ok: timestamp with time zone
+ advisor_sub | ok: character varying
+ student_id  | ok: character varying
+(3 rows)
+
+== plan_reviews columns ==
+ column_name  |            status            
+--------------+------------------------------
+ review_id    | ok: integer
+ plan_id      | ok: integer
+ reviewed_at  | ok: timestamp with time zone
+ reviewer_sub | ok: character varying
+ decision     | ok: character varying
+ comment      | ok: text
+(6 rows)
+
+== plan_reviews.plan_id matches coop_plans.plan_id type ==
+ coop_plans | plan_reviews 
+------------+--------------
+ integer    | integer
+(1 row)
+
+== constraints and indexes ==
+         name          | status 
+-----------------------+--------
+ chk_coop_plans_status | ok
+(1 row)
+
+            name             | status 
+-----------------------------+--------
+ uq_coop_plans_active_period | ok
+(1 row)
+
+== no plan left on a V2-only status ==
+  status   | plans 
+-----------+-------
+ APPROVED  |     2
+ PREPARING |     3
+ REJECTED  |     2
+ SUBMITTED |     3
+(4 rows)
+
+== accounts by role (empty until app_users is seeded) ==
+  role   | active | total 
+---------+--------+-------
+ ADMIN   |      1 |     1
+ ADVISOR |      1 |     1
+ STAFF   |      1 |     1
+ STUDENT |      1 |     1
+(4 rows)
+

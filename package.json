@@ -14,7 +14,9 @@
     "verify:api": "node infra/verify-api.mjs",
     "env:sync": "bash infra/sync-env.sh",
     "web:deploy": "bash infra/deploy-web.sh",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:migrate-v3": "bash -c \"psql -h $(terraform -chdir=infra/terraform output -raw rds_endpoint) -U $(terraform -chdir=infra/terraform output -raw db_username) -d $(terraform -chdir=infra/terraform output -raw db_name) -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_upgrade.sql\"",
+    "db:test-migration": "bash infra/migrate/test-migration-roundtrip.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
