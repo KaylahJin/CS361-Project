@@ -1,21 +1,10 @@
-// ============================================================
-// CS361 V2 — GET /coop-plans/{planId}
-// ============================================================
-// Responses:
-//   200 -> single CoopPlan object (joined with student / position /
-//          company / period so the frontend needs no extra calls)
-//   400 -> planId missing / empty / not a positive 32-bit integer
-//          (validated BEFORE any DB call — plan_id is INTEGER, so a
-//          non-numeric value would otherwise make pg throw and become a 500)
-//   404 -> no row with that plan_id
-//   500 -> anything thrown; generic body only
-//
-// SQL safety: planId is passed as $1 through the pg driver's values
-// array, never interpolated into the SQL text.
-// ============================================================
+// GET /coop-plans/{planId} — one plan, joined with its student, position,
+// company and period so the frontend needs no follow-up calls.
 
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
+import { getAuthenticatedUser } from './auth.mjs';
+import { assertCanViewPlan, ForbiddenError } from './authorize.mjs';
 
 const MAX_INT4 = 2147483647;
 
@@ -34,29 +23,36 @@ LEFT JOIN companies c ON c.company_id = pos.company_id
 LEFT JOIN periods per ON per.period_id = p.period_id
 WHERE p.plan_id = $1`;
 
-/**
- * @param {unknown} value
- * @returns {boolean} true when value is a positive integer string that fits INTEGER
- */
 function isValidPlanId(value) {
   if (typeof value !== 'string' || !/^\d+$/.test(value.trim())) return false;
   const n = Number(value.trim());
   return n >= 1 && n <= MAX_INT4;
 }
 
-/**
- * GET /coop-plans/{planId} handler.
- *
- * @param {{pathParameters?: Record<string, string> | null}} event
- *   API Gateway HTTP API payload format 2.0 event.
- * @returns {Promise<{statusCode: number, headers: Record<string, string>, body: string}>}
- */
 export async function getCoopPlanById(event) {
   const planId = event?.pathParameters?.planId;
 
-  // Validate first — this must short-circuit before touching the pool.
+  // plan_id is an INTEGER column, so a non-numeric id has to be rejected here;
+  // handed to pg it would throw and come back as a 500.
   if (!isValidPlanId(planId)) {
     return jsonResponse(400, { error: 'planId must be a positive integer' });
+  }
+
+  // A throw while resolving identity is a server fault (app_users missing, DB
+  // unreachable), so it answers 500. Reporting it as 401 would tell a
+  // signed-in user their credentials were rejected and hide the outage.
+  //
+  // getAuthenticatedUser decides between 401 and 403 itself; see auth.mjs.
+  let user;
+  try {
+    const resolved = await getAuthenticatedUser(event);
+    if (resolved.denied) {
+      return jsonResponse(resolved.denied.status, { error: resolved.denied.error });
+    }
+    user = resolved.user;
+  } catch (err) {
+    console.error('getCoopPlanById auth failed', err);
+    return jsonResponse(500, { error: 'Internal server error' });
   }
 
   try {
@@ -66,7 +62,23 @@ export async function getCoopPlanById(event) {
       return jsonResponse(404, { error: 'Coop plan not found' });
     }
 
-    return jsonResponse(200, result.rows[0]);
+    const plan = result.rows[0];
+
+    // Ownership is checked against the row we just read, so a missing plan
+    // answers 404 before a forbidden one answers 403. That does reveal which
+    // plan ids exist, which is fine here: everyone past this point is a known
+    // signed-in user and the ids are sequential anyway.
+    try {
+      await assertCanViewPlan(user, plan);
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        console.error('getCoopPlanById forbidden', err.message);
+        return jsonResponse(403, { error: 'Forbidden' });
+      }
+      throw err;
+    }
+
+    return jsonResponse(200, plan);
   } catch (err) {
     console.error('getCoopPlanById failed', err);
     return jsonResponse(500, { error: 'Internal server error' });

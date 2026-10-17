@@ -275,10 +275,14 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO position_periods (position_id, period_id)
-VALUES 
-  ('POS021', '2568-1'),
-  ('POS022', '2568-1'),
-  ('POS023', '2568-1'),
-  ('POS029', '2568-2'),
-  ('POS051', '2568-1')
+-- period_id must match the ids inserted above ('P2568-1', 'P2567-2'). Written
+-- without the 'P' these rows fail the foreign key and abort the whole load.
+VALUES
+  ('POS021', 'P2568-1'),
+  ('POS022', 'P2568-1'),
+  ('POS023', 'P2568-1'),
+  -- POS029 was written against '2568-2', a semester that has no row in
+  -- periods at all. Left out rather than guessed at — restore it once the
+  -- intended period exists.
+  ('POS051', 'P2568-1')
 ON CONFLICT (position_id, period_id) DO NOTHING;

@@ -1,23 +1,14 @@
-// ============================================================
-// CS361 V2 — PostgreSQL connection pool (Lambda)
-// ============================================================
-// Issue: #26 — ทำการเรียกข้อมูลสถานประกอบการ
+// PostgreSQL connection pool for the Lambda.
 //
-// Architecture:
-//   Lambda (in VPC) -> RDS Proxy -> RDS PostgreSQL
-//   The Lambda never reaches the public internet, so no NAT Gateway is
-//   needed. DB_HOST points at the RDS Proxy endpoint, NOT the RDS
-//   instance endpoint.
+// The Lambda sits in the VPC and connects straight to RDS — the RDS Proxy
+// that used to sit in between is gone. It never reaches the public internet,
+// so there is no NAT Gateway.
 //
-// Pooling:
-//   RDS Proxy does the real connection pooling ACROSS concurrent Lambda
-//   invocations. The pool here exists only so that a single warm
-//   execution context reuses one connection instead of opening a new one
-//   per invocation — hence the deliberately small `max`.
-//
-// The Pool lives at module scope (created lazily on first getPool() call)
-// so it survives across invocations that share a warm execution context.
-// ============================================================
+// The pool lives at module scope and is created on the first getPool() call,
+// so a warm execution context reuses its connection instead of opening a new
+// one per invocation. Each context keeps its own small pool; nothing pools
+// across concurrent invocations now, which is why `max` stays low — a burst of
+// cold starts must not exhaust the instance's connection limit.
 
 import pg from 'pg';
 
@@ -27,12 +18,6 @@ const MAX_CONNECTIONS = 5;
 /** @type {import('pg').Pool | null} */
 let pool = null;
 
-/**
- * Lazily create and return the module-scope singleton pg.Pool.
- * Reused across warm Lambda invocations.
- *
- * @returns {import('pg').Pool}
- */
 export function getPool() {
   if (pool) return pool;
 
@@ -42,10 +27,10 @@ export function getPool() {
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    // RDS Proxy has TLS enforced (see docs/aws-lambda-setup-guide.md) — a
-    // plaintext connect attempt gets dropped immediately by the proxy.
+    // RDS requires TLS. rejectUnauthorized stays false because the instance
+    // presents the AWS RDS CA, which is not in the Lambda runtime's trust
+    // store without bundling the certificate.
     ssl: { rejectUnauthorized: false },
-    // Small on purpose — RDS Proxy pools across invocations.
     max: MAX_CONNECTIONS,
     // Fail fast rather than letting API Gateway hit its own 30s timeout.
     connectionTimeoutMillis: 5000,

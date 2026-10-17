@@ -13,7 +13,11 @@ resource "aws_apigatewayv2_api" "companies" {
       local.web_url,
     ]
     allow_methods = ["GET", "OPTIONS"]
-    allow_headers = ["content-type"]
+    # `authorization` has to be listed: the browser sends the ID token in that
+    # header, and a header missing here fails the preflight before the real
+    # request is sent. That shows up as a CORS error, not a 401, which is easy
+    # to mistake for an auth bug.
+    allow_headers = ["content-type", "authorization"]
   }
 }
 
@@ -54,28 +58,50 @@ resource "aws_apigatewayv2_route" "get_position" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-resource "aws_apigatewayv2_route" "list_students" {
+# index.mjs has routed 'GET /periods' to listPeriods for a while, but no API
+# Gateway route pointed at it, so every request 404'd at the edge.
+resource "aws_apigatewayv2_route" "list_periods" {
   api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /students"
+  route_key = "GET /periods"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# Student records are personal data in every column, so these two require a
+# token like the coop-plan routes do. Which routes must is declared in
+# route-policy.mjs and checked by route-policy.test.mjs — add a route here
+# without declaring it there and that test fails.
+resource "aws_apigatewayv2_route" "list_students" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /students"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_route" "get_student" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /students/{studentId}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /students/{studentId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
+# Everything above the student routes stays public on purpose: announcements,
+# criteria and job positions must be readable without logging in.
 resource "aws_apigatewayv2_route" "list_coop_plans" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /coop-plans"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_route" "get_coop_plan" {
-  api_id    = aws_apigatewayv2_api.companies.id
-  route_key = "GET /coop-plans/{planId}"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/{planId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 resource "aws_apigatewayv2_stage" "default" {

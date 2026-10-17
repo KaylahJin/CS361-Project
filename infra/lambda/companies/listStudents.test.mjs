@@ -6,11 +6,40 @@ vi.mock('./db.mjs', () => ({
   getPool: () => ({ query: queryMock }),
 }));
 
+// Auth is mocked, not the app_users query behind it: these suites are about
+// the SQL each handler builds, and a real getAuthenticatedUser would add a
+// second call to the same pool mock and shift every call index.
+//
+// Default is STAFF — the role that sees every row and every field — so the
+// pre-auth expectations in these tests still describe the unscoped query.
+// Role-specific behaviour lives in authorize.test.mjs and in the role suites.
+const getAuthenticatedUserMock = vi.fn();
+
+vi.mock('./auth.mjs', () => ({
+  getAuthenticatedUser: getAuthenticatedUserMock,
+}));
+
+function signedInAs(role, studentId = null) {
+  getAuthenticatedUserMock.mockResolvedValue({
+    user: { sub: `${role.toLowerCase()}-sub`, role, studentId },
+    denied: null,
+  });
+}
+
+function deniedWith(status) {
+  getAuthenticatedUserMock.mockResolvedValue({
+    user: null,
+    denied: { status, error: status === 401 ? 'Unauthorized' : 'Forbidden' },
+  });
+}
+
 const { listStudents } = await import('./listStudents.mjs');
 
 describe('listStudents', () => {
   beforeEach(() => {
     queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    signedInAs('STAFF');
   });
 
   it('with no params, queries with no WHERE clause and returns the raw rows as a bare array', async () => {
@@ -169,5 +198,111 @@ describe('listStudents', () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).not.toMatch(/SENTINEL/);
     expect(JSON.parse(result.body)).toEqual({ error: 'Internal server error' });
+  });
+});
+
+
+describe('listStudents and the role of the caller', () => {
+  beforeEach(() => {
+    queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    queryMock.mockResolvedValue({ rows: [] });
+  });
+
+  it('answers 401 without touching the database when there is no identity', async () => {
+    deniedWith(401);
+
+    const result = await listStudents({});
+
+    expect(result.statusCode).toBe(401);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('answers 403 for a token with no app_users row', async () => {
+    deniedWith(403);
+
+    const result = await listStudents({});
+
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('STUDENT: narrows the query to their own row', async () => {
+    signedInAs('STUDENT', '6600000001');
+
+    const result = await listStudents({});
+
+    expect(result.statusCode).toBe(200);
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toMatch(/WHERE/i);
+    expect(text).toMatch(/s\.student_id\s*=\s*\$1/);
+    expect(values).toEqual(['6600000001']);
+  });
+
+  it('STUDENT: a search term narrows further and never widens the scope', async () => {
+    signedInAs('STUDENT', '6600000001');
+
+    await listStudents({ queryStringParameters: { search: 'เอเอ' } });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toMatch(/AND/i);
+    expect(text).toMatch(/s\.student_id\s*=/);
+    expect(values).toContain('6600000001');
+    expect(values).toContain('%เอเอ%');
+  });
+
+  it('STUDENT with no linked student record: 403, no query', async () => {
+    signedInAs('STUDENT', null);
+
+    const result = await listStudents({});
+
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('ADVISOR: narrows to their assigned students', async () => {
+    signedInAs('ADVISOR');
+
+    await listStudents({});
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toMatch(/advisor_student_assignments/);
+    expect(values).toEqual(['advisor-sub']);
+  });
+
+  it('STAFF: no row scope, and every field but a birth date', async () => {
+    signedInAs('STAFF');
+
+    await listStudents({});
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).not.toMatch(/WHERE/i);
+    expect(values).toEqual([]);
+    expect(text).toMatch(/s\.email/);
+    expect(text).toMatch(/gpa/);
+    expect(text).not.toMatch(/birth_date/);
+  });
+
+  it('ADMIN: identity columns only, so contact and grades are never selected', async () => {
+    signedInAs('ADMIN');
+
+    await listStudents({});
+
+    const [text] = queryMock.mock.calls[0];
+    expect(text).toMatch(/s\.student_id/);
+    expect(text).toMatch(/s\.first_name/);
+    expect(text).not.toMatch(/email/);
+    expect(text).not.toMatch(/phone/);
+    expect(text).not.toMatch(/gpa/);
+    expect(text).not.toMatch(/birth_date/);
+  });
+
+  it('a role the rules do not cover: 403, no query', async () => {
+    signedInAs('EMPLOYER_COORDINATOR');
+
+    const result = await listStudents({});
+
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
   });
 });

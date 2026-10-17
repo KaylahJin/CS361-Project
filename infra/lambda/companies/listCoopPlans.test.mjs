@@ -1,16 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const queryMock = vi.fn();
+const getAuthenticatedUserMock = vi.fn();
 
 vi.mock('./db.mjs', () => ({
   getPool: () => ({ query: queryMock }),
 }));
 
+// getAuthenticatedUser returns { user, denied }: see auth.mjs. These two
+// helpers build that shape so the tests below read as intent, not plumbing.
+function signedInAs(user) {
+  getAuthenticatedUserMock.mockResolvedValue({ user, denied: null });
+}
+
+function deniedWith(status, error) {
+  getAuthenticatedUserMock.mockResolvedValue({ user: null, denied: { status, error } });
+}
+
+// Identity is mocked, authorize.mjs is not, so these cases run the real
+// role-filter SQL.
+vi.mock('./auth.mjs', () => ({
+  getAuthenticatedUser: getAuthenticatedUserMock,
+}));
+
 const { listCoopPlans } = await import('./listCoopPlans.mjs');
+
+const STAFF = { sub: 'staff-1', role: 'STAFF', studentId: null };
 
 describe('listCoopPlans', () => {
   beforeEach(() => {
     queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    // STAFF adds no filter, so the cases below assert the same SQL as before
+    // authorization existed.
+    signedInAs(STAFF);
   });
 
   it('with no params, queries with no WHERE clause and returns the raw rows as a bare array', async () => {
@@ -144,5 +167,134 @@ describe('listCoopPlans', () => {
 
     expect(result.statusCode).toBe(500);
     expect(result.body).not.toContain('secret-host');
+  });
+});
+
+describe('listCoopPlans authorization', () => {
+  beforeEach(() => {
+    queryMock.mockReset();
+    getAuthenticatedUserMock.mockReset();
+    signedInAs(STAFF);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('returns 401 without touching the DB when there is no authenticated user', async () => {
+    deniedWith(401, 'Unauthorized');
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(401);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 for a valid token whose account has no app_users row', async () => {
+    // A Cognito account that exists but was never mapped, or was deactivated.
+    // auth.mjs answers 403 there, and the handler forwards it unchanged
+    // instead of flattening every refusal to 401. Required by #100.
+    deniedWith(403, 'Forbidden');
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(403);
+    expect(JSON.parse(result.body)).toEqual({ error: 'Forbidden' });
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500, never 401, when identity resolution itself fails', async () => {
+    // app_users missing or the DB unreachable is a server fault, not a
+    // rejected credential.
+    getAuthenticatedUserMock.mockRejectedValue(
+      new Error('relation "app_users" does not exist: secret-host'),
+    );
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).not.toContain('secret-host');
+  });
+
+  it('returns 403 without touching the DB for an ADMIN-only account', async () => {
+    signedInAs({ sub: 'admin-1', role: 'ADMIN', studentId: null });
+
+    const result = await listCoopPlans({ queryStringParameters: null });
+
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it('STAFF: queries with no role filter', async () => {
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).not.toContain('WHERE');
+    expect(values).toEqual([]);
+  });
+
+  it('STUDENT: scopes the query to their own student_id', async () => {
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toContain('p.student_id =');
+    expect(values).toEqual(['S001']);
+  });
+
+  it('STUDENT: a studentId param for someone else narrows, never widens, their scope', async () => {
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: { studentId: 'S999' } });
+
+    const [text, values] = queryMock.mock.calls[0];
+    // Both conditions are ANDed, so the result is empty rather than S999's
+    // plans: the query param cannot replace the identity-derived filter.
+    expect(values).toContain('S001');
+    expect(values).toContain('S999');
+    expect(text.match(/p\.student_id = \$\d+/g)).toHaveLength(2);
+    expect(text).toContain(' AND ');
+  });
+
+  it('STUDENT: leaves no unsubstituted $PARAM placeholder in the SQL', async () => {
+    signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    expect(queryMock.mock.calls[0][0]).not.toContain('$PARAM');
+  });
+
+  it('ADVISOR: scopes the query to assigned students via advisor_student_assignments', async () => {
+    signedInAs({
+      sub: 'advisor-1',
+      role: 'ADVISOR',
+      studentId: null,
+    });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toContain('advisor_student_assignments');
+    expect(text).not.toContain('$PARAM');
+    expect(values).toEqual(['advisor-1']);
+  });
+
+  it('ADVISOR: the advisor sub is bound as a parameter, not interpolated', async () => {
+    signedInAs({
+      sub: "'; DROP TABLE coop_plans; --",
+      role: 'ADVISOR',
+      studentId: null,
+    });
+    queryMock.mockResolvedValue({ rows: [] });
+
+    await listCoopPlans({ queryStringParameters: null });
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).not.toContain('DROP TABLE');
+    expect(values).toEqual(["'; DROP TABLE coop_plans; --"]);
   });
 });

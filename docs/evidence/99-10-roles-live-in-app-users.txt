@@ -1,0 +1,22 @@
+psql: where each account's role actually lives
+database: coop_db on the deployed RDS instance
+run: 2026-10-16T16:56:35Z
+
+-- Roles are rows in app_users, not Cognito groups. The pool has no groups;
+-- this table is what the API reads to decide what each account may see.
+
+  role   |        email         | student_id | is_active |          created_at           
+---------+----------------------+------------+-----------+-------------------------------
+ ADMIN   | admin1@example.com   |            | t         | 2026-10-16 14:43:12.35594+00
+ ADVISOR | advisor1@example.com |            | t         | 2026-10-16 14:43:14.854246+00
+ STAFF   | staff1@example.com   |            | t         | 2026-10-16 14:43:07.49557+00
+ STUDENT | student1@example.com | 6600000001 | t         | 2026-10-16 14:43:09.905553+00
+(4 rows)
+
+             advisor_sub              | student_id 
+--------------------------------------+------------
+ 244834f8-2001-7093-8758-3837844b8c31 | 6600000001
+(1 row)
+
+-- Cognito groups defined in the pool:
+[]

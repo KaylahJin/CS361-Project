@@ -12,14 +12,19 @@
     "migrate:build-positions": "node infra/migrate/build-positions-seed.mjs",
     "db:load": "bash infra/load-db.sh",
     "verify:api": "node infra/verify-api.mjs",
+    "verify:auth": "node infra/verify-auth.mjs",
     "env:sync": "bash infra/sync-env.sh",
     "web:deploy": "bash infra/deploy-web.sh",
     "test": "vitest run",
     "db:migrate-v3": "bash -c \"psql -h $(terraform -chdir=infra/terraform output -raw rds_endpoint) -U $(terraform -chdir=infra/terraform output -raw db_username) -d $(terraform -chdir=infra/terraform output -raw db_name) -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_upgrade.sql\"",
-    "db:test-migration": "bash infra/migrate/test-migration-roundtrip.sh"
+    "db:seed-users": "bash infra/seed-app-users.sh",
+    "db:test-migration": "bash infra/migrate/test-migration-roundtrip.sh",
+    "verify:roles": "node infra/verify-roles.mjs",
+    "verify:scope": "node infra/verify-scope.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "amazon-cognito-identity-js": "^6.3.22",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -27,6 +32,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
@@ -38,6 +46,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
     "pg": "^8.23.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",

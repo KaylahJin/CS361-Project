@@ -84,6 +84,12 @@ export default defineConfig({
     tailwindcss(),
     mockPositionsApiPlugin(),
   ],
+  // amazon-cognito-identity-js still reaches for Node's `global`, which a
+  // browser does not have. Without this the whole app dies on load with
+  // "ReferenceError: global is not defined" and renders a blank page.
+  define: {
+    global: 'globalThis',
+  },
   server: {
     host: true,
     port: 5173,

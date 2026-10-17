@@ -8,7 +8,11 @@ import Positions from './pages/Positions';
 import Students from './pages/Students';
 import Periods from './pages/Periods';
 import CoopPlans from './pages/CoopPlans';
+import Login from './pages/Login';
+import Account from './pages/Account';
 import Footer from './components/Footer';
+import AuthProvider from './auth/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import type { Company } from './types/company';
 
 function App() {
@@ -55,8 +59,15 @@ function App() {
           />
         );
 
+      // The navbar hides this tab when signed out, and the gate here is what
+      // catches a session that ends while the page is open: the active page is
+      // a tab in state, so nothing navigates away on its own.
       case 'students':
-        return <Students />;
+        return (
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('students')} />}>
+            <Students />
+          </ProtectedRoute>
+        );
 
       case 'periods':
         return <Periods />;
@@ -64,24 +75,40 @@ function App() {
       case 'coop-plans':
         return <CoopPlans />;
 
+      case 'login':
+        return <Login onSuccess={() => handleTabChange('account')} />;
+
+      // The fallback is the Login page itself: this app tracks the active tab
+      // in state instead of the URL, so there is nowhere to redirect to.
+      case 'account':
+        return (
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('account')} />}>
+            <Account />
+          </ProtectedRoute>
+        );
+
       default:
         return <Home onTabChange={handleTabChange} />;
     }
   };
 
+  // AuthProvider has to wrap the Navbar too, which reads auth status to choose
+  // between the login button and the account/logout pair.
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 antialiased">
-      <Navbar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+    <AuthProvider>
+      <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 antialiased">
+        <Navbar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
 
-      <div className="flex-1">
-        {renderContent()}
+        <div className="flex-1">
+          {renderContent()}
+        </div>
+
+        <Footer onTabChange={handleTabChange} />
       </div>
-
-      <Footer onTabChange={handleTabChange} />
-    </div>
+    </AuthProvider>
   );
 }
 

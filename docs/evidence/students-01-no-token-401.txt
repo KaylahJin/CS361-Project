@@ -1,0 +1,18 @@
+GET every route with no Authorization header, against the deployed API.
+Captured: 2026-10-17 02:53 UTC
+API: https://z9ly6malij.execute-api.us-east-1.amazonaws.com
+
+ROUTE                          STATUS   BODY (first 120 chars)
+/students                      401      {"message":"Unauthorized"}
+/students/6600000001           401      {"message":"Unauthorized"}
+/students/6100000001           401      {"message":"Unauthorized"}
+/coop-plans                    401      {"message":"Unauthorized"}
+/coop-plans/1                  401      {"message":"Unauthorized"}
+/companies                     200      [{"company_id":"C83","name":"อีวาย คาร์ปอเรท เซอร์วิสเซส","short_name"
+/positions                     200      [{"position_id":"POS001","company_id":"C18","company_name":"บริษัท ปูนซิเมนต์ไทย �
+/coop-info                     200      []
+/periods                       200      {"period":{"period_id":"P2568-1","name":"ภาคการศึกษาที่ 1/2568","academic_year":2568,"semest
+
+Expected, per docs/permission-matrix.md and infra/terraform/route-policy.mjs:
+  /students, /students/{id}, /coop-plans, /coop-plans/{id}  -> 401 (API Gateway, Lambda never runs)
+  /companies, /positions, /coop-info, /periods              -> 200 (public on purpose)

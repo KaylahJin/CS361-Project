@@ -1,0 +1,105 @@
+Full test run on branch feat/97-v3-02-auth.
+Captured: 2026-10-17 02:54 UTC
+Commit:   b93ea10
+
+$ npm test
+
+> cs361-project@0.0.0 test
+> vitest run
+
+
+ RUN  v3.2.7 G:/ObsidianCS/CS/CloudCS/CS361-Project
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > returns 404 for an unknown routeKey
+Unhandled routeKey DELETE /companies
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > returns 404 for inherited Object.prototype property names used as routeKey
+Unhandled routeKey toString
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > returns 404 for inherited Object.prototype property names used as routeKey
+Unhandled routeKey constructor
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > returns 404 for inherited Object.prototype property names used as routeKey
+Unhandled routeKey valueOf
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > returns 404 for inherited Object.prototype property names used as routeKey
+Unhandled routeKey hasOwnProperty
+
+stderr | infra/lambda/companies/index.test.mjs > router (index.mjs handler) > catches a thrown error from a handler and returns a generic 500 body that does not leak the thrown message
+Unhandled error in companies handler Error: SENTINEL_SHOULD_NOT_LEAK
+    at G:\ObsidianCS\CS\CloudCS\CS361-Project\infra\lambda\companies\index.test.mjs:81:13
+    at mockCall (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/spy/dist/index.js:96:15)
+    at spy (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/tinyspy/dist/index.js:47:80)
+    at handler (G:\ObsidianCS\CS\CloudCS\CS361-Project\infra\lambda\companies\index.mjs:65:18)
+    at G:\ObsidianCS\CS\CloudCS\CS361-Project\infra\lambda\companies\index.test.mjs:84:26
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+
+ ✓  backend  infra/lambda/companies/index.test.mjs (10 tests) 31ms
+stderr | infra/lambda/companies/listPositions.test.mjs > listPositions > handles database error gracefully by returning 500
+listPositions failed Error: DB connection failed
+    at G:\ObsidianCS\CS\CloudCS\CS361-Project\infra\lambda\companies\listPositions.test.mjs:83:33
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ ✓  backend  infra/lambda/companies/listPositions.test.mjs (5 tests) 30ms
+ ✓  backend  infra/migrate/build-seed.test.mjs (22 tests) 29ms
+ ✓  backend  infra/lambda/companies/listCoopPlans.test.mjs (21 tests) 28ms
+ ✓  frontend  src/components/ProtectedRoute.test.tsx (3 tests) 80ms
+ ✓  frontend  src/data/studentApi.test.ts (5 tests) 13ms
+ ✓  frontend  src/data/coopPlanApi.test.ts (10 tests) 19ms
+ ✓  frontend  src/auth/cognitoClient.test.ts (8 tests) 14ms
+ ✓  backend  infra/lambda/companies/authorize.test.mjs (27 tests) 25ms
+ ✓  frontend  src/pages/CoopPlans.test.tsx (3 tests) 430ms
+ ✓  backend  infra/lambda/companies/listStudents.test.mjs (22 tests) 26ms
+ ✓  frontend  src/pages/Students.test.tsx (9 tests) 564ms
+stderr | infra/lambda/companies/getPositionById.test.mjs > getPositionById > returns 500 when database query throws error
+getPositionById failed Error: Connection error
+    at G:\ObsidianCS\CS\CloudCS\CS361-Project\infra\lambda\companies\getPositionById.test.mjs:56:33
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///G:/ObsidianCS/CS/CloudCS/CS361-Project/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ ✓  backend  infra/lambda/companies/getPositionById.test.mjs (4 tests) 19ms
+ ✓  backend  infra/lambda/companies/getCoopPlanById.test.mjs (16 tests) 17ms
+ ✓  frontend  src/auth/AuthContext.test.tsx (9 tests) 875ms
+   ✓ AuthProvider > becomes authenticated after a successful login  366ms
+ ✓  backend  infra/lambda/companies/auth.test.mjs (7 tests) 15ms
+ ✓  backend  infra/lambda/companies/getStudentById.test.mjs (17 tests) 20ms
+ ✓  backend  infra/lambda/companies/listCoopInfo.test.mjs (6 tests) 16ms
+ ✓  backend  infra/lambda/companies/listCompanies.test.mjs (4 tests) 14ms
+ ✓  backend  infra/lambda/companies/getCompanyById.test.mjs (4 tests) 9ms
+ ✓  backend  infra/terraform/route-policy.test.mjs (12 tests) 9ms
+ ✓  frontend  src/components/Navbar.test.tsx (7 tests) 1457ms
+   ✓ Navbar sign-out > leaves the account page when signing out  602ms
+ ✓  frontend  src/App.test.tsx (2 tests) 1055ms
+   ✓ reaching the student page > a signed-in user can open it from the navbar  785ms
+ ✓  frontend  src/pages/Login.test.tsx (6 tests) 3474ms
+   ✓ Login page > calls login with the typed email and password  1093ms
+   ✓ Login page > reports success so the caller can leave the login page  561ms
+   ✓ Login page > does not report success when login fails  390ms
+   ✓ Login page > shows one generic message when login fails  474ms
+   ✓ Login page > clears a previous error when the next attempt succeeds  406ms
+   ✓ Login page > does not submit twice while a request is in flight  549ms
+
+ Test Files  24 passed (24)
+      Tests  239 passed (239)
+   Start at  09:54:46
+   Duration  7.74s (transform 2.06s, setup 5.39s, collect 5.79s, tests 8.27s, environment 26.39s, prepare 6.21s)
+

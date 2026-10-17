@@ -12,15 +12,19 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { getStudent, getStudents } from '../data/studentApi';
+import {
+  getStudent,
+  getStudents,
+  StudentApiError,
+} from '../data/studentApi';
+
+import { useAuth } from '../auth/AuthContext';
 
 import type {
   Student,
   StudentDetail,
   StudentCourse,
 } from '../types/student';
-
-import studentsData from '../data/studentsData.json';
 
 /* ============================================================
    API timeout helper
@@ -46,79 +50,71 @@ import studentsData from '../data/studentsData.json';
 };
 
 /* ============================================================
-   Local fallback data (studentsData.json)
-   Defined at module scope so it is created once and is stable
-   (no need to list it as a hook dependency).
-   ============================================================ */
-
-const localStudents: Student[] = studentsData.map((student) => ({
-  student_id: student.studentId,
-  first_name: student.firstName,
-  last_name: student.lastName,
-  email: student.email,
-  phone: student.phone,
-  birth_date: student.birthDate,
-  curriculum: student.curriculum,
-  gpa: student.gpa,
-  courses: student.courses.map((course) => ({
-    course_code: course.courseCode,
-    status: course.status,
-    grade_point: course.gradePoint,
-  })),
-}));
-
-const getFilteredLocalStudents = (
-  searchValue: string,
-  curriculumValue: string
-): Student[] => {
-  const keyword = searchValue.trim().toLowerCase();
-
-  return localStudents.filter((student) => {
-    const matchesSearch =
-      !keyword ||
-      student.student_id.toLowerCase().includes(keyword) ||
-      `${student.first_name} ${student.last_name}`
-        .toLowerCase()
-        .includes(keyword);
-
-    const matchesCurriculum =
-      !curriculumValue || student.curriculum === curriculumValue;
-
-    return matchesSearch && matchesCurriculum;
-  });
-};
-
-/* ============================================================
    Fetch student list (no React state in here)
 
-   API first
-   - Success within 10 seconds -> use API data
-   - Error / timeout -> use local JSON
+   The API is the only source. There is no bundled copy to fall back
+   on: studentsData.json held ten students' names, emails, birth dates
+   and grades, and shipping it meant anyone who loaded the page had the
+   data whether or not the API would have given it to them. A failure
+   here surfaces as an error, which is also the honest answer once the
+   route requires a token.
    ============================================================ */
 
 const fetchStudentList = async (
   searchValue: string,
-  curriculumValue: string
-): Promise<Student[]> => {
-  try {
-    return await fetchWithTimeout(
-      getStudents({
+  curriculumValue: string,
+  idToken: string | null
+): Promise<Student[]> =>
+  fetchWithTimeout(
+    getStudents(
+      {
         search: searchValue.trim() || undefined,
         curriculum: curriculumValue || undefined,
-      }),
-      10000
-    );
-  } catch (err) {
-    console.warn(
-      'Student API is unavailable or timed out. Using local studentsData.json instead.',
-      err
-    );
+      },
+      idToken
+    ),
+    10000
+  );
 
-    return getFilteredLocalStudents(searchValue, curriculumValue);
+/* ============================================================
+   Error messages
+
+   The three answers mean different things to the person reading the
+   page: sign in, ask for access, or try again. A single "failed to
+   load" would send someone who simply is not signed in to retry a
+   request that can never succeed.
+   ============================================================ */
+
+const messageForListError = (err: unknown): string => {
+  if (err instanceof StudentApiError) {
+    if (err.status === 401) return 'ลงชื่อเข้าใช้เพื่อดูข้อมูลนักศึกษา';
+    if (err.status === 403) return 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงข้อมูลนักศึกษา';
   }
+
+  return 'ไม่สามารถโหลดข้อมูลนักศึกษาได้ กรุณาลองใหม่อีกครั้ง';
+};
+
+const messageForDetailError = (err: unknown): string => {
+  if (err instanceof StudentApiError) {
+    if (err.status === 401) return 'ลงชื่อเข้าใช้เพื่อดูข้อมูลนักศึกษา';
+    if (err.status === 403) return 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงข้อมูลนักศึกษา';
+    if (err.status === 404) return 'ไม่พบข้อมูลนักศึกษา';
+  }
+
+  return 'ไม่สามารถโหลดข้อมูลนักศึกษาได้ กรุณาลองใหม่อีกครั้ง';
 };
 
 function Students() {
+  /* ============================================================
+     Session
+
+     Which students exist for this caller depends on their role, so the
+     page reloads when the session changes and asks for the token right
+     before each request instead of holding on to one.
+     ============================================================ */
+
+  const { status: authStatus, getIdToken } = useAuth();
+
   /* ============================================================
      Student List State
      ============================================================ */
@@ -158,8 +154,15 @@ function Students() {
     setError('');
 
     try {
-      const data = await fetchStudentList(searchValue, curriculumValue);
+      const data = await fetchStudentList(
+        searchValue,
+        curriculumValue,
+        await getIdToken()
+      );
       setStudents(data);
+    } catch (err) {
+      setStudents([]);
+      setError(messageForListError(err));
     } finally {
       setLoading(false);
     }
@@ -174,19 +177,46 @@ function Students() {
      an unmounted component.
      ============================================================ */
 
+  // authStatus belongs in here: signing in or out changes which students
+  // exist for this caller, and without it one person's rows stay on screen
+  // for whoever is at the keyboard next. Nothing is fetched while a stored
+  // session is still being restored — that request would carry no token, come
+  // back 401, and show an error that then corrects itself.
+  //
+  // The filters are deliberately not dependencies. `search` updates on every
+  // keystroke, and a request per character is worse than the explicit reload
+  // the search and filter handlers already do.
   useEffect(() => {
+    if (authStatus === 'loading') return;
+
     let cancelled = false;
 
-    fetchStudentList('', '').then((data) => {
-      if (cancelled) return;
-      setStudents(data);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError('');
+
+    getIdToken()
+      .then((token) => fetchStudentList(search, curriculum, token))
+      .then((data) => {
+        if (cancelled) return;
+        setStudents(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStudents([]);
+        setSelectedStudent(null);
+        setIsDetailOpen(false);
+        setError(messageForListError(err));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus]);
 
   /* ============================================================
      Search
@@ -213,10 +243,8 @@ function Students() {
 
   /* ============================================================
      Open Student Detail
-     
-     API first
-     - Success within 10 seconds -> use API data
-     - Error / timeout -> use local JSON
+
+     The API is the only source here too; see fetchStudentList.
      ============================================================ */
 
   const handleStudentClick = async (studentId: string) => {
@@ -227,27 +255,14 @@ function Students() {
 
     try {
       const data = await fetchWithTimeout(
-        getStudent(studentId),
+        getStudent(studentId, await getIdToken()),
         10000
       );
 
       setSelectedStudent(data);
-    } catch (error) {
-      console.warn(
-        `Student API is unavailable or timed out. Using local data for ${studentId}.`,
-        error
-      );
-
-      const localStudent = localStudents.find(
-        (student) => student.student_id === studentId
-      );
-
-      if (localStudent) {
-        setSelectedStudent(localStudent as StudentDetail);
-      } else {
-        setSelectedStudent(null);
-        setDetailError('ไม่พบข้อมูลนักศึกษา');
-      }
+    } catch (err) {
+      setSelectedStudent(null);
+      setDetailError(messageForDetailError(err));
     } finally {
       setDetailLoading(false);
     }
@@ -779,13 +794,13 @@ function Students() {
                       </div>
 
                       <span className="text-xs font-semibold text-slate-500">
-                        {selectedStudent.courses.length}{' '}
+                        {(selectedStudent.courses ?? []).length}{' '}
                         รายวิชา
                       </span>
 
                     </div>
 
-                    {selectedStudent.courses.length === 0 ? (
+                    {(selectedStudent.courses ?? []).length === 0 ? (
 
                       <div className="px-6 pb-8 text-center">
 
@@ -823,7 +838,7 @@ function Students() {
 
                           <tbody className="divide-y divide-slate-100">
 
-                            {selectedStudent.courses.map(
+                            {(selectedStudent.courses ?? []).map(
                               (course: StudentCourse) => (
                                 <tr key={course.course_code}>
 

@@ -1,21 +1,18 @@
-// ============================================================
-// CS361 V2 — Coop Plan API Client
-// ============================================================
-// Calls: API Gateway → Lambda → RDS PostgreSQL
+// Coop plan API client: API Gateway, Lambda, then RDS.
 //
-// Fallback:
-// - API timeout after 10 seconds
-// - API error
-// - API unavailable
-// → use local coopPlansData.json
-// ============================================================
+// Both routes are behind the JWT authorizer, so both functions take the
+// Cognito ID token and send it as a Bearer header.
+//
+// There is no bundled fallback. coopPlansData.json used to serve that role,
+// but it carried every student's id, name, note and review comments, and
+// anything imported here is compiled into the public JS bundle — readable
+// without signing in, which is exactly what the authorizer exists to stop.
+// A request that cannot be answered now fails, and the page says so.
 
 import type {
   CoopPlan,
   CoopPlanQueryParams,
 } from '../types/coopPlan';
-
-import coopPlansData from './coopPlansData.json';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -32,15 +29,14 @@ export class CoopPlanApiError extends Error {
   }
 }
 
-// ============================================================
-// Local fallback data
-// ============================================================
-
-const localCoopPlans = coopPlansData as CoopPlan[];
-
-// ============================================================
-// Fetch with timeout
-// ============================================================
+/**
+ * Without this header the request is rejected with 401 before the Lambda
+ * runs. Pass `useAuth().getIdToken()`, read right before the call.
+ */
+function authHeaders(idToken?: string | null): RequestInit | undefined {
+  if (!idToken) return undefined;
+  return { headers: { Authorization: `Bearer ${idToken}` } };
+}
 
 async function fetchWithTimeout(
   url: string,
@@ -62,136 +58,9 @@ async function fetchWithTimeout(
   }
 }
 
-// ============================================================
-// Local fallback — filter
-// ============================================================
-
-function filterLocalCoopPlans(
-  params?: CoopPlanQueryParams
-): CoopPlan[] {
-  if (!params) {
-    return localCoopPlans;
-  }
-
-  const search = params.search?.trim().toLowerCase();
-  const status = params.status?.trim();
-  const studentId = params.studentId?.trim();
-  const curriculum = params.curriculum?.trim();
-  const periodId = params.periodId?.trim();
-  const companyId = params.companyId?.trim();
-  const positionId = params.positionId?.trim();
-
-  return localCoopPlans.filter((plan) => {
-    // --------------------------------------------------------
-    // Search
-    // --------------------------------------------------------
-
-    if (search) {
-      const searchableText = [
-        plan.student_id,
-        plan.first_name,
-        plan.last_name,
-        `${plan.first_name} ${plan.last_name}`,
-        plan.company_name,
-        plan.company_short_name,
-        plan.position_title,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      if (!searchableText.includes(search)) {
-        return false;
-      }
-    }
-
-    // --------------------------------------------------------
-    // Status
-    // --------------------------------------------------------
-
-    if (status && plan.status !== status) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Student
-    // --------------------------------------------------------
-
-    if (studentId && plan.student_id !== studentId) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Curriculum
-    // --------------------------------------------------------
-
-    if (curriculum && plan.curriculum !== curriculum) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Period
-    // --------------------------------------------------------
-
-    if (periodId && plan.period_id !== periodId) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Company
-    // --------------------------------------------------------
-
-    if (companyId && plan.company_id !== companyId) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Position
-    // --------------------------------------------------------
-
-    if (positionId && plan.position_id !== positionId) {
-      return false;
-    }
-
-    // --------------------------------------------------------
-    // Submitted date
-    // --------------------------------------------------------
-
-    if (params.submittedFrom && plan.submitted_at) {
-      if (
-        plan.submitted_at <
-        `${params.submittedFrom}T00:00:00`
-      ) {
-        return false;
-      }
-    }
-
-    if (params.submittedTo && plan.submitted_at) {
-      if (
-        plan.submitted_at >
-        `${params.submittedTo}T23:59:59`
-      ) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-}
-
-// ============================================================
-// GET /coop-plans
-// ============================================================
-
-/**
- * Fetch coop plans with optional search + filters.
- *
- * API is tried first.
- * If API fails or times out after 10 seconds,
- * local coopPlansData.json is used instead.
- */
 export async function getCoopPlans(
-  params?: CoopPlanQueryParams
+  params?: CoopPlanQueryParams,
+  idToken?: string | null
 ): Promise<CoopPlan[]> {
   const qs = new URLSearchParams();
 
@@ -238,7 +107,7 @@ export async function getCoopPlans(
   }`;
 
   try {
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, authHeaders(idToken));
 
     if (!res.ok) {
       throw new CoopPlanApiError(
@@ -249,35 +118,26 @@ export async function getCoopPlans(
 
     return await res.json();
   } catch (error) {
-    console.warn(
-      'Coop Plan API unavailable. Using local coopPlansData.json.',
-      error
-    );
+    if (error instanceof CoopPlanApiError) {
+      throw error;
+    }
 
-    return filterLocalCoopPlans(params);
+    console.warn('Coop Plan API unreachable.', error);
+
+    throw error;
   }
 }
 
-// ============================================================
-// GET /coop-plans/{planId}
-// ============================================================
-
-/**
- * Fetch a single coop plan by ID.
- *
- * API is tried first.
- * If API fails or times out after 10 seconds,
- * local coopPlansData.json is used instead.
- */
 export async function getCoopPlan(
-  planId: number
+  planId: number,
+  idToken?: string | null
 ): Promise<CoopPlan> {
   const url = `${API_BASE}/coop-plans/${encodeURIComponent(
     planId
   )}`;
 
   try {
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, authHeaders(idToken));
 
     if (!res.ok) {
       throw new CoopPlanApiError(
@@ -288,22 +148,12 @@ export async function getCoopPlan(
 
     return await res.json();
   } catch (error) {
-    console.warn(
-      `Coop Plan API unavailable for plan ${planId}. Using local coopPlansData.json.`,
-      error
-    );
-
-    const localPlan = localCoopPlans.find(
-      (plan) => plan.plan_id === planId
-    );
-
-    if (!localPlan) {
-      throw new CoopPlanApiError(
-        `Coop plan ${planId} not found`,
-        404
-      );
+    if (error instanceof CoopPlanApiError) {
+      throw error;
     }
 
-    return localPlan;
+    console.warn(`Coop Plan API unreachable for plan ${planId}.`, error);
+
+    throw error;
   }
 }

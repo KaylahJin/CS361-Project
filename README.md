@@ -18,6 +18,8 @@ The company list is served by a real AWS backend. To stand your own up:
 | [`docs/company-schema-design.md`](docs/company-schema-design.md) | The `companies` table and why its columns look like that |
 | [`docs/architecture-diagram-brief.md`](docs/architecture-diagram-brief.md) | Brief to hand an AI (or a designer) to produce the architecture diagrams |
 | [`docs/overview/V2.md`](docs/overview/V2.md) | The team's V2 system design, scope, and decision log |
+| [`docs/v3-02-auth.md`](docs/v3-02-auth.md) | **Login and permissions.** How auth works, test accounts, which settings are yours to change |
+| [`docs/permission-matrix.md`](docs/permission-matrix.md) | Which role may read which plan, in table form |
 
 Already have a stack? Point the local dev server at it with
 `npm run env:sync`, or publish the site to its S3 bucket with

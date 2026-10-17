@@ -5,7 +5,7 @@
 export type CoopPlanStatus =
   | 'PREPARING'
   | 'SUBMITTED'
-  | 'UNDER_REVIEW'
+  | 'RETURNED'
   | 'APPROVED'
   | 'REJECTED';
 

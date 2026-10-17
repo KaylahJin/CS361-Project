@@ -1,0 +1,32 @@
+The deployed JavaScript bundle, searched for the data it used to carry.
+Captured: 2026-10-17 02:54 UTC
+Site:   http://coop-portal-coop-web-067504979088.s3-website-us-east-1.amazonaws.com
+Bundle: assets/index-gNfpPgy0.js  (named by index.html, so this is what a visitor loads)
+
+SEARCHED FOR           OCCURRENCES
+example.ac.th          0
+6100000001             0
+6600000001             0
+birthDate              0
+gradePoint             0
+studentId              1
+reviewer_name          1
+
+Before this change the same searches found: 10 student emails, every
+student id, birth dates, GPAs and course codes from studentsData.json,
+plus every coop plan's student note and review comment from
+coopPlansData.json. Both files are deleted; the API is the only source.
+
+The previous bundles are gone from the bucket, not merely unreferenced:
+  index-TWoh5pp_.js      HTTP 404
+  index-CuymO2R6.js      HTTP 404
+
+The two non-zero counts are source identifiers, not data:
+
+  studentId:
+    chParams;e?.status&&n.set(`status`,e.status),e?.studentId&&n.set(`studentId`,e.studentId),e?.search&&n.se
+  reviewer_name:
+    )]})]}),(0,I.jsx)(z,{label:`ผู้ตรวจสอบ`,value:e.reviewer_name}),(0,I.jsx)(z,{label:`วันที่ตรวจสอบ`,value:sa(e
+
+The first is the query-parameter name the client sets; the second is a
+field read out of an API response. Neither carries a value.

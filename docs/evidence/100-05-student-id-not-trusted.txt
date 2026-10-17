@@ -1,0 +1,25 @@
+COOP_TEST_PASSWORD=... npm run verify:scope
+api: deployed stack; signed in as student1@example.com over SRP
+run: 2026-10-16T17:01:03Z
+
+
+> cs361-project@0.0.0 verify:scope
+> node infra/verify-scope.mjs
+
+api: https://z9ly6malij.execute-api.us-east-1.amazonaws.com
+
+signed in as:        student1@example.com
+own student_id:      6600000001
+another student_id:  6100000001  (found via staff1@example.com, who sees all)
+staff sees in total: 10 distinct student_ids, 10 plans
+
+  ok    GET /coop-plans (no params)                                          200, 1 plans, student_ids: 6600000001
+                                                                             expected: 200, only the caller's own student_id
+  ok    GET /coop-plans?studentId=6100000001                                 200, 0 plans, student_ids: (none)
+                                                                             expected: 200 with zero rows: ANDed with the role filter, so it narrows and contradicts
+  ok    GET /coop-plans?student_id=6100000001                                200, 1 plans, student_ids: 6600000001
+                                                                             expected: 200 with the caller's own rows: an unknown parameter is inert
+  ok    the other student's id never appears in any response to the student  6100000001 absent from both responses
+                                                                             expected: absent
+
+identity comes from the token only; a caller-supplied student_id cannot widen scope

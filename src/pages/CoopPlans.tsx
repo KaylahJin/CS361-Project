@@ -24,6 +24,8 @@ import type {
   CoopPlanStatus,
 } from '../types/coopPlan';
 
+import { useAuth } from '../auth/AuthContext';
+
 function StatusBadge({ status }: { status: CoopPlanStatus }) {
   const config = {
     PREPARING: {
@@ -34,8 +36,8 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
       label: 'ยื่นแล้ว',
       className: 'bg-blue-50 text-blue-700 border-blue-200',
     },
-    UNDER_REVIEW: {
-      label: 'กำลังตรวจสอบ',
+    RETURNED: {
+      label: 'ส่งกลับแก้ไข',
       className: 'bg-amber-50 text-amber-700 border-amber-200',
     },
     APPROVED: {
@@ -75,11 +77,13 @@ function LoadingState({
 }
 
 function ErrorState({
+  title,
   message,
   onRetry,
 }: {
+  title: string;
   message: string;
-  onRetry: () => void;
+  onRetry?: () => void;
 }) {
   return (
     <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
@@ -88,21 +92,76 @@ function ErrorState({
       </div>
 
       <h3 className="text-base font-bold text-slate-700">
-        ไม่สามารถโหลดข้อมูลได้
+        {title}
       </h3>
 
       <p className="mt-2 max-w-md text-sm text-slate-400">
         {message}
       </p>
 
-      <button
-        onClick={onRetry}
-        className="mt-5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
-      >
-        ลองอีกครั้ง
-      </button>
+      {/* No retry button for a refusal: the same request can only be refused
+          again, and offering the button suggests the problem is the network. */}
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="mt-5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+        >
+          ลองอีกครั้ง
+        </button>
+      )}
     </div>
   );
+}
+
+/* ============================================================
+   Why the list is empty
+
+   The three answers mean different things to the person reading the
+   page: sign in, ask for access, or try again. The API's own message
+   ("Failed to fetch coop plans: Forbidden") said none of them, and sent
+   an admin who simply has no plan access off to debug a network fault.
+
+   An ADMIN reaching the 403 branch is not a bug — managing accounts and
+   roles does not carry plan access, which is why the message names the
+   roles that do.
+   ============================================================ */
+
+type PlanError = {
+  title: string;
+  detail: string;
+  canRetry: boolean;
+};
+
+function describePlanError(err: unknown, notFound: string): PlanError {
+  if (err instanceof CoopPlanApiError) {
+    if (err.status === 401) {
+      return {
+        title: 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ',
+        detail: 'คำร้องแผนสหกิจเปิดให้เฉพาะผู้ที่ลงชื่อเข้าใช้แล้วเท่านั้น',
+        canRetry: false,
+      };
+    }
+
+    if (err.status === 403) {
+      return {
+        title: 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงแผนสหกิจ',
+        detail:
+          'การดูแผนสหกิจต้องใช้บทบาทนักศึกษา อาจารย์ที่ปรึกษา หรือเจ้าหน้าที่สหกิจ ' +
+          'หากต้องการสิทธิ์นี้ ให้ผู้ดูแลระบบกำหนดบทบาทให้บัญชีของคุณ',
+        canRetry: false,
+      };
+    }
+
+    if (err.status === 404) {
+      return { title: notFound, detail: 'ข้อมูลที่ขอไม่มีอยู่ หรือไม่อยู่ในสิทธิ์ของบัญชีนี้', canRetry: false };
+    }
+  }
+
+  return {
+    title: 'ไม่สามารถโหลดข้อมูลได้',
+    detail: 'เกิดข้อผิดพลาดระหว่างเชื่อมต่อกับระบบ กรุณาลองใหม่อีกครั้ง',
+    canRetry: true,
+  };
 }
 
 function EmptyState() {
@@ -371,13 +430,18 @@ function CoopPlans() {
 
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<PlanError | null>(null);
 
   const [search, setSearch] = useState('');
   const [status, setStatus] =
     useState<CoopPlanStatus | ''>('');
   const [curriculum, setCurriculum] = useState('');
   const [periodId, setPeriodId] = useState('');
+
+  // Read right before each request, never at mount: the token expires after an
+  // hour and this is what refreshes it. `authStatus` is here so the list
+  // reloads when the session changes — see the effect below.
+  const { getIdToken, status: authStatus } = useAuth();
 
   const loadPlans = async () => {
     setLoading(true);
@@ -391,36 +455,42 @@ function CoopPlans() {
         periodId: periodId || undefined,
       };
 
-      const data = await getCoopPlans(params);
+      const data = await getCoopPlans(params, await getIdToken());
       setPlans(data);
     } catch (err) {
-      if (err instanceof CoopPlanApiError) {
-        setError(err.message);
-      } else {
-        setError('ไม่สามารถเชื่อมต่อกับ API ได้');
-      }
+      // Drop whatever the previous caller could see. Leaving their rows on
+      // screen after a refusal would show one person's plans to whoever is at
+      // the keyboard next.
+      setPlans([]);
+      setSelectedPlan(null);
+
+      setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     } finally {
       setLoading(false);
     }
   };
 
+  // authStatus belongs in here: signing in or out changes which plans exist
+  // for this caller, and without it the page keeps showing the previous
+  // session's result until something else happens to re-render.
+  //
+  // Nothing is fetched while the stored session is still being restored. A
+  // request sent in that window would carry no token and come back 401, and
+  // the user would watch an error appear and then correct itself.
   useEffect(() => {
+    if (authStatus === 'loading') return;
     loadPlans();
-  }, [search, status, curriculum, periodId]);
+  }, [search, status, curriculum, periodId, authStatus]);
 
   const handleSelectPlan = async (planId: number) => {
     setDetailLoading(true);
     setError(null);
 
     try {
-      const plan = await getCoopPlan(planId);
+      const plan = await getCoopPlan(planId, await getIdToken());
       setSelectedPlan(plan);
     } catch (err) {
-      if (err instanceof CoopPlanApiError) {
-        setError(err.message);
-      } else {
-        setError('ไม่สามารถโหลดรายละเอียดคำร้องได้');
-      }
+      setError(describePlanError(err, 'ไม่พบคำร้องนี้'));
     } finally {
       setDetailLoading(false);
     }
@@ -513,7 +583,7 @@ function CoopPlans() {
             <option value="">ทุกสถานะ</option>
             <option value="PREPARING">กำลังเตรียม</option>
             <option value="SUBMITTED">ยื่นแล้ว</option>
-            <option value="UNDER_REVIEW">กำลังตรวจสอบ</option>
+            <option value="RETURNED">ส่งกลับแก้ไข</option>
             <option value="APPROVED">อนุมัติแล้ว</option>
             <option value="REJECTED">ไม่อนุมัติ</option>
           </select>
@@ -540,8 +610,9 @@ function CoopPlans() {
           <LoadingState text="กำลังโหลดข้อมูลคำร้อง..." />
         ) : error ? (
           <ErrorState
-            message={error}
-            onRetry={loadPlans}
+            title={error.title}
+            message={error.detail}
+            onRetry={error.canRetry ? loadPlans : undefined}
           />
         ) : plans.length === 0 ? (
           <EmptyState />
