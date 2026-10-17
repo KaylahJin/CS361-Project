@@ -73,7 +73,7 @@ function App() {
         return <Periods />;
 
       case 'coop-plans':
-        return <CoopPlans />;
+        return <CoopPlans onNavigateLogin={() => handleTabChange('login')} />;
 
       case 'login':
         return <Login onSuccess={() => handleTabChange('account')} />;
