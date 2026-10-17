@@ -229,7 +229,9 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
 
     expect(await screen.findByText('6609600001')).toBeInTheDocument();
     expect(screen.getByText('6109600002')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Co-op.*Plans Review/i);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      /แผนสหกิจศึกษาและการพิจารณา/,
+    );
     expect(screen.getByRole('button', { name: /รอตรวจ/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /อนุมัติแล้ว/i })).toBeInTheDocument();
   });
