@@ -20,16 +20,42 @@ export interface Session {
   email: string;
 }
 
-const pool = new CognitoUserPool({
-  UserPoolId: cognitoConfig.userPoolId,
-  ClientId: cognitoConfig.clientId,
-});
+const pool: CognitoUserPool | null = (() => {
+  const userPoolId =
+    cognitoConfig.userPoolId ||
+    (import.meta.env.MODE === 'test' ? 'us-east-1_test' : '');
+  const clientId =
+    cognitoConfig.clientId ||
+    (import.meta.env.MODE === 'test' ? 'testclient' : '');
+
+  if (!userPoolId || !clientId) {
+    return null;
+  }
+
+  try {
+    return new CognitoUserPool({
+      UserPoolId: userPoolId,
+      ClientId: clientId,
+    });
+  } catch (err) {
+    console.warn('Could not initialize Cognito User Pool:', err);
+    return null;
+  }
+})();
 
 /**
  * Rejects with the raw Cognito error so the caller can tell a wrong password
  * from a network failure. The Login page collapses both into one message.
  */
 export function login(email: string, password: string): Promise<Session> {
+  if (!pool) {
+    return Promise.reject(
+      new Error(
+        'Cognito User Pool is not configured. Both VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_CLIENT_ID must be set.'
+      )
+    );
+  }
+
   const user = new CognitoUser({ Username: email, Pool: pool });
   const details = new AuthenticationDetails({ Username: email, Password: password });
 
@@ -44,7 +70,7 @@ export function login(email: string, password: string): Promise<Session> {
 }
 
 export function logout(): void {
-  pool.getCurrentUser()?.signOut();
+  pool?.getCurrentUser()?.signOut();
 }
 
 /**
@@ -54,6 +80,8 @@ export function logout(): void {
  * because the caller answers all of them by showing the login form.
  */
 export function getCurrentSession(): Promise<Session | null> {
+  if (!pool) return Promise.resolve(null);
+
   const current = pool.getCurrentUser();
   if (!current) return Promise.resolve(null);
 
