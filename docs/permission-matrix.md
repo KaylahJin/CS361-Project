@@ -64,7 +64,10 @@ owns that distinction so the two handlers cannot drift apart.
 
 `docs/overview/V3-01-data-model.md` §2: "การเป็น ADMIN เพียงอย่างเดียวไม่ให้สิทธิ์
 พิจารณาแผนโดยอัตโนมัติ". An admin manages accounts, roles and assignments; to
-see or review a plan they need a `STAFF` or `ADVISOR` row as well.
+see or review a plan, that account's `app_users.role` must be changed to
+`STAFF` or `ADVISOR`. `app_users` holds exactly one role per `cognito_sub`
+(primary key) — there is no second row and no dual-role state, so "ADMIN
+plus reviewer access" means switching the role, not adding one.
 
 ### Query parameters never widen scope
 

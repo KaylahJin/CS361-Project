@@ -77,6 +77,17 @@ describe('assertCanViewPlan', () => {
     );
   });
 
+  it('STUDENT with no linked student_id: throws even when plan.student_id is also null', async () => {
+    // Without the `user.studentId &&` guard, null === null would let an
+    // unlinked account view a plan that also has no student_id set.
+    const orphan = { sub: 'sub-9', role: 'STUDENT', studentId: null };
+
+    await expect(assertCanViewPlan(orphan, { student_id: null })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
   it('ADVISOR assigned to that student: resolves', async () => {
     queryMock.mockResolvedValue({ rows: [{ student_id: 'S002' }] });
 
