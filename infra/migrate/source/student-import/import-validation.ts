@@ -24,7 +24,7 @@ function parseCsv<T>(contents: string): CsvRecord<T>[] {
       relax_column_count: false,
     }) as Record<string, string>[];
   } catch (error) {
-    throw new Error(`CSV format error: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Validation failed: ${(error as Error).message}`, { cause: error });
   }
 
   return rows.map((value, index) => ({

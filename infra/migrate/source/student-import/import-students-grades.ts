@@ -5,7 +5,6 @@ import { parseArgs } from "node:util";
 import pg from "pg";
 import type {
   ImportRowResult,
-  ImportStatus,
   ImportSummary,
   StudentImportRecord,
   StudentCourseImportRecord,
@@ -224,7 +223,7 @@ async function main(): Promise<void> {
     courseRecords = parseStudentCoursesCsv(await readFile(coursesPath, "utf8"));
   } catch (error) {
     if (error instanceof RowValidationError) throw error;
-    throw new Error(`Cannot read/validate input CSV: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Cannot read/validate input CSV: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 
   if (dryRun) {
@@ -264,6 +263,10 @@ async function main(): Promise<void> {
     for (const record of studentsRecords) {
       console.log(`>>> กำลังนำเข้า student_id: ${record.value.student_id}`);
       addResult(studentSummary, await importStudent(client, record.value, record.rowNumber));
+    }
+
+    for (const record of courseRecords) {
+      addResult(courseSummary, await importStudentCourse(client, record.value, record.rowNumber));
     }
   } finally {
     client.release();
