@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   ArrowLeft,
@@ -7,6 +7,8 @@ import {
   FileText,
   GraduationCap,
   Loader2,
+  Pencil,
+  Plus,
   Search,
   UserRound,
   XCircle,
@@ -18,11 +20,14 @@ import {
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
-import type {
-  CoopPlan,
-  CoopPlanQueryParams,
-  CoopPlanStatus,
+import {
+  isPlanEditable,
+  type CoopPlan,
+  type CoopPlanQueryParams,
+  type CoopPlanStatus,
 } from '../types/coopPlan';
+
+import CoopPlanForm from '../pages/CoopPlanForm';
 
 import { useAuth } from '../auth/AuthContext';
 
@@ -130,6 +135,9 @@ type PlanError = {
   title: string;
   detail: string;
   canRetry: boolean;
+  // The HTTP status when the API answered. The page uses it to stop offering
+  // "create a plan" to a caller the API has just refused.
+  status?: number;
 };
 
 function describePlanError(err: unknown, notFound: string): PlanError {
@@ -139,6 +147,7 @@ function describePlanError(err: unknown, notFound: string): PlanError {
         title: 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ',
         detail: 'คำร้องแผนสหกิจเปิดให้เฉพาะผู้ที่ลงชื่อเข้าใช้แล้วเท่านั้น',
         canRetry: false,
+        status: 401,
       };
     }
 
@@ -149,11 +158,17 @@ function describePlanError(err: unknown, notFound: string): PlanError {
           'การดูแผนสหกิจต้องใช้บทบาทนักศึกษา อาจารย์ที่ปรึกษา หรือเจ้าหน้าที่สหกิจ ' +
           'หากต้องการสิทธิ์นี้ ให้ผู้ดูแลระบบกำหนดบทบาทให้บัญชีของคุณ',
         canRetry: false,
+        status: 403,
       };
     }
 
     if (err.status === 404) {
-      return { title: notFound, detail: 'ข้อมูลที่ขอไม่มีอยู่ หรือไม่อยู่ในสิทธิ์ของบัญชีนี้', canRetry: false };
+      return {
+        title: notFound,
+        detail: 'ข้อมูลที่ขอไม่มีอยู่ หรือไม่อยู่ในสิทธิ์ของบัญชีนี้',
+        canRetry: false,
+        status: 404,
+      };
     }
   }
 
@@ -192,6 +207,21 @@ function formatDate(value: string | null) {
   });
 }
 
+// Why there is no edit button. Shown instead of the button so a student looking
+// at a submitted or decided plan is told, not left to wonder where it went.
+function lockedReason(status: CoopPlanStatus): string | null {
+  switch (status) {
+    case 'SUBMITTED':
+      return 'แผนนี้ยื่นแล้วจึงแก้ไขไม่ได้ จนกว่าผู้พิจารณาจะส่งกลับให้แก้ไข';
+    case 'APPROVED':
+      return 'แผนนี้ได้รับอนุมัติแล้ว แก้ไขไม่ได้';
+    case 'REJECTED':
+      return 'แผนนี้ไม่ได้รับอนุมัติ แก้ไขไม่ได้';
+    default:
+      return null;
+  }
+}
+
 function InfoRow({
   label,
   value,
@@ -215,10 +245,14 @@ function InfoRow({
 function PlanDetail({
   plan,
   onBack,
+  onEdit,
 }: {
   plan: CoopPlan;
   onBack: () => void;
+  onEdit: () => void;
 }) {
+  const locked = lockedReason(plan.status);
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <button
@@ -246,8 +280,34 @@ function PlanDetail({
             </p>
           </div>
 
-          <StatusBadge status={plan.status} />
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <StatusBadge status={plan.status} />
+
+            {/* A convenience, not the access control: the API checks the owner
+                and the status again on every save. Advisors and staff can read
+                a draft too, so the caption says who the button is for. */}
+            {isPlanEditable(plan.status) && (
+              <>
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  <Pencil className="h-4 w-4" />
+                  แก้ไขแผน
+                </button>
+
+                <span className="text-xs text-slate-400">
+                  แก้ไขได้เฉพาะนักศึกษาเจ้าของแผน
+                </span>
+              </>
+            )}
+          </div>
         </div>
+
+        {locked && (
+          <p className="mt-4 text-sm text-slate-500">{locked}</p>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -428,6 +488,14 @@ function CoopPlans() {
   const [selectedPlan, setSelectedPlan] =
     useState<CoopPlan | null>(null);
 
+  // The create/edit form, when open. `plan` is absent for a new plan.
+  const [editor, setEditor] = useState<{ plan?: CoopPlan } | null>(null);
+
+  // The newest plan the open form saved, exactly as the API returned it. When
+  // the form closes the page shows this, so what is on screen is what the
+  // database holds rather than what the student last typed.
+  const savedInEditor = useRef<CoopPlan | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<PlanError | null>(null);
@@ -496,14 +564,52 @@ function CoopPlans() {
     }
   };
 
+  const openEditor = (plan?: CoopPlan) => {
+    savedInEditor.current = null;
+    setEditor({ plan });
+  };
+
+  const closeEditor = () => {
+    const back = savedInEditor.current ?? editor?.plan ?? null;
+
+    savedInEditor.current = null;
+    setEditor(null);
+    setSelectedPlan(back);
+
+    // The list behind the form should show what was just saved.
+    void loadPlans();
+  };
+
+  if (editor) {
+    return (
+      <CoopPlanForm
+        key={editor.plan?.plan_id ?? 'new'}
+        plan={editor.plan}
+        onBack={closeEditor}
+        onSaved={(saved) => {
+          savedInEditor.current = saved;
+        }}
+      />
+    );
+  }
+
   if (selectedPlan) {
     return (
       <PlanDetail
         plan={selectedPlan}
         onBack={() => setSelectedPlan(null)}
+        onEdit={() => openEditor(selectedPlan)}
       />
     );
   }
+
+  // Offered to anyone signed in, except a caller the list has just refused: a
+  // 401/403 there means the account has no plan role, so a create form could
+  // only be refused too. Which role may create is still decided by the API —
+  // an advisor or staff member gets the button and a 403 when they use it.
+  const canCreate =
+    authStatus === 'authenticated' &&
+    !(error && (error.status === 401 || error.status === 403));
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -526,6 +632,17 @@ function CoopPlans() {
           ตรวจสอบรายการคำร้องแผนสหกิจศึกษา
           สถานะการพิจารณา และรายละเอียดนักศึกษาและสถานประกอบการ
         </p>
+
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => openEditor()}
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            สร้างแผนใหม่
+          </button>
+        )}
       </section>
 
       {/* Filters */}
