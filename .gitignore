@@ -45,3 +45,4 @@ tfplan*
 *.njsproj
 *.sln
 *.sw?
+reports/
