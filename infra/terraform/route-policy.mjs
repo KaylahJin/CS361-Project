@@ -19,6 +19,9 @@ export const PRIVATE_ROUTES = [
   'GET /coop-plans/{planId}',
   'GET /students',
   'GET /students/{studentId}',
+  'POST /coop-plans',
+  'PATCH /coop-plans/{planId}',
+  'POST /coop-plans/{planId}/submit',
 ];
 
 /** Routes that are public on purpose. */

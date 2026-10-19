@@ -11,6 +11,9 @@ const {
   assertCanViewPlan,
   buildStudentScope,
   studentColumnsFor,
+  assertCanCreatePlan,
+  assertCanEditPlan,
+  assertCanSubmitPlan,
   ForbiddenError,
 } = await import('./authorize.mjs');
 
@@ -242,5 +245,75 @@ describe('studentColumnsFor', () => {
     const stranger = { sub: 'sub-x', role: 'EMPLOYER_COORDINATOR', studentId: null };
 
     expect(() => studentColumnsFor(stranger)).toThrow(ForbiddenError);
+  });
+});
+
+describe('assertCanCreatePlan', () => {
+  it('STUDENT linked to a student record: allowed', () => {
+    expect(() => assertCanCreatePlan(STUDENT)).not.toThrow();
+  });
+
+  it.each([
+    ['ADVISOR', ADVISOR],
+    ['STAFF', STAFF],
+    ['ADMIN', ADMIN],
+    ['unknown role', { sub: 'x', role: 'SUPERUSER', studentId: 'S001' }],
+  ])('%s: refused, even when a student_id is attached', (_name, user) => {
+    expect(() => assertCanCreatePlan(user)).toThrow(ForbiddenError);
+  });
+
+  it('STUDENT with no linked student_id: refused rather than creating an ownerless plan', () => {
+    expect(() => assertCanCreatePlan({ ...STUDENT, studentId: null })).toThrow(ForbiddenError);
+  });
+});
+
+describe('assertCanEditPlan', () => {
+  const plan = { plan_id: 1, student_id: 'S001' };
+
+  it('STUDENT who owns the plan: allowed', () => {
+    expect(() => assertCanEditPlan(STUDENT, plan)).not.toThrow();
+  });
+
+  it('STUDENT who does not own the plan: refused', () => {
+    expect(() => assertCanEditPlan({ ...STUDENT, studentId: 'S999' }, plan)).toThrow(ForbiddenError);
+  });
+
+  it.each([
+    ['ADVISOR', ADVISOR],
+    ['STAFF', STAFF],
+    ['ADMIN', ADMIN],
+    ['unknown role', { sub: 'x', role: 'SUPERUSER', studentId: 'S001' }],
+  ])('%s: refused even when their studentId happens to match the plan', (_name, user) => {
+    expect(() => assertCanEditPlan({ ...user, studentId: 'S001' }, plan)).toThrow(ForbiddenError);
+  });
+
+  it('STUDENT with no linked student_id: refused', () => {
+    expect(() => assertCanEditPlan({ ...STUDENT, studentId: null }, plan)).toThrow(ForbiddenError);
+  });
+
+  it('does a pure in-memory check: no database round trip, so nothing to cache or go stale', () => {
+    queryMock.mockReset();
+    assertCanEditPlan(STUDENT, plan);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('assertCanSubmitPlan', () => {
+  const plan = { student_id: 'S001' };
+
+  it('lets the student who owns the plan submit it', () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: 'S001' }, plan)).not.toThrow();
+  });
+
+  it("refuses a student submitting someone else's plan", () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: 'S999' }, plan)).toThrow(ForbiddenError);
+  });
+
+  it('refuses a student account that is not linked to a student record', () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: null }, { student_id: null })).toThrow(ForbiddenError);
+  });
+
+  it.each(['ADVISOR', 'STAFF', 'ADMIN', 'SOMETHING_NEW'])('refuses the %s role: only the owning student submits', (role) => {
+    expect(() => assertCanSubmitPlan({ role, studentId: 'S001' }, plan)).toThrow(ForbiddenError);
   });
 });

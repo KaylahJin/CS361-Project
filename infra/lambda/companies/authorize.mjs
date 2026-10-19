@@ -157,3 +157,48 @@ export function studentColumnsFor(user) {
 
   throw new ForbiddenError(`role ${user.role} may not read student records`);
 }
+
+/**
+ * Writes are student-only: a plan is created and edited by the student it
+ * belongs to, and by nobody else. ADVISOR and STAFF review plans (V3-05) but
+ * never author them, and ADMIN has no plan access at all. Anything else,
+ * including an unknown role, is refused.
+ *
+ * This is the role and ownership half only. Whether the plan's current status
+ * allows the action is checked next to it, in planWorkflow.mjs.
+ */
+function assertLinkedStudent(user, action) {
+  if (user.role !== 'STUDENT') {
+    throw new ForbiddenError(`role ${user.role} may not ${action} coop plans`);
+  }
+  // Without this, a broken account link would compare against null and look
+  // like "not the owner" instead of the configuration fault it is.
+  if (!user.studentId) {
+    throw new ForbiddenError('student account is not linked to a student record');
+  }
+}
+
+/** Throws ForbiddenError unless this caller may create a plan for themselves. */
+export function assertCanCreatePlan(user) {
+  assertLinkedStudent(user, 'create');
+}
+
+/** Throws ForbiddenError unless this caller is the student who owns this already-fetched plan. */
+export function assertCanEditPlan(user, plan) {
+  assertLinkedStudent(user, 'edit');
+  if (user.studentId !== plan.student_id) {
+    throw new ForbiddenError('student does not own this plan');
+  }
+}
+
+/**
+ * Submitting is the owner's act, like editing: only the student who owns this
+ * already-fetched plan may submit it. Reviewers decide a plan after it is
+ * submitted, they never submit one.
+ */
+export function assertCanSubmitPlan(user, plan) {
+  assertLinkedStudent(user, 'submit');
+  if (user.studentId !== plan.student_id) {
+    throw new ForbiddenError('student does not own this plan');
+  }
+}
