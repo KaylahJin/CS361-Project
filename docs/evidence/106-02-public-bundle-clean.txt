@@ -4,13 +4,13 @@ $ npm run build
 
 vite v8.2.2 building client environment for production...
 transforming...
-✓ 1876 modules transformed.
+✓ 1878 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/index.html                   0.86 kB │ gzip:   0.48 kB
-dist/assets/index-GXy3c7z9.css   79.59 kB │ gzip:  13.18 kB
-dist/assets/index-DK1cXBqc.js   476.18 kB │ gzip: 125.58 kB
-✓ built in 1.92s
+dist/assets/index-CdeNck9R.css   80.40 kB │ gzip:  13.30 kB
+dist/assets/index-CwItzrNX.js   508.29 kB │ gzip: 132.36 kB
+✓ built in 1.78s
 
-$ Select-String -Path "dist/assets/*.js" -Pattern "somchai.j@cstu.ac.th", "อ.สมชาย ใจดี", "MOCK_REVIEWERS", "INITIAL_PLANS"
+$ Select-String -Path "dist/assets/*.js" -Pattern "somchai.j@cstu.ac.th", "MOCK_REVIEWERS", "INITIAL_PLANS"
 (0 matches found - public bundle is completely clean of mock plans and mock reviewer fallback data)

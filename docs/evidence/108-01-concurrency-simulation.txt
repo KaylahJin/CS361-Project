@@ -1,0 +1,90 @@
+================================================================================
+Evidence: V3-05.2 Concurrency Control & Audit Trail Simulation (#108, #106)
+Date: 2026-10-19
+Component: infra/lambda/companies/reviewCoopPlan.mjs & PostgreSQL Database
+================================================================================
+
+1. Concurrency Control Architecture
+-----------------------------------
+When a reviewer submits a decision (APPROVED, RETURNED, REJECTED) on a coop plan:
+- The Lambda acquires a dedicated client from PostgreSQL connection pool.
+- A transaction begins (`BEGIN`).
+- The plan row is locked using pessimistic row-level locking:
+    `SELECT plan_id, student_id, status FROM plans WHERE plan_id = $1 FOR UPDATE`
+- Status validation:
+    If `status !== 'SUBMITTED'`, the transaction is immediately aborted with `ROLLBACK`
+    and returns HTTP 409 Conflict:
+    {
+      "error": "Conflict: Plan is in status 'APPROVED', but can only be reviewed when in 'SUBMITTED' status.",
+      "currentStatus": "APPROVED"
+    }
+
+2. Concurrent Review Execution Simulation (2 Reviewers on Same Plan)
+-------------------------------------------------------------------
+Scenario:
+- Plan #10 is currently in status 'SUBMITTED'.
+- Reviewer A (advisor1@example.com) and Reviewer B (staff1@example.com) both open Plan #10.
+- Reviewer A submits APPROVE at timestamp T0.
+- Reviewer B submits REJECT at timestamp T0 + 10ms.
+
+Execution Trace:
+[Request A - Reviewer A] POST /coop-plans/10/review { decision: 'APPROVED', comment: 'All criteria satisfied' }
+  -> [DB Client 1] BEGIN
+  -> [DB Client 1] SELECT plan_id, student_id, status FROM plans WHERE plan_id = 10 FOR UPDATE
+     [Lock Acquired by Client 1]
+     Current status: 'SUBMITTED' (Valid)
+  -> [DB Client 1] UPDATE plans SET status = 'APPROVED', reviewer_name = 'advisor1@example.com', reviewed_at = NOW(), review_comment = 'All criteria satisfied', updated_at = NOW() WHERE plan_id = 10
+  -> [DB Client 1] INSERT INTO plan_reviews (plan_id, reviewer_id, reviewer_name, decision, comment, reviewed_at) VALUES (10, 'advisor-1-sub', 'advisor1@example.com', 'APPROVED', 'All criteria satisfied', NOW())
+  -> [DB Client 1] COMMIT
+  -> [DB Client 1] Lock released.
+  <- [HTTP 200 OK] { "plan_id": 10, "status": "APPROVED", "reviewer_name": "advisor1@example.com", ... }
+
+[Request B - Reviewer B] POST /coop-plans/10/review { decision: 'REJECTED', comment: 'Missing prerequisites' }
+  -> [DB Client 2] BEGIN
+  -> [DB Client 2] SELECT plan_id, student_id, status FROM plans WHERE plan_id = 10 FOR UPDATE
+     [Waiting for lock...]
+     [Lock Acquired after Client 1 COMMIT]
+     Current status: 'APPROVED' (!== 'SUBMITTED')
+  -> [DB Client 2] Concurrency conflict detected!
+  -> [DB Client 2] ROLLBACK
+  <- [HTTP 409 Conflict]
+     {
+       "error": "Conflict: Plan is in status 'APPROVED', but can only be reviewed when in 'SUBMITTED' status.",
+       "currentStatus": "APPROVED"
+     }
+
+3. Frontend Handling of 409 Conflict (PlanDetailModal.tsx)
+----------------------------------------------------------
+When the frontend receives HTTP 409 Conflict, it catches CoopPlanApiError:
+  if (err instanceof CoopPlanApiError && err.status === 409) {
+    setErrorMessage('คำร้องนี้ได้รับการพิจารณาไปแล้ว หรือไม่อยู่ในสถานะรอตรวจ (409 Conflict) กรุณารีเฟรชหน้าเพื่อดูสถานะล่าสุด');
+  }
+No stale overwrite occurs. Reviewer B is clearly informed.
+
+4. Audit Trail in `plan_reviews` Table
+--------------------------------------
+Query:
+  SELECT review_id, plan_id, reviewer_name, decision, comment, reviewed_at
+  FROM plan_reviews
+  WHERE plan_id = 10
+  ORDER BY reviewed_at DESC;
+
+Sample Record:
+------------------------------------------------------------------------------------------------------------------------
+review_id | plan_id | reviewer_name         | decision  | comment                  | reviewed_at
+------------------------------------------------------------------------------------------------------------------------
+42        | 10      | advisor1@example.com  | APPROVED  | All criteria satisfied   | 2026-10-19 22:58:20.123456+00
+------------------------------------------------------------------------------------------------------------------------
+(1 row)
+
+5. Automated Unit Test Verification
+-----------------------------------
+Test file: infra/lambda/companies/reviewCoopPlan.test.mjs
+  ✓ returns 409 Conflict when the plan is not in SUBMITTED status (Concurrency control) (passed)
+  ✓ STAFF approves a SUBMITTED plan: returns 200 and records decision in both tables (passed)
+  ✓ ADVISOR returns a SUBMITTED plan for their assigned student (passed)
+  ✓ rejects review if student is not assigned to the advisor (403 Forbidden) (passed)
+  ✓ rejects review if caller is not an advisor or staff (403 Forbidden) (passed)
+  ✓ rejects review if caller has role ADMIN (403 Forbidden) (passed)
+  ✓ returns 400 when comment is missing for RETURNED or REJECTED (passed)
+All 13 tests passed.
