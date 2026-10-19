@@ -5,6 +5,7 @@ import {
   getCoopPlans,
   getCoopPlan,
   updateCoopPlan,
+  submitCoopPlan,
 } from './coopPlanApi';
 
 const fetchMock = vi.fn();
@@ -23,8 +24,16 @@ afterEach(() => {
 const jsonResponse = (body: unknown) =>
   ({ ok: true, status: 200, statusText: 'OK', json: async () => body }) as unknown as Response;
 
-const errorResponse = (status: number, statusText: string) =>
-  ({ ok: false, status, statusText, json: async () => ({}) }) as unknown as Response;
+const errorResponse = (
+  status: number,
+  body: unknown
+) =>
+  ({
+    ok: false,
+    status,
+    statusText: 'Error',
+    json: async () => body,
+  }) as unknown as Response;
 
 describe('getCoopPlans', () => {
   it('sends the ID token as a Bearer Authorization header when given one', async () => {
@@ -262,4 +271,146 @@ describe('updateCoopPlan', () => {
 
     await expect(updateCoopPlan(7, { studentNote: 'x' }, 't')).rejects.toThrow('Failed to fetch');
   });
+});
+
+describe('submitCoopPlan', () => {
+  it('POSTs to the submit route with the ID token and no body', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        plan_id: 7,
+        status: 'SUBMITTED',
+        submitted_at: '2026-10-19T08:00:00.000Z',
+      })
+    );
+
+    const result = await submitCoopPlan(7, 'the-id-token');
+
+    const [url, options] = fetchMock.mock.calls[0];
+
+    expect(url).toMatch(/\/coop-plans\/7\/submit$/);
+    expect(options.method).toBe('POST');
+    expect(options.headers).toMatchObject({
+      Authorization: 'Bearer the-id-token',
+    });
+    expect(options.body).toBeUndefined();
+
+    expect(result).toMatchObject({
+      plan_id: 7,
+      status: 'SUBMITTED',
+      submitted_at: '2026-10-19T08:00:00.000Z',
+    });
+  });
+
+  it('does not add a student ID to the request', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        plan_id: 7,
+        status: 'SUBMITTED',
+        submitted_at: '2026-10-19T08:00:00.000Z',
+      })
+    );
+
+    await submitCoopPlan(7, 'token');
+
+    const options = fetchMock.mock.calls[0][1];
+
+    expect(options.body).toBeUndefined();
+  });
+
+
+it('preserves the API reason code when validation fails', async () => {
+  fetchMock.mockResolvedValue(
+    errorResponse(400, {
+      error: 'Requirements not met',
+      code: 'SUBMISSION_REQUIREMENTS_NOT_MET',
+      message: 'Some requirements are missing',
+    })
+  );
+
+  await expect(
+    submitCoopPlan(7, 'token')
+  ).rejects.toMatchObject({
+    status: 400,
+    code: 'SUBMISSION_REQUIREMENTS_NOT_MET',
+  });
+});
+
+it('throws a conflict when the plan was already submitted', async () => {
+  fetchMock.mockResolvedValue(
+    errorResponse(409, {
+      error: 'Already submitted',
+      code: 'ALREADY_SUBMITTED',
+      message: 'This plan has already been submitted',
+    })
+  );
+
+  await expect(
+    submitCoopPlan(7, 'token')
+  ).rejects.toMatchObject({
+    status: 409,
+    code: 'ALREADY_SUBMITTED',
+  });
+});
+
+it('throws when the user is not authorized', async () => {
+  fetchMock.mockResolvedValue(
+    errorResponse(403, {
+      error: 'Forbidden',
+      code: 'FORBIDDEN',
+      message: 'You cannot submit this plan',
+    })
+  );
+
+  await expect(
+    submitCoopPlan(7, 'token')
+  ).rejects.toMatchObject({
+    status: 403,
+    code: 'FORBIDDEN',
+  });
+});
+
+
+  it('throws when the API returns 401', async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(401, 'Unauthorized')
+    );
+
+    await expect(
+      submitCoopPlan(7)
+    ).rejects.toBeInstanceOf(CoopPlanApiError);
+  });
+
+  it('throws when the network fails', async () => {
+    fetchMock.mockRejectedValue(
+      new TypeError('Failed to fetch')
+    );
+
+    await expect(
+      submitCoopPlan(7, 'token')
+    ).rejects.toThrow('Failed to fetch');
+  });
+
+  it('preserves server validation failures so the page can explain them in Thai', async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(400, {
+        error: 'Bad request',
+        code: 'SUBMISSION_REQUIREMENTS_NOT_MET',
+        message: 'The plan cannot be submitted yet',
+        failures: [
+          { code: 'POSITION_REQUIRED' },
+          { code: 'SUBMISSION_WINDOW_CLOSED' },
+        ],
+      })
+    );
+
+    await expect(submitCoopPlan(7, 'token')).rejects.toMatchObject({
+      status: 400,
+      code: 'SUBMISSION_REQUIREMENTS_NOT_MET',
+      details: [
+        { code: 'POSITION_REQUIRED' },
+        { code: 'SUBMISSION_WINDOW_CLOSED' },
+      ],
+    });
+  });
+
 });

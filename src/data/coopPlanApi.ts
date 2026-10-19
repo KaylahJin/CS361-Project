@@ -23,20 +23,20 @@ const API_TIMEOUT = 10000;
 
 export class CoopPlanApiError extends Error {
   status: number;
-
-  /**
-   * Machine-readable reason from the API's `{ error, code, message }` body
-   * (for example ACTIVE_PLAN_EXISTS). Absent on the read routes and on
-   * failures that never got a response. The page turns it into Thai text;
-   * the API's own English `message` is never shown to the user.
-   */
   code?: string;
+  details?: Array<{ code?: string; message?: string }>;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    details?: Array<{ code?: string; message?: string }>
+  ) {
     super(message);
     this.name = 'CoopPlanApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -190,24 +190,47 @@ async function writeError(
   action: string
 ): Promise<CoopPlanApiError> {
   let code: string | undefined;
+  let details: Array<{ code?: string; message?: string }> | undefined;
 
   try {
     const body: unknown = await res.json();
-    if (
-      body &&
-      typeof body === 'object' &&
-      typeof (body as { code?: unknown }).code === 'string'
-    ) {
-      code = (body as { code: string }).code;
+
+    if (body && typeof body === 'object') {
+      const payload = body as {
+        code?: unknown;
+        failures?: unknown;
+        details?: unknown;
+      };
+
+      if (typeof payload.code === 'string') {
+        code = payload.code;
+      }
+
+      const rawDetails = Array.isArray(payload.failures)
+        ? payload.failures
+        : payload.details;
+
+      if (Array.isArray(rawDetails)) {
+        details = rawDetails.filter(
+          (item): item is { code?: string; message?: string } =>
+            Boolean(item) &&
+            typeof item === 'object' &&
+            (
+              typeof (item as { code?: unknown }).code === 'string' ||
+              typeof (item as { message?: unknown }).message === 'string'
+            )
+        );
+      }
     }
   } catch {
-    // No usable body. The status is all there is.
+    // No usable JSON body. Keep the HTTP status.
   }
 
   return new CoopPlanApiError(
     `Failed to ${action}: ${res.statusText}`,
     res.status,
-    code
+    code,
+    details
   );
 }
 
@@ -274,6 +297,52 @@ export async function updateCoopPlan(
     }
 
     console.warn(`Coop Plan API unreachable on update of plan ${planId}.`, error);
+
+    throw error;
+  }
+}
+
+/**
+ * Submit a saved coop plan.
+ *
+ * The API must verify ownership, eligibility, submission window,
+ * current status and duplicate submissions on the server.
+ *
+ * The frontend does not send a student ID and does not decide
+ * whether the student is eligible.
+ */
+export async function submitCoopPlan(
+  planId: number,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/submit`;
+
+  try {
+    const headers: Record<string, string> = {};
+
+    if (idToken) {
+      headers.Authorization = `Bearer ${idToken}`;
+    }
+
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+    });
+
+    if (!res.ok) {
+      throw await writeError(res, 'submit coop plan');
+    }
+
+    return await res.json();
+  } catch (error) {
+    if (error instanceof CoopPlanApiError) {
+      throw error;
+    }
+
+    console.warn(
+      `Coop Plan API unreachable on submit of plan ${planId}.`,
+      error
+    );
 
     throw error;
   }

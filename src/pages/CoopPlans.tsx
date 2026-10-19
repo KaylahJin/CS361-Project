@@ -12,11 +12,13 @@ import {
   Search,
   UserRound,
   XCircle,
+  Send,
 } from 'lucide-react';
 
 import {
   getCoopPlan,
   getCoopPlans,
+  submitCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -38,7 +40,7 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
       className: 'bg-slate-100 text-slate-700 border-slate-200',
     },
     SUBMITTED: {
-      label: 'ยื่นแล้ว',
+      label: 'รอตรวจ',
       className: 'bg-blue-50 text-blue-700 border-blue-200',
     },
     RETURNED: {
@@ -242,16 +244,114 @@ function InfoRow({
   );
 }
 
+function submissionFailureLabel(code?: string): string {
+  const labels: Record<string, string> = {
+    POSITION_REQUIRED: 'กรุณาเลือกตำแหน่งงานก่อนยื่นแผน',
+    ACKNOWLEDGEMENT_REQUIRED: 'กรุณารับทราบเงื่อนไขก่อนเริ่มสหกิจ',
+    TERMS_NOT_ACCEPTED: 'กรุณายอมรับข้อกำหนดและเงื่อนไข',
+    STUDENT_NOT_ELIGIBLE: 'คุณสมบัตินักศึกษายังไม่ผ่านเกณฑ์การยื่นแผน',
+    GPA_TOO_LOW: 'เกรดเฉลี่ยยังไม่ถึงเกณฑ์ที่กำหนด',
+    COURSE_GROUP_GPA_TOO_LOW:
+      'เกรดเฉลี่ยในกลุ่มรายวิชายังไม่ถึงเกณฑ์ที่กำหนด',
+    ONGOING_OR_STUDIED_COURSE_MISSING:
+      'ยังไม่ผ่านเงื่อนไขรายวิชาที่กำหนด',
+    SUBMISSION_WINDOW_CLOSED:
+      'ยังไม่อยู่ในช่วงเวลาที่เปิดรับยื่นแผน',
+    APPLICATION_WINDOW_CLOSED:
+      'ยังไม่อยู่ในช่วงเวลาที่เปิดรับยื่นแผน',
+  };
+
+  if (code && labels[code]) {
+    return labels[code];
+  }
+
+  return code
+    ? `ยังไม่ผ่านเงื่อนไขข้อ ${code.replace(/_/g, ' ').toLowerCase()}`
+    : 'กรุณาตรวจสอบข้อมูลและเงื่อนไขก่อนยื่นแผน';
+}
+
+function describeSubmissionError(error: unknown): string[] {
+  if (!(error instanceof CoopPlanApiError)) {
+    return ['เชื่อมต่อระบบไม่สำเร็จ กรุณาลองอีกครั้ง'];
+  }
+
+  if (error.status === 401) {
+    return ['เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'];
+  }
+
+  if (error.status === 403) {
+    return ['บัญชีนี้ไม่มีสิทธิ์ยื่นแผนนี้ หรือแผนนี้ไม่ใช่ของคุณ'];
+  }
+
+  if (error.code === 'ALREADY_SUBMITTED') {
+    return ['แผนนี้ถูกยื่นแล้ว ไม่สามารถยื่นซ้ำได้'];
+  }
+
+  if (error.code === 'PLAN_NOT_SUBMITTABLE') {
+    return ['สถานะปัจจุบันไม่อนุญาตให้ยื่นแผน'];
+  }
+
+  if (error.code === 'SUBMISSION_REQUIREMENTS_NOT_MET') {
+    const details =
+      error.details?.map((item) => submissionFailureLabel(item.code)) ?? [];
+
+    return details.length
+      ? details
+      : ['ข้อมูลหรือคุณสมบัติยังไม่ครบตามเงื่อนไขการยื่นแผน'];
+  }
+
+  if (error.status === 409) {
+    return ['สถานะของแผนเปลี่ยนไปแล้ว กรุณาโหลดข้อมูลล่าสุด'];
+  }
+
+  return ['ยื่นแผนไม่สำเร็จเนื่องจากระบบขัดข้อง กรุณาลองอีกครั้ง'];
+}
+
 function PlanDetail({
   plan,
   onBack,
   onEdit,
+  onSubmitted,
 }: {
   plan: CoopPlan;
   onBack: () => void;
   onEdit: () => void;
+  onSubmitted: (plan: CoopPlan) => void;
 }) {
   const locked = lockedReason(plan.status);
+
+  const { getIdToken } = useAuth();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [submitError, setSubmitError] = useState<string[] | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const canSubmit =
+    plan.status === 'PREPARING' || plan.status === 'RETURNED';
+
+  const handleSubmitPlan = async () => {
+    if (!canSubmit || submitting) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
+    try {
+      const submitted = await submitCoopPlan(
+        plan.plan_id,
+        await getIdToken()
+      );
+
+      onSubmitted(submitted);
+      setConfirmSubmit(false);
+      setSubmitSuccess(true);
+    } catch (error) {
+      setSubmitError(describeSubmissionError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -287,7 +387,7 @@ function PlanDetail({
                 and the status again on every save. Advisors and staff can read
                 a draft too, so the caption says who the button is for. */}
             {isPlanEditable(plan.status) && (
-              <>
+              <div className="flex flex-col items-start gap-2 sm:items-end">
                 <button
                   type="button"
                   onClick={onEdit}
@@ -297,10 +397,25 @@ function PlanDetail({
                   แก้ไขแผน
                 </button>
 
-                <span className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   แก้ไขได้เฉพาะนักศึกษาเจ้าของแผน
-                </span>
-              </>
+                </p>
+              </div>
+            )}
+
+            {canSubmit && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitError(null);
+                  setConfirmSubmit(true);
+                }}
+                disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                {plan.status === 'RETURNED' ? 'ยื่นแผนอีกครั้ง' : 'ยื่นแผน'}
+              </button>
             )}
           </div>
         </div>
@@ -309,6 +424,15 @@ function PlanDetail({
           <p className="mt-4 text-sm text-slate-500">{locked}</p>
         )}
       </div>
+
+      {submitSuccess && (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700"
+        >
+          ยื่นแผนสำเร็จแล้ว
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Student */}
@@ -479,6 +603,72 @@ function PlanDetail({
           />
         </section>
       </div>
+
+      {confirmSubmit && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={() => {
+            if (!submitting) setConfirmSubmit(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-submit-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2
+              id="confirm-submit-title"
+              className="text-lg font-bold text-slate-900"
+            >
+              ยืนยันการยื่นแผน
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              เมื่อต้องการยื่นแผน ระบบจะส่งข้อมูลเพื่อรอการพิจารณา
+              โปรดตรวจสอบข้อมูลก่อนยืนยัน
+            </p>
+
+            {submitError && (
+              <div
+                role="alert"
+                className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4"
+              >
+                <ul className="list-disc space-y-1 pl-5 text-sm text-red-700">
+                  {submitError.map((message, index) => (
+                    <li key={`${index}-${message}`}>{message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setConfirmSubmit(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSubmitPlan}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting && (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                )}
+                ยืนยันยื่นแผน
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
     </main>
   );
 }
@@ -599,6 +789,10 @@ function CoopPlans() {
         plan={selectedPlan}
         onBack={() => setSelectedPlan(null)}
         onEdit={() => openEditor(selectedPlan)}
+        onSubmitted={(submitted) => {
+          setSelectedPlan(submitted);
+          void loadPlans();
+        }}
       />
     );
   }
