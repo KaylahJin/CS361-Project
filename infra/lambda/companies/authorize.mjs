@@ -190,3 +190,15 @@ export function assertCanEditPlan(user, plan) {
     throw new ForbiddenError('student does not own this plan');
   }
 }
+
+/**
+ * Submitting is the owner's act, like editing: only the student who owns this
+ * already-fetched plan may submit it. Reviewers decide a plan after it is
+ * submitted, they never submit one.
+ */
+export function assertCanSubmitPlan(user, plan) {
+  assertLinkedStudent(user, 'submit');
+  if (user.studentId !== plan.student_id) {
+    throw new ForbiddenError('student does not own this plan');
+  }
+}

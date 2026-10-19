@@ -10,6 +10,7 @@ const listCoopPlansMock = vi.fn();
 const getCoopPlanByIdMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
+const submitCoopPlanMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -49,6 +50,10 @@ vi.mock('./createCoopPlan.mjs', () => ({
 
 vi.mock('./updateCoopPlan.mjs', () => ({
   updateCoopPlan: updateCoopPlanMock,
+}));
+
+vi.mock('./submitCoopPlan.mjs', () => ({
+  submitCoopPlan: submitCoopPlanMock,
 }));
 
 const { handler } = await import('./index.mjs');
@@ -209,8 +214,21 @@ describe('router (index.mjs handler)', () => {
     expect(result).toBe(handlerResponse);
   });
 
+  it('dispatches POST /coop-plans/{planId}/submit to submitCoopPlan', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    submitCoopPlanMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'POST /coop-plans/{planId}/submit', pathParameters: { planId: '101' } };
+    const result = await handler(event);
+
+    expect(submitCoopPlanMock).toHaveBeenCalledWith(event);
+    expect(createCoopPlanMock).not.toHaveBeenCalled();
+    expect(updateCoopPlanMock).not.toHaveBeenCalled();
+    expect(result).toBe(handlerResponse);
+  });
+
   it('does not route methods that have no handler (PUT / DELETE on a plan)', async () => {
-    for (const routeKey of ['PUT /coop-plans/{planId}', 'DELETE /coop-plans/{planId}', 'PATCH /coop-plans']) {
+    for (const routeKey of ['PUT /coop-plans/{planId}', 'DELETE /coop-plans/{planId}', 'PATCH /coop-plans', 'GET /coop-plans/{planId}/submit', 'PATCH /coop-plans/{planId}/submit']) {
       const result = await handler({ routeKey });
       expect(result.statusCode).toBe(404);
     }

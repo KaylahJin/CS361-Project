@@ -13,6 +13,7 @@ const {
   studentColumnsFor,
   assertCanCreatePlan,
   assertCanEditPlan,
+  assertCanSubmitPlan,
   ForbiddenError,
 } = await import('./authorize.mjs');
 
@@ -283,5 +284,25 @@ describe('assertCanEditPlan', () => {
     queryMock.mockReset();
     assertCanEditPlan(STUDENT, plan);
     expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('assertCanSubmitPlan', () => {
+  const plan = { student_id: 'S001' };
+
+  it('lets the student who owns the plan submit it', () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: 'S001' }, plan)).not.toThrow();
+  });
+
+  it("refuses a student submitting someone else's plan", () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: 'S999' }, plan)).toThrow(ForbiddenError);
+  });
+
+  it('refuses a student account that is not linked to a student record', () => {
+    expect(() => assertCanSubmitPlan({ role: 'STUDENT', studentId: null }, { student_id: null })).toThrow(ForbiddenError);
+  });
+
+  it.each(['ADVISOR', 'STAFF', 'ADMIN', 'SOMETHING_NEW'])('refuses the %s role: only the owning student submits', (role) => {
+    expect(() => assertCanSubmitPlan({ role, studentId: 'S001' }, plan)).toThrow(ForbiddenError);
   });
 });

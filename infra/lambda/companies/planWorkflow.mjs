@@ -14,3 +14,13 @@ export const EDITABLE_PLAN_STATUSES = Object.freeze(['PREPARING', 'RETURNED']);
 export function isEditableStatus(status) {
   return EDITABLE_PLAN_STATUSES.includes(status);
 }
+
+// docs/overview/V3-01-workflow-permissions.md §3: a student submits from
+// PREPARING, and submits again from RETURNED once the plan has been fixed. Every
+// other status is either waiting on a reviewer (SUBMITTED) or final (APPROVED,
+// REJECTED, which need a new plan instead).
+export const SUBMITTABLE_PLAN_STATUSES = Object.freeze(['PREPARING', 'RETURNED']);
+
+export function isSubmittableStatus(status) {
+  return SUBMITTABLE_PLAN_STATUSES.includes(status);
+}
