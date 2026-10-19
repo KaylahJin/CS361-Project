@@ -1,0 +1,21 @@
+$ npx vitest run infra/lambda/companies/reviewCoopPlan.test.mjs infra/terraform/route-policy.test.mjs src/pages/CoopPlans.test.tsx
+
+ RUN  v3.2.7 C:/Users/sunan/OneDrive/Documents/CSTU/CS361/Project/CS361-Project
+
+ ✓  backend   infra/terraform/route-policy.test.mjs (13 tests)
+ ✓  backend   infra/lambda/companies/reviewCoopPlan.test.mjs (13 tests)
+ ✓  frontend  src/pages/CoopPlans.test.tsx (11 tests)
+   ✓ CoopPlans and the signed-in session > loads the plans the signed-in caller may see
+   ✓ CoopPlans and the signed-in session > reloads when the session changes, so signing out drops the previous caller rows
+   ✓ CoopPlans and the signed-in session > reloads when a visitor signs in, so the list fills without changing page
+   ✓ CoopPlans says why the list is empty > asks a signed-out caller to sign in, with no retry button
+   ✓ CoopPlans says why the list is empty > tells a signed-in caller without permission that the account lacks it
+   ✓ CoopPlans says why the list is empty > offers a retry when the request actually failed
+   ✓ CoopPlans says why the list is empty > does not leak the raw API message into the page
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > renders progress chart, status filter tabs, and counts
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > filters plans by status tab
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > opens and closes plan detail modal when clicking a plan row
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > switches view mode between table and cards view
+
+ Test Files  3 passed (3)
+      Tests  37 passed (37)

@@ -157,3 +157,47 @@ export async function getCoopPlan(
     throw error;
   }
 }
+
+export async function reviewCoopPlan(
+  planId: number,
+  decision: 'APPROVED' | 'RETURNED' | 'REJECTED',
+  comment?: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/review`;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (idToken) {
+    headers.Authorization = `Bearer ${idToken}`;
+  }
+
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ decision, comment: comment || '' }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `Failed to review coop plan: ${res.statusText}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.error) errorMsg = errJson.error;
+      } catch {
+        // use default
+      }
+      throw new CoopPlanApiError(errorMsg, res.status);
+    }
+
+    return await res.json();
+  } catch (error) {
+    if (error instanceof CoopPlanApiError) {
+      throw error;
+    }
+
+    console.warn(`Coop Plan review API unreachable for plan ${planId}.`, error);
+    throw error;
+  }
+}

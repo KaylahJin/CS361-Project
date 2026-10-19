@@ -1,23 +1,19 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Check,
-  ChevronDown,
   Inbox,
   LayoutGrid,
   LayoutList,
   Loader2,
   Lock,
   LogIn,
-  RotateCcw,
   UserRound,
   XCircle,
 } from 'lucide-react';
 
 import type {
   PlanCounts,
-  PlanReviewFilter,
   PlanReviewItem,
-  Reviewer,
 } from '../types/planReview';
 
 import type {
@@ -26,17 +22,9 @@ import type {
 } from '../types/coopPlan';
 
 import {
-  getAvailableReviewers,
-  getCurrentReviewer,
-  getPlanReviewCounts,
-  getReviewPlans,
-  setCurrentReviewer,
-  resetPlansStore,
-} from '../data/planReviewApi';
-
-import {
   getCoopPlan,
   getCoopPlans,
+  reviewCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -98,7 +86,7 @@ function ErrorState({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 cursor-pointer"
+          className="mt-4 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition"
         >
           ลองอีกครั้ง
         </button>
@@ -111,12 +99,10 @@ function UnauthenticatedState({
   title,
   message,
   onLogin,
-  onSelectReviewer,
 }: {
   title: string;
   message: string;
   onLogin?: () => void;
-  onSelectReviewer?: (id: string) => void;
 }) {
   return (
     <div className="flex min-h-[360px] flex-col items-center justify-center px-6 py-10 text-center max-w-lg mx-auto">
@@ -141,17 +127,6 @@ function UnauthenticatedState({
           >
             <LogIn className="h-4 w-4" />
             <span>เข้าสู่ระบบ (Sign In)</span>
-          </button>
-        )}
-
-        {onSelectReviewer && (
-          <button
-            type="button"
-            onClick={() => onSelectReviewer('ADV01')}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition cursor-pointer shadow-2xs"
-          >
-            <UserRound className="h-4 w-4 text-blue-600" />
-            <span>เข้าดูเป็น อ.สมชาย (หลักสูตร 61)</span>
           </button>
         )}
       </div>
@@ -242,11 +217,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanReviewItem | null>(null);
 
-  // Reviewer and Role Switcher (V3-05.1: Advisor vs Staff view scopes from branch 106)
-  const availableReviewers = getAvailableReviewers();
-  const [currentReviewer, setReviewerState] = useState<Reviewer>(getCurrentReviewer());
-  const [reviewerDropdownOpen, setReviewerDropdownOpen] = useState(false);
-
   // Toast notification state
   const [toast, setToast] = useState<ToastState>({
     show: false,
@@ -261,127 +231,53 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     }, 4000);
   };
 
-  const reviewerName = currentReviewer.name;
-
   // Read right before each request
   const { getIdToken, status: authStatus, user } = useAuth();
   const getIdTokenRef = useRef(getIdToken);
   getIdTokenRef.current = getIdToken;
 
-  // Load plans & counts
+  // Load plans & counts from real backend API
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    // If signed into real Cognito session
-    if (authStatus === 'authenticated') {
-      try {
-        const token = await getIdTokenRef.current();
-        const params: CoopPlanQueryParams = {
-          search: searchQuery.trim() || undefined,
-          curriculum: curriculumFilter && curriculumFilter !== 'ALL' ? curriculumFilter : undefined,
-          periodId: periodId && periodId !== 'ALL' ? periodId : undefined,
-        };
-
-        const apiPlans = await getCoopPlans(params, token);
-        setPlans(apiPlans);
-
-        const nextCounts: PlanCounts = {
-          ALL: apiPlans.length,
-          SUBMITTED: apiPlans.filter((p) => p.status === 'SUBMITTED').length,
-          RETURNED: apiPlans.filter((p) => p.status === 'RETURNED').length,
-          APPROVED: apiPlans.filter((p) => p.status === 'APPROVED').length,
-          REJECTED: apiPlans.filter((p) => p.status === 'REJECTED').length,
-          PREPARING: apiPlans.filter((p) => p.status === 'PREPARING').length,
-        };
-        setCounts(nextCounts);
-        setTotal(apiPlans.length);
-        return;
-      } catch (err) {
-        // If API fails, handle refusal
-        setPlans([]);
-        setSelectedPlan(null);
-        setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
-        return;
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    // In unit test mode: if tests mock getCoopPlans, call it to trigger test assertions
-    if (import.meta.env.MODE === 'test') {
-      try {
-        const token = await getIdTokenRef.current();
-        const apiPlans = await getCoopPlans({}, token);
-        if (Array.isArray(apiPlans)) {
-          setPlans(apiPlans);
-          const nextCounts: PlanCounts = {
-            ALL: apiPlans.length,
-            SUBMITTED: apiPlans.filter((p) => p.status === 'SUBMITTED').length,
-            RETURNED: apiPlans.filter((p) => p.status === 'RETURNED').length,
-            APPROVED: apiPlans.filter((p) => p.status === 'APPROVED').length,
-            REJECTED: apiPlans.filter((p) => p.status === 'REJECTED').length,
-            PREPARING: apiPlans.filter((p) => p.status === 'PREPARING').length,
-            DRAFT: 0,
-          };
-          setCounts(nextCounts);
-          setTotal(apiPlans.length);
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        if (
-          (err instanceof CoopPlanApiError && (err.status === 401 || err.status === 403)) ||
-          (err instanceof Error && (err.message === 'Unauthorized' || err.message === 'network down'))
-        ) {
-          setPlans([]);
-          setSelectedPlan(null);
-          setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
-          setLoading(false);
-          return;
-        }
-      }
-    }
-
-    // Default: use rich self-contained planReviewApi store (branch 106 UX)
     try {
-      const filter: PlanReviewFilter = {
-        status: 'ALL',
-        curriculum: curriculumFilter,
-        search: searchQuery,
-        periodId: periodId,
-        reviewerId: currentReviewer.id,
+      const token = await getIdTokenRef.current();
+      const params: CoopPlanQueryParams = {
+        search: searchQuery.trim() || undefined,
+        curriculum: curriculumFilter && curriculumFilter !== 'ALL' ? curriculumFilter : undefined,
+        periodId: periodId && periodId !== 'ALL' ? periodId : undefined,
       };
 
-      const [items, nextCounts] = await Promise.all([
-        getReviewPlans(filter),
-        getPlanReviewCounts(currentReviewer.id),
-      ]);
+      const apiPlans = await getCoopPlans(params, token);
+      setPlans(apiPlans);
 
-      setPlans(items);
+      const nextCounts: PlanCounts = {
+        ALL: apiPlans.length,
+        SUBMITTED: apiPlans.filter((p) => p.status === 'SUBMITTED').length,
+        RETURNED: apiPlans.filter((p) => p.status === 'RETURNED').length,
+        APPROVED: apiPlans.filter((p) => p.status === 'APPROVED').length,
+        REJECTED: apiPlans.filter((p) => p.status === 'REJECTED').length,
+        PREPARING: apiPlans.filter((p) => p.status === 'PREPARING').length,
+        DRAFT: 0,
+      };
       setCounts(nextCounts);
-      setTotal(nextCounts.ALL || 0);
+      setTotal(apiPlans.length);
     } catch (err) {
-      console.error('Failed to load plans:', err);
+      setPlans([]);
+      setSelectedPlan(null);
+      setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     } finally {
       setLoading(false);
     }
-  }, [authStatus, getIdToken, searchQuery, curriculumFilter, periodId, currentReviewer.id]);
+  }, [searchQuery, curriculumFilter, periodId]);
 
   useEffect(() => {
     if (authStatus === 'loading') return;
     loadData();
   }, [loadData, authStatus]);
 
-  // Handle switching active reviewer (Advisor 1 vs Advisor 2 vs Staff)
-  const handleSelectReviewer = (reviewerId: string) => {
-    const updated = setCurrentReviewer(reviewerId);
-    setReviewerState(updated);
-    setReviewerDropdownOpen(false);
-    setError(null);
-  };
-
-  // Callback when a review decision is submitted (V3-05.2)
+  // Callback when a review decision is saved
   const handleSaved = (updatedPlan: PlanReviewItem) => {
     setSelectedPlan(null);
     loadData();
@@ -392,15 +288,8 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
     showToast(
       `บันทึกผลการพิจารณาเรียบร้อยแล้ว (${decisionLabel})`,
-      `แผน #${updatedPlan.plan_id} ของ ${updatedPlan.first_name} ${updatedPlan.last_name} ได้รับการบันทึกสถานะเป็น "${updatedPlan.status}"`
+      `แผน #${updatedPlan.plan_id} ของ ${updatedPlan.first_name} ${updatedPlan.last_name} ได้รับการบันทึกสถานะเป็น "${updatedPlan.status}"`,
     );
-  };
-
-  // Reset demo data helper
-  const handleResetData = () => {
-    resetPlansStore();
-    loadData();
-    showToast('รีเซ็ตข้อมูลทดสอบเรียบร้อยแล้ว', 'คืนค่าสถานะและข้อมูลผลการพิจารณาทั้งหมดเป็นค่าเริ่มต้น');
   };
 
   const handleOpenPlan = async (plan: CoopPlan) => {
@@ -438,7 +327,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         </div>
       )}
 
-      {/* Hero Header with OKLCH Gradient (Exact Branch 106 Styling) */}
+      {/* Hero Header with OKLCH Gradient */}
       <header
         style={{
           background:
@@ -457,96 +346,45 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             </p>
           </div>
 
-          {/* Reviewer Role Switcher Dropdown (ปุ่ม login / สลับบทบาทผู้ตรวจจาก Branch 106) */}
-          <div className="relative">
-            <button
-              id="btn-reviewer-switcher"
-              type="button"
-              onClick={() => setReviewerDropdownOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white shadow-xs backdrop-blur-xs hover:bg-white/20 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer"
-              title="สลับบทบาทผู้ตรวจเพื่อทดสอบสิทธิ์อาจารย์และเจ้าหน้าที่"
-            >
-              <div className="flex items-center gap-2.5 text-left">
+          {/* User Account / Sign In Status Badge */}
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm text-white shadow-xs">
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 text-blue-100">
                   <UserRound className="h-4 w-4 shrink-0" />
                 </div>
-                <div>
-                  <div className="font-bold leading-none">
-                    {user?.email ? user.email : reviewerName}
+                <div className="text-left">
+                  <div className="font-bold text-xs sm:text-sm leading-none">
+                    {user.email}
                   </div>
                   <div className="text-[11px] text-blue-200 leading-tight mt-1">
-                    {user?.email ? 'เข้าสู่ระบบแล้ว' : currentReviewer.roleTitle}
+                    เข้าสู่ระบบแล้ว
                   </div>
                 </div>
               </div>
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {reviewerDropdownOpen && (
-              <>
-                <div
-                  onClick={() => setReviewerDropdownOpen(false)}
-                  className="fixed inset-0 z-40"
-                />
-                <div className="absolute right-0 top-full mt-2 z-50 w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl animate-in zoom-in-95">
-                  <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                    สลับบทบาทผู้ตรวจ (ทดสอบสิทธิ์)
-                  </div>
-                  {availableReviewers.map((r) => {
-                    const isSelected = r.id === currentReviewer.id && !user?.email;
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => handleSelectReviewer(r.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-xl p-2.5 text-left text-xs transition-all duration-150 cursor-pointer hover:scale-[1.01] hover:translate-x-0.5 ${
-                          isSelected
-                            ? 'bg-blue-50 text-blue-700 font-bold'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-semibold">{r.name}</div>
-                          <div className="text-[11px] text-slate-500 font-normal">
-                            {r.roleTitle}
-                          </div>
-                        </div>
-                        {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0" />}
-                      </button>
-                    );
-                  })}
-
-                  {onNavigateLogin && (
-                    <div className="mt-1 border-t border-slate-100 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReviewerDropdownOpen(false);
-                          onNavigateLogin();
-                        }}
-                        className="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-xs font-semibold text-blue-600 hover:bg-blue-50 transition cursor-pointer"
-                      >
-                        <LogIn className="h-4 w-4" />
-                        <span>ไปที่หน้าฟอร์มเข้าสู่ระบบ (Cognito)</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+            ) : onNavigateLogin ? (
+              <button
+                type="button"
+                onClick={onNavigateLogin}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/15 px-4 py-2 text-xs sm:text-sm font-bold text-white backdrop-blur-sm hover:bg-white/25 transition cursor-pointer"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>เข้าสู่ระบบ</span>
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        {/* Top Control Bar & KPI Section */}
-        <div className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      {/* Main Workspace Layout */}
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+        {/* Top Control Grid: Filters & Circular Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Left Column: Title and Filters */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="font-heading text-lg font-bold text-slate-900">
+                <h2 className="font-heading text-lg font-bold text-slate-800 tracking-tight">
                   รายการแผนสหกิจศึกษา
                 </h2>
               </div>
@@ -581,17 +419,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                     <span className="hidden sm:inline">การ์ด</span>
                   </button>
                 </div>
-
-                {/* Reset Demo Data Button */}
-                <button
-                  type="button"
-                  onClick={handleResetData}
-                  className="inline-flex items-center gap-1.5 self-start rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:scale-105 hover:-translate-y-0.5 hover:shadow-xs active:scale-95 transition-all duration-200 cursor-pointer"
-                  title="รีเซ็ตผลการพิจารณาเป็นค่าเริ่มต้น"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>รีเซ็ตข้อมูลทดสอบ</span>
-                </button>
               </div>
             </div>
 
@@ -629,7 +456,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               title={error.title}
               message={error.detail}
               onLogin={onNavigateLogin}
-              onSelectReviewer={handleSelectReviewer}
             />
           </section>
         ) : error ? (
@@ -705,7 +531,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         onOpenChange={(open) => {
           if (!open) setSelectedPlan(null);
         }}
-        reviewerName={reviewerName}
+        reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+        onSubmitReview={async ({ planId, decision, comment }) => {
+          const token = await getIdToken();
+          await reviewCoopPlan(planId, decision, comment, token);
+          await loadData();
+        }}
         onSaved={handleSaved}
       />
     </div>

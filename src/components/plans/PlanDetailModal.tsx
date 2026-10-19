@@ -15,6 +15,7 @@ import type { CoopPlan } from '../../types/coopPlan';
 import type { ReviewDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { CircleCheckFill } from './CircleCheckFill';
+import { CoopPlanApiError } from '../../data/coopPlanApi';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -129,11 +130,17 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
 
       onOpenChange(false);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : 'เกิดข้อผิดพลาดในการบันทึกผลการพิจารณา'
-      );
+      if (err instanceof CoopPlanApiError && err.status === 409) {
+        setErrorMessage(
+          'คำร้องนี้ได้รับการพิจารณาไปแล้ว หรือไม่อยู่ในสถานะรอตรวจ (409 Conflict) กรุณารีเฟรชหน้าเพื่อดูสถานะล่าสุด'
+        );
+      } else {
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : 'เกิดข้อผิดพลาดในการบันทึกผลการพิจารณา'
+        );
+      }
     } finally {
       setSubmitting(false);
     }

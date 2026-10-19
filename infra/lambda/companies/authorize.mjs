@@ -88,6 +88,23 @@ export async function assertCanViewPlan(user, plan) {
 }
 
 /**
+ * Throws ForbiddenError when this caller may not review this plan.
+ * Staff may review any plan. Advisors may only review plans belonging
+ * to their assigned students. Students and Admins may not review plans.
+ */
+export async function assertCanReviewPlan(user, plan, queryable = getPool()) {
+  if (user.role === 'STAFF') return;
+
+  if (user.role === 'ADVISOR') {
+    const result = await queryable.query(IS_ASSIGNED, [user.sub, plan.student_id]);
+    if (result.rows.length > 0) return;
+    throw new ForbiddenError('advisor is not assigned to this student');
+  }
+
+  throw new ForbiddenError(`role ${user.role} may not review coop plans`);
+}
+
+/**
  * Row filter for the student routes, same shape as buildCoopPlanListFilter:
  * a SQL fragment with `$PARAM` placeholders plus the params to bind. `sql` is
  * '' when the role may see every student.

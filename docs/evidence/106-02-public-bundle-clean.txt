@@ -1,0 +1,16 @@
+$ npm run build
+> cs361-project@0.0.0 build
+> tsc -b && vite build
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 1876 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.86 kB │ gzip:   0.48 kB
+dist/assets/index-GXy3c7z9.css   79.59 kB │ gzip:  13.18 kB
+dist/assets/index-DK1cXBqc.js   476.18 kB │ gzip: 125.58 kB
+✓ built in 1.92s
+
+$ Select-String -Path "dist/assets/*.js" -Pattern "somchai.j@cstu.ac.th", "อ.สมชาย ใจดี", "MOCK_REVIEWERS", "INITIAL_PLANS"
+(0 matches found - public bundle is completely clean of mock plans and mock reviewer fallback data)
