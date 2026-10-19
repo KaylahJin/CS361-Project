@@ -25,9 +25,7 @@
 - status (Enum/Text, Required): สถานะการเรียน รับค่า PASSED, FAILED, ENROLLED
 - grade_point (Decimal 2 ตำแหน่ง, Nullable): เช่น 3.50, 0.00 (กรณีสถานะ ENROLLED ให้เว้นว่าง ระบบจะแปลงเป็น NULL)
 
-#### ค. ข้อมูลการจับคู่อาจารย์ที่ปรึกษา (advisor_students.csv)
-- advisor_sub (Text, Required): Cognito sub หรือ User ID ของอาจารย์ เช่น sub-advisor-001
-- student_id (Text, Required, Foreign Key อ้างอิง students.student_id)
+> **หมายเหตุ:** การผูกข้อมูลอาจารย์ที่ปรึกษา (`advisor_student_assignments`) จะถูกจัดการผ่านคำสั่ง `npm run db:seed-users` (`infra/seed-app-users.sh`) ตาม Cognito User Pool โดยตรง จึงไม่มีการนำเข้าผ่านสคริปต์นี้
 
 
 ### 1.2 นโยบายการระบุ Key และการจัดการข้อมูลเดิม (Idempotent Upsert Policy)
@@ -35,7 +33,7 @@
 1. **Key ที่ใช้ระบุข้อมูล:**
    - ข้อมูลนักศึกษา: ใช้ student_id
    - ข้อมูลรายวิชา: ใช้คู่ student_id + course_code
-   - ข้อมูลอาจารย์ที่ปรึกษา: ใช้คู่ advisor_sub + student_id
+
 2. **กติกาการจัดการข้อมูลเดิม:**
    - **กรณีข้อมูลใหม่:** ทำการ INSERT เข้าตาราง
    - **กรณีมีข้อมูลเดิมและค่าเปลี่ยนแปลง:** ทำการ UPDATE เฉพาะฟิลด์ที่เปลี่ยน
@@ -73,6 +71,8 @@ PGSSLMODE=require
    ```
 
 ### 2.3 การแก้ไขปัญหาเบื้องต้น (Troubleshooting)
+
+หลังสคริปต์ทำงานเสร็จสิ้น ระบบจะสรุปผลออกทางหน้าจอ Console และบันทึกผลการทำงานแบบละเอียดลงในไฟล์ reports/import-report.json เสมอ
 
 | ปัญหาที่พบ | สาเหตุ | วิธีการแก้ไข |
 |---|---|---|
