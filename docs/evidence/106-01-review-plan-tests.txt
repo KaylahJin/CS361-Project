@@ -1,0 +1,44 @@
+$ npx vitest run infra/lambda/companies/reviewCoopPlan.test.mjs infra/terraform/route-policy.test.mjs src/pages/CoopPlans.test.tsx
+
+ RUN  v3.2.7 C:/Users/sunan/OneDrive/Documents/CSTU/CS361/Project/CS361-Project
+
+ ✓  backend  infra/terraform/route-policy.test.mjs (16 tests)
+ ✓  backend  infra/lambda/companies/reviewCoopPlan.test.mjs (13 tests)
+ ✓  frontend  src/pages/CoopPlans.test.tsx (34 tests)
+   ✓ CoopPlans and the signed-in session > loads the plans the signed-in caller may see
+   ✓ CoopPlans and the signed-in session > reloads when the session changes, so signing out drops the previous caller rows
+   ✓ CoopPlans and the signed-in session > reloads when a visitor signs in, so the list fills without changing page
+   ✓ CoopPlans says why the list is empty > asks a signed-out caller to sign in, with no retry button
+   ✓ CoopPlans says why the list is empty > tells a signed-in caller without permission that the account lacks it
+   ✓ CoopPlans says why the list is empty > offers a retry when the request actually failed
+   ✓ CoopPlans says why the list is empty > does not leak the raw API message into the page
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > renders progress chart, status filter tabs, and counts
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > filters plans by status tab
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > opens and closes plan detail modal when clicking a plan row
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > switches view mode between table and cards view
+   ✓ CoopPlans: create and edit > the create button > is offered to a signed-in caller
+   ✓ CoopPlans: create and edit > the create button > is not offered to a signed-out visitor
+   ✓ CoopPlans: create and edit > the create button > is withdrawn when the list is refused with 403: an account with no plan role cannot create either
+   ✓ CoopPlans: create and edit > the create button > stays after a plain network failure, which says nothing about permission
+   ✓ CoopPlans: create and edit > creating a plan > opens the form, saves a draft, and shows the new plan on the way back
+   ✓ CoopPlans: create and edit > creating a plan > goes back to the list, not a detail page, when nothing was saved
+   ✓ CoopPlans: create and edit > editing a plan > offers Edit on a PREPARING plan and opens the form with the saved data
+   ✓ CoopPlans: create and edit > editing a plan > offers Edit on a RETURNED plan and opens the form with the saved data
+   ✓ CoopPlans: create and edit > editing a plan > offers no Edit on a SUBMITTED plan, and says why
+   ✓ CoopPlans: create and edit > editing a plan > offers no Edit on a APPROVED plan, and says why
+   ✓ CoopPlans: create and edit > editing a plan > offers no Edit on a REJECTED plan, and says why
+   ✓ CoopPlans: create and edit > editing a plan > says Edit is for the plan’s owner, since an advisor can read a draft too
+   ✓ CoopPlans: create and edit > editing a plan > saves, and the detail page then shows what the API returned
+   ✓ CoopPlans: create and edit > editing a plan > leaving the form without saving shows the plan unchanged
+   ✓ CoopPlans: create and edit > editing a plan > a refused save keeps the form open with the reason
+   ✓ submitting a plan > offers the submit action for PREPARING plans
+   ✓ submitting a plan > offers the submit action for RETURNED plans
+   ✓ submitting a plan > does not offer submit for SUBMITTED plans
+   ✓ submitting a plan > does not offer submit for APPROVED plans
+   ✓ submitting a plan > does not offer submit for REJECTED plans
+   ✓ submitting a plan > confirms before calling the API and shows the submitted status
+   ✓ submitting a plan > shows the server validation reason and does not claim success
+   ✓ submitting a plan > explains duplicate submission errors
+
+ Test Files  3 passed (3)
+      Tests  63 passed (63)

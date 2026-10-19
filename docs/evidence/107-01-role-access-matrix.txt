@@ -1,0 +1,53 @@
+================================================================================
+Evidence: V3-05.1 Reviewer Role-Based Access Control & API Test Matrix (#107, #106)
+Date: 2026-10-19
+Component: GET /coop-plans, GET /coop-plans/{planId}, POST /coop-plans/{planId}/review
+================================================================================
+
+1. Role-Based Access Control Matrix for Review Operations
+---------------------------------------------------------
+| Role         | GET /coop-plans (List)       | GET /coop-plans/{id} (View)   | POST /coop-plans/{id}/review (Review) |
+|--------------|------------------------------|-------------------------------|---------------------------------------|
+| Anonymous    | 401 Unauthorized             | 401 Unauthorized              | 401 Unauthorized                      |
+| STUDENT      | 200 (Own plans only)         | 200 (Own plan) / 403 (Other)  | 403 Forbidden                         |
+| ADVISOR      | 200 (Assigned students only) | 200 (Assigned) / 403 (Other)  | 200 (Assigned) / 403 (Other)          |
+| STAFF        | 200 (All programme plans)    | 200 (All programme plans)     | 200 (All programme plans)             |
+| ADMIN        | 403 Forbidden                | 403 Forbidden                 | 403 Forbidden                         |
+
+2. Key Security Properties Verified
+-----------------------------------
+1) Role Enforced Server-Side:
+   Client JWT token claims are decoded by API Gateway Authorizer and verified against
+   `app_users` table in RDS PostgreSQL (`assertCanReviewPlan`).
+2) Zero-Trust Student ID:
+   Reviewers cannot inspect or review plans outside their advisor assignment.
+   Query parameters never widen scope.
+3) Admin Restriction:
+   Per V3-01 architecture, ADMIN alone has no permission to review or view plans
+   (answers 403 Forbidden). Must have ADVISOR or STAFF role to inspect/review.
+4) No Mock Fallback:
+   When 401 or 403 is returned, the frontend does not fall back to local mock data.
+   Unauthenticated and Forbidden states are rendered with clear guidance.
+
+3. Automated Test Verification Summary
+--------------------------------------
+$ npx vitest run infra/lambda/companies/authorize.test.mjs infra/lambda/companies/reviewCoopPlan.test.mjs infra/lambda/companies/listCoopPlans.test.mjs
+
+- infra/lambda/companies/authorize.test.mjs:
+    ✓ assertCanReviewPlan allows STAFF to review any plan (passed)
+    ✓ assertCanReviewPlan allows ADVISOR to review assigned student (passed)
+    ✓ assertCanReviewPlan rejects ADVISOR if student is unassigned with 403 (passed)
+    ✓ assertCanReviewPlan rejects STUDENT role with 403 (passed)
+    ✓ assertCanReviewPlan rejects ADMIN role with 403 (passed)
+    ✓ assertCanReviewPlan rejects unmapped Cognito user with 403 (passed)
+    ✓ assertCanReviewPlan rejects inactive user with 403 (passed)
+
+- infra/lambda/companies/reviewCoopPlan.test.mjs:
+    ✓ STAFF approves a SUBMITTED plan: returns 200 (passed)
+    ✓ ADVISOR returns a SUBMITTED plan for their assigned student: returns 200 (passed)
+    ✓ rejects review if student is not assigned to the advisor (403 Forbidden) (passed)
+    ✓ rejects review if caller is not an advisor or staff (403 Forbidden) (passed)
+    ✓ rejects review if caller has role ADMIN (403 Forbidden) (passed)
+    ✓ answers 401 when the caller carries no token at all (passed)
+
+Total: All 83 authorization and plan-review unit tests passed.

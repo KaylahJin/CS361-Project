@@ -6,7 +6,7 @@ import {
   Briefcase,
   GraduationCap,
   CalendarClock,
-  ClipboardList,
+  ClipboardCheck,
   Menu,
   X,
   LogIn,
@@ -40,7 +40,7 @@ const navItems = [
   { id: 'employers', label: 'สถานประกอบการ', icon: Building2 },
   { id: 'positions', label: 'ตำแหน่งงาน', icon: Briefcase },
   { id: 'students', label: 'นักศึกษา', icon: GraduationCap, requiresAuth: true },
-  { id: 'coop-plans', label: 'แผนสหกิจ', icon: ClipboardList },
+  { id: 'coop-plans', label: 'แผนสหกิจ', icon: ClipboardCheck },
   { id: 'periods', label: 'รอบเวลา', icon: CalendarClock },
 ] as const;
 
