@@ -80,8 +80,6 @@ function validateDate(value: string | undefined, field: string): string | null {
 
 export function parseStudentCsv(contents: string): CsvRecord<StudentImportRecord>[] {
   const rows = parseCsv<Record<string, string>>(contents);
-  const seenIds = new Set<string>();
-  const seenEmails = new Set<string>();
 
   return rows.map(({ rowNumber, value }) => {
     try {
@@ -105,11 +103,6 @@ export function parseStudentCsv(contents: string): CsvRecord<StudentImportRecord
       }
       if (phone && phone.length > 20) throw new RowValidationError("phone must be at most 20 characters");
 
-      if (seenIds.has(student_id)) throw new RowValidationError(`duplicate student_id "${student_id}" in this file`);
-      if (seenEmails.has(email)) throw new RowValidationError(`duplicate email "${email}" in this file`);
-      seenIds.add(student_id);
-      seenEmails.add(email);
-
       return {
         rowNumber,
         value: {
@@ -132,7 +125,6 @@ export function parseStudentCsv(contents: string): CsvRecord<StudentImportRecord
 
 export function parseStudentCoursesCsv(contents: string): CsvRecord<StudentCourseImportRecord>[] {
   const rows = parseCsv<Record<string, string>>(contents);
-  const seenKeys = new Set<string>();
 
   return rows.map(({ rowNumber, value }) => {
     try {
@@ -165,10 +157,6 @@ export function parseStudentCoursesCsv(contents: string): CsvRecord<StudentCours
       if ((rawStatus === "PASSED" || rawStatus === "FAILED") && grade_point === null) {
         throw new RowValidationError(`${rawStatus} records require grade_point`);
       }
-
-      const key = `${student_id}::${course_code}`;
-      if (seenKeys.has(key)) throw new RowValidationError(`duplicate student/course key "${key}" in this file`);
-      seenKeys.add(key);
 
       return {
         rowNumber,
