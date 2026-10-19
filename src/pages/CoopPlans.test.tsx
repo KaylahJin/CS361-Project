@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+import type { CoopPlan, CoopPlanStatus } from '../types/coopPlan';
 
 const useAuthMock = vi.fn();
 vi.mock('../auth/AuthContext', () => ({ useAuth: useAuthMock }));
 
 const getCoopPlansMock = vi.fn();
 const getCoopPlanMock = vi.fn();
+const createCoopPlanMock = vi.fn();
+const updateCoopPlanMock = vi.fn();
+const submitCoopPlanMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
   const actual = await vi.importActual<typeof import('../data/coopPlanApi')>(
@@ -15,8 +21,18 @@ vi.mock('../data/coopPlanApi', async () => {
     ...actual,
     getCoopPlans: getCoopPlansMock,
     getCoopPlan: getCoopPlanMock,
+    createCoopPlan: createCoopPlanMock,
+    updateCoopPlan: updateCoopPlanMock,
+    submitCoopPlan: submitCoopPlanMock,
   };
 });
+
+// The create/edit form loads these when it opens.
+const getPeriodTimelineMock = vi.fn();
+vi.mock('../data/periodAPI', () => ({ getPeriodTimeline: getPeriodTimelineMock }));
+
+const getPositionsMock = vi.fn();
+vi.mock('../data/positionApi', () => ({ getPositions: getPositionsMock }));
 
 const { CoopPlanApiError } = await import('../data/coopPlanApi');
 const { default: CoopPlans } = await import('./CoopPlans');
@@ -58,6 +74,7 @@ describe('CoopPlans and the signed-in session', () => {
     useAuthMock.mockReset();
     getCoopPlansMock.mockReset();
     getCoopPlanMock.mockReset();
+    submitCoopPlanMock.mockReset();
   });
 
   it('loads the plans the signed-in caller may see', async () => {
@@ -310,3 +327,383 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 });
 
+/* ============================================================
+   V3-04.1: create and edit from the list and the detail page
+   ============================================================ */
+
+function fullPlan(overrides: Partial<CoopPlan> = {}): CoopPlan {
+  return {
+    plan_id: 7,
+    student_id: '6600000001',
+    period_id: 'P2568-1',
+    position_id: null,
+    status: 'PREPARING',
+    acknowledged_pre_course: false,
+    terms_accepted_at: null,
+    student_note: 'old note',
+    submitted_at: null,
+    reviewer_name: null,
+    reviewed_at: null,
+    review_comment: null,
+    created_at: '2026-10-01T09:00:00.000Z',
+    updated_at: '2026-10-01T09:00:00.000Z',
+    first_name: 'บีบี',
+    last_name: 'น้ำทิพย์',
+    curriculum: '66',
+    position_title: null,
+    company_id: null,
+    company_name: null,
+    company_short_name: null,
+    period_name: 'ภาคการศึกษาที่ 1/2568',
+    ...overrides,
+  };
+}
+
+const ACTIVE_PERIOD = {
+  period_id: 'P2568-1',
+  name: 'ภาคการศึกษาที่ 1/2568',
+  academic_year: 2568,
+  semester: '1',
+  is_active: true,
+};
+
+// Lists one plan, serves it as the detail, and opens the detail page.
+async function openDetail(plan: CoopPlan) {
+  getCoopPlansMock.mockResolvedValue([plan]);
+  getCoopPlanMock.mockResolvedValue(plan);
+  const user = userEvent.setup();
+
+  render(<CoopPlans />);
+  await user.click(await screen.findByText(plan.student_id));
+  await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' });
+  return user;
+}
+
+describe('CoopPlans: create and edit', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    getCoopPlansMock.mockReset();
+    getCoopPlanMock.mockReset();
+    createCoopPlanMock.mockReset();
+    updateCoopPlanMock.mockReset();
+    getPeriodTimelineMock.mockReset();
+    getPositionsMock.mockReset();
+
+    signedIn();
+    getPeriodTimelineMock.mockResolvedValue({
+      period: ACTIVE_PERIOD,
+      all_periods: [ACTIVE_PERIOD],
+      schedules: [],
+    });
+    getPositionsMock.mockResolvedValue([]);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  describe('the create button', () => {
+    it('is offered to a signed-in caller', async () => {
+      getCoopPlansMock.mockResolvedValue([]);
+
+      render(<CoopPlans />);
+
+      expect(await screen.findByRole('button', { name: /สร้างแผนใหม่/ })).toBeInTheDocument();
+    });
+
+    it('is not offered to a signed-out visitor', async () => {
+      signedOut();
+      getCoopPlansMock.mockRejectedValue(new CoopPlanApiError('no token', 401));
+
+      render(<CoopPlans />);
+
+      await screen.findByText(/ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ/);
+      expect(screen.queryByRole('button', { name: /สร้างแผนใหม่/ })).not.toBeInTheDocument();
+    });
+
+    it('is withdrawn when the list is refused with 403: an account with no plan role cannot create either', async () => {
+      getCoopPlansMock.mockRejectedValue(new CoopPlanApiError('forbidden', 403));
+
+      render(<CoopPlans />);
+
+      await screen.findByText(/ไม่มีสิทธิ์เข้าถึงแผนสหกิจ/);
+      expect(screen.queryByRole('button', { name: /สร้างแผนใหม่/ })).not.toBeInTheDocument();
+    });
+
+    it('stays after a plain network failure, which says nothing about permission', async () => {
+      getCoopPlansMock.mockRejectedValue(new Error('network down'));
+
+      render(<CoopPlans />);
+
+      await screen.findByText(/ไม่สามารถโหลดข้อมูลได้/);
+      expect(screen.getByRole('button', { name: /สร้างแผนใหม่/ })).toBeInTheDocument();
+    });
+  });
+
+  describe('creating a plan', () => {
+    it('opens the form, saves a draft, and shows the new plan on the way back', async () => {
+      const created = fullPlan({ student_note: null });
+      getCoopPlansMock.mockResolvedValueOnce([]).mockResolvedValue([created]);
+      createCoopPlanMock.mockResolvedValue(created);
+      const user = userEvent.setup();
+
+      render(<CoopPlans />);
+      await user.click(await screen.findByRole('button', { name: /สร้างแผนใหม่/ }));
+
+      expect(await screen.findByRole('heading', { name: 'สร้างแผนสหกิจศึกษาใหม่' })).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByLabelText(/รอบสหกิจศึกษา/)).toHaveValue('P2568-1'));
+      await user.click(screen.getByRole('button', { name: /บันทึกร่าง/ }));
+      expect(await screen.findByRole('status')).toHaveTextContent(/บันทึกร่างเรียบร้อยแล้ว/);
+
+      // Back from the form lands on the plan that was just saved...
+      await user.click(screen.getByRole('button', { name: /กลับรายละเอียดแผน/ }));
+      expect(await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' })).toBeInTheDocument();
+      expect(screen.getByText(/Plan #7/)).toBeInTheDocument();
+
+      // ...and the list behind it was reloaded, so it has the new row.
+      await user.click(screen.getByRole('button', { name: /กลับรายการคำร้อง/ }));
+      expect(await screen.findByText('6600000001')).toBeInTheDocument();
+      expect(getCoopPlansMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('goes back to the list, not a detail page, when nothing was saved', async () => {
+      getCoopPlansMock.mockResolvedValue([]);
+      const user = userEvent.setup();
+
+      render(<CoopPlans />);
+      await user.click(await screen.findByRole('button', { name: /สร้างแผนใหม่/ }));
+      await waitFor(() => expect(screen.getByLabelText(/รอบสหกิจศึกษา/)).toHaveValue('P2568-1'));
+      await user.click(screen.getByRole('button', { name: /กลับรายการคำร้อง/ }));
+
+      expect(await screen.findByRole('heading', { name: /รายการคำร้องแผนสหกิจศึกษา/ })).toBeInTheDocument();
+      expect(createCoopPlanMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('editing a plan', () => {
+    it.each(['PREPARING', 'RETURNED'] as CoopPlanStatus[])(
+      'offers Edit on a %s plan and opens the form with the saved data',
+      async (status) => {
+        const user = await openDetail(
+          fullPlan({
+            status,
+            student_note: 'saved note',
+            ...(status === 'RETURNED'
+              ? {
+                  acknowledged_pre_course: true,
+                  terms_accepted_at: '2026-09-20T09:00:00.000Z',
+                  review_comment: 'please fix',
+                }
+              : {}),
+          }),
+        );
+
+        await user.click(screen.getByRole('button', { name: 'แก้ไขแผน' }));
+
+        expect(await screen.findByRole('heading', { name: 'แก้ไขแผนสหกิจศึกษา' })).toBeInTheDocument();
+        expect(screen.getByLabelText(/หมายเหตุจากนักศึกษา/)).toHaveValue('saved note');
+      },
+    );
+
+    it.each([
+      ['SUBMITTED', /ยื่นแล้วจึงแก้ไขไม่ได้/],
+      ['APPROVED', /ได้รับอนุมัติแล้ว แก้ไขไม่ได้/],
+      ['REJECTED', /ไม่ได้รับอนุมัติ แก้ไขไม่ได้/],
+    ] as [CoopPlanStatus, RegExp][])(
+      'offers no Edit on a %s plan, and says why',
+      async (status, reason) => {
+        await openDetail(
+          fullPlan({
+            status,
+            acknowledged_pre_course: true,
+            terms_accepted_at: '2026-09-20T09:00:00.000Z',
+            submitted_at: '2026-09-20T09:00:00.000Z',
+            ...(status === 'SUBMITTED'
+              ? {}
+              : { reviewer_name: 'อ.ที่ปรึกษา', reviewed_at: '2026-09-25T09:00:00.000Z', review_comment: 'x' }),
+          }),
+        );
+
+        expect(screen.queryByRole('button', { name: 'แก้ไขแผน' })).not.toBeInTheDocument();
+        expect(screen.getByText(reason)).toBeInTheDocument();
+      },
+    );
+
+    it('says Edit is for the plan’s owner, since an advisor can read a draft too', async () => {
+      await openDetail(fullPlan());
+
+      expect(screen.getByText('แก้ไขได้เฉพาะนักศึกษาเจ้าของแผน')).toBeInTheDocument();
+    });
+
+    it('saves, and the detail page then shows what the API returned', async () => {
+      const user = await openDetail(fullPlan({ student_note: 'old note' }));
+      updateCoopPlanMock.mockResolvedValue(fullPlan({ student_note: 'new note from the database' }));
+
+      await user.click(screen.getByRole('button', { name: 'แก้ไขแผน' }));
+      await user.clear(await screen.findByLabelText(/หมายเหตุจากนักศึกษา/));
+      await user.type(screen.getByLabelText(/หมายเหตุจากนักศึกษา/), 'whatever was typed');
+      await user.click(screen.getByRole('button', { name: /บันทึกร่าง/ }));
+      await screen.findByRole('status');
+
+      await user.click(screen.getByRole('button', { name: /กลับรายละเอียดแผน/ }));
+
+      expect(await screen.findByText('new note from the database')).toBeInTheDocument();
+      expect(screen.queryByText('whatever was typed')).not.toBeInTheDocument();
+      expect(updateCoopPlanMock).toHaveBeenCalledWith(7, { studentNote: 'whatever was typed' }, 'a-token');
+    });
+
+    it('leaving the form without saving shows the plan unchanged', async () => {
+      const user = await openDetail(fullPlan({ student_note: 'old note' }));
+
+      await user.click(screen.getByRole('button', { name: 'แก้ไขแผน' }));
+      await user.type(await screen.findByLabelText(/หมายเหตุจากนักศึกษา/), ' unsaved');
+      await user.click(screen.getByRole('button', { name: /กลับรายละเอียดแผน/ }));
+      await user.click(screen.getByRole('button', { name: 'ออกโดยไม่บันทึก' }));
+
+      expect(await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' })).toBeInTheDocument();
+      expect(screen.getByText('old note')).toBeInTheDocument();
+      expect(updateCoopPlanMock).not.toHaveBeenCalled();
+    });
+
+    it('a refused save keeps the form open with the reason', async () => {
+      const user = await openDetail(fullPlan());
+      updateCoopPlanMock.mockRejectedValue(new CoopPlanApiError('forbidden', 403, 'FORBIDDEN'));
+
+      await user.click(screen.getByRole('button', { name: 'แก้ไขแผน' }));
+      await user.type(await screen.findByLabelText(/หมายเหตุจากนักศึกษา/), ' more');
+      await user.click(screen.getByRole('button', { name: /บันทึกร่าง/ }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(/ไม่มีสิทธิ์ทำรายการนี้/);
+      expect(screen.getByRole('heading', { name: 'แก้ไขแผนสหกิจศึกษา' })).toBeInTheDocument();
+    });
+  });
+
+
+});
+
+  describe('submitting a plan', () => {
+    beforeEach(() => {
+      useAuthMock.mockReset();
+      getCoopPlansMock.mockReset();
+      getCoopPlanMock.mockReset();
+      submitCoopPlanMock.mockReset();
+
+      signedIn();
+
+      getPeriodTimelineMock.mockReset();
+      getPeriodTimelineMock.mockResolvedValue({
+        period: ACTIVE_PERIOD,
+        all_periods: [ACTIVE_PERIOD],
+        schedules: [],
+      });
+
+      getPositionsMock.mockReset();
+      getPositionsMock.mockResolvedValue([]);
+    });
+    it.each([
+      ['PREPARING', 'ยื่นแผน'],
+      ['RETURNED', 'ยื่นแผนอีกครั้ง'],
+    ] as const)(
+      'offers the submit action for %s plans',
+      async (status, label) => {
+        await openDetail(fullPlan({ status }));
+
+        expect(
+          screen.getByRole('button', { name: label })
+        ).toBeInTheDocument();
+      }
+    );
+
+    it.each(['SUBMITTED', 'APPROVED', 'REJECTED'] as const)(
+      'does not offer submit for %s plans',
+      async (status) => {
+        await openDetail(fullPlan({ status }));
+
+        expect(
+          screen.queryByRole('button', { name: /ยื่นแผน/ })
+        ).not.toBeInTheDocument();
+      }
+    );
+
+    it('confirms before calling the API and shows the submitted status', async () => {
+      const submitted = fullPlan({
+        status: 'SUBMITTED',
+        submitted_at: '2026-10-19T09:00:00.000Z',
+      });
+
+      submitCoopPlanMock.mockResolvedValue(submitted);
+
+      const user = await openDetail(fullPlan({ status: 'PREPARING' }));
+
+      await user.click(screen.getByRole('button', { name: 'ยื่นแผน' }));
+
+      expect(submitCoopPlanMock).not.toHaveBeenCalled();
+
+      await user.click(
+        screen.getByRole('button', { name: 'ยืนยันยื่นแผน' })
+      );
+
+      await waitFor(() => {
+        expect(submitCoopPlanMock).toHaveBeenCalledWith(7, 'a-token');
+      });
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        /ยื่นแผนสำเร็จแล้ว/
+      );
+
+      expect(screen.getByText('รอตรวจ')).toBeInTheDocument();
+    });
+
+    it('shows the server validation reason and does not claim success', async () => {
+      submitCoopPlanMock.mockRejectedValue(
+        new CoopPlanApiError(
+          'validation failed',
+          400,
+          'SUBMISSION_REQUIREMENTS_NOT_MET',
+          [
+            { code: 'POSITION_REQUIRED' },
+            { code: 'SUBMISSION_WINDOW_CLOSED' },
+          ]
+        )
+      );
+
+      const user = await openDetail(fullPlan({ status: 'PREPARING' }));
+
+      await user.click(screen.getByRole('button', { name: 'ยื่นแผน' }));
+
+      await user.click(
+        screen.getByRole('button', { name: 'ยืนยันยื่นแผน' })
+      );
+
+      const alert = await screen.findByRole('alert');
+
+      expect(alert).toHaveTextContent(
+        /กรุณาเลือกตำแหน่งงานก่อนยื่นแผน/
+      );
+
+      expect(alert).toHaveTextContent(
+        /ยังไม่อยู่ในช่วงเวลาที่เปิดรับยื่นแผน/
+      );
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('explains duplicate submission errors', async () => {
+      submitCoopPlanMock.mockRejectedValue(
+        new CoopPlanApiError(
+          'already submitted',
+          409,
+          'ALREADY_SUBMITTED'
+        )
+      );
+
+      const user = await openDetail(fullPlan({ status: 'PREPARING' }));
+
+      await user.click(screen.getByRole('button', { name: 'ยื่นแผน' }));
+
+      await user.click(
+        screen.getByRole('button', { name: 'ยืนยันยื่นแผน' })
+      );
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        /ไม่สามารถยื่นซ้ำได้/
+      );
+    });
+  });

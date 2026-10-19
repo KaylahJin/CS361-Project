@@ -1,0 +1,100 @@
+
+> cs361-project@0.0.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mG:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100[39m
+
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/auth.test.mjs [2m([22m[2m7 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/terraform/route-policy.test.mjs [2m([22m[2m12 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/listCoopInfo.test.mjs [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/authorize.test.mjs [2m([22m[2m28 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/listStudents.test.mjs [2m([22m[2m22 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/listCoopPlans.test.mjs [2m([22m[2m21 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/migrate/build-seed.test.mjs [2m([22m[2m22 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/getStudentById.test.mjs [2m([22m[2m17 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/getCoopPlanById.test.mjs [2m([22m[2m16 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+[90mstderr[2m | infra/lambda/companies/listPositions.test.mjs[2m > [22m[2mlistPositions[2m > [22m[2mhandles database error gracefully by returning 500
+[22m[39mlistPositions failed Error: DB connection failed
+    at [90mG:\ObsidianCS\CS\CloudCS\CS361-Project-fix-100\[39minfra\lambda\companies\listPositions.test.mjs:83:33
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/listPositions.test.mjs [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mreturns 404 for an unknown routeKey
+[22m[39mUnhandled routeKey DELETE /companies
+
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mreturns 404 for inherited Object.prototype property names used as routeKey
+[22m[39mUnhandled routeKey toString
+
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mreturns 404 for inherited Object.prototype property names used as routeKey
+[22m[39mUnhandled routeKey constructor
+
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mreturns 404 for inherited Object.prototype property names used as routeKey
+[22m[39mUnhandled routeKey valueOf
+
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mreturns 404 for inherited Object.prototype property names used as routeKey
+[22m[39mUnhandled routeKey hasOwnProperty
+
+[90mstderr[2m | infra/lambda/companies/index.test.mjs[2m > [22m[2mrouter (index.mjs handler)[2m > [22m[2mcatches a thrown error from a handler and returns a generic 500 body that does not leak the thrown message
+[22m[39mUnhandled error in companies handler Error: SENTINEL_SHOULD_NOT_LEAK
+    at [90mG:\ObsidianCS\CS\CloudCS\CS361-Project-fix-100\[39minfra\lambda\companies\index.test.mjs:81:13
+    at mockCall [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/spy[24m/dist/index.js:96:15[90m)[39m
+    at spy [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4mtinyspy[24m/dist/index.js:47:80[90m)[39m
+    at handler [90m(G:\ObsidianCS\CS\CloudCS\CS361-Project-fix-100\[39minfra\lambda\companies\index.mjs:65:18[90m)[39m
+    at [90mG:\ObsidianCS\CS\CloudCS\CS361-Project-fix-100\[39minfra\lambda\companies\index.test.mjs:84:26
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/index.test.mjs [2m([22m[2m10 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/listCompanies.test.mjs [2m([22m[2m4 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/getCompanyById.test.mjs [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+[90mstderr[2m | infra/lambda/companies/getPositionById.test.mjs[2m > [22m[2mgetPositionById[2m > [22m[2mreturns 500 when database query throws error
+[22m[39mgetPositionById failed Error: Connection error
+    at [90mG:\ObsidianCS\CS\CloudCS\CS361-Project-fix-100\[39minfra\lambda\companies\getPositionById.test.mjs:56:33
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///G:/ObsidianCS/CS/CloudCS/CS361-Project-fix-100/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ [32m✓[39m [30m[46m backend [49m[39m infra/lambda/companies/getPositionById.test.mjs [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/data/coopPlanApi.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/auth/cognitoClient.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/data/studentApi.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/components/ProtectedRoute.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/pages/Students.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 531[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/pages/CoopPlans.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 704[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/auth/AuthContext.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 958[2mms[22m[39m
+   [33m[2m✓[22m[39m AuthProvider[2m > [22mbecomes authenticated after a successful login [33m 348[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/components/Navbar.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1186[2mms[22m[39m
+   [33m[2m✓[22m[39m Navbar sign-out[2m > [22mleaves the account page when signing out [33m 538[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/App.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 790[2mms[22m[39m
+   [33m[2m✓[22m[39m reaching the student page[2m > [22ma signed-in user can open it from the navbar [33m 552[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/pages/Login.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 4087[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mcalls login with the typed email and password [33m 992[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mreports success so the caller can leave the login page [33m 639[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mdoes not report success when login fails [33m 530[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mshows one generic message when login fails [33m 578[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mclears a previous error when the next attempt succeeds [33m 596[2mms[22m[39m
+   [33m[2m✓[22m[39m Login page[2m > [22mdoes not submit twice while a request is in flight [33m 749[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m24 passed[39m[22m[90m (24)[39m
+[2m      Tests [22m [1m[32m244 passed[39m[22m[90m (244)[39m
+[2m   Start at [22m 16:12:15
+[2m   Duration [22m 9.30s[2m (transform 2.40s, setup 4.51s, collect 7.09s, tests 8.69s, environment 24.85s, prepare 5.63s)[22m
+

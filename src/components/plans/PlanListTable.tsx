@@ -13,6 +13,7 @@ import { CircleCheckFill } from './CircleCheckFill';
 interface PlanListTableProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
+  onReview?: (plan: PlanReviewItem) => void;
 }
 
 export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = ({
@@ -78,6 +79,7 @@ function formatDate(isoString: string | null): string {
 export const PlanListTable: React.FC<PlanListTableProps> = ({
   plans,
   onOpen,
+  onReview,
 }) => {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
@@ -187,7 +189,11 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onOpen(plan);
+                        if (isPending && onReview) {
+                          onReview(plan);
+                        } else {
+                          onOpen(plan);
+                        }
                       }}
                       className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
                         isPending

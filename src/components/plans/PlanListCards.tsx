@@ -6,6 +6,7 @@ import { PlanStatusBadge } from './PlanListTable';
 interface PlanListCardsProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
+  onReview?: (plan: PlanReviewItem) => void;
 }
 
 function formatDate(isoString: string | null): string {
@@ -25,6 +26,7 @@ function formatDate(isoString: string | null): string {
 export const PlanListCards: React.FC<PlanListCardsProps> = ({
   plans,
   onOpen,
+  onReview,
 }) => {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -106,7 +108,11 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpen(plan);
+                  if (isPending && onReview) {
+                    onReview(plan);
+                  } else {
+                    onOpen(plan);
+                  }
                 }}
                 className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] ${
                   isPending

@@ -12,7 +12,7 @@ resource "aws_apigatewayv2_api" "companies" {
       var.cors_allow_origin,
       local.web_url,
     ]
-    allow_methods = ["GET", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PATCH", "OPTIONS"]
     # `authorization` has to be listed: the browser sends the ID token in that
     # header, and a header missing here fails the preflight before the real
     # request is sent. That shows up as a CORS error, not a 401, which is easy
@@ -99,6 +99,30 @@ resource "aws_apigatewayv2_route" "list_coop_plans" {
 resource "aws_apigatewayv2_route" "get_coop_plan" {
   api_id             = aws_apigatewayv2_api.companies.id
   route_key          = "GET /coop-plans/{planId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "create_coop_plan" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "update_coop_plan" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "PATCH /coop-plans/{planId}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "submit_coop_plan" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans/{planId}/submit"
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id

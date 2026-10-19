@@ -57,3 +57,45 @@ export interface CoopPlanQueryParams {
   submittedFrom?: string;
   submittedTo?: string;
 }
+
+// ------------------------------------------------------------
+// V3-04.1 — create and edit
+// ------------------------------------------------------------
+
+/**
+ * Body of POST /coop-plans. There is no student id: the API takes the owner
+ * from the verified token, and refuses a body that names one.
+ */
+export interface CreateCoopPlanInput {
+  periodId: string;
+  positionId?: string | null;
+}
+
+/**
+ * Body of PATCH /coop-plans/{planId}. Send only the fields that changed.
+ * `termsAccepted` is a yes/no — the server stamps the time itself.
+ * Status, period and every review field are not editable and are refused.
+ */
+export interface UpdateCoopPlanInput {
+  positionId?: string | null;
+  studentNote?: string | null;
+  acknowledgedPreCourse?: boolean;
+  termsAccepted?: boolean;
+}
+
+/**
+ * Statuses a student may edit (V3-01-data-model.md §4). SUBMITTED is waiting
+ * on a reviewer; APPROVED and REJECTED are final. This only decides whether the
+ * page offers an edit button — the API enforces it with a 409 regardless.
+ */
+export const EDITABLE_PLAN_STATUSES: readonly CoopPlanStatus[] = [
+  'PREPARING',
+  'RETURNED',
+];
+
+export function isPlanEditable(status: CoopPlanStatus): boolean {
+  return EDITABLE_PLAN_STATUSES.includes(status);
+}
+
+/** Same limit the API enforces on studentNote. */
+export const MAX_STUDENT_NOTE = 2000;
