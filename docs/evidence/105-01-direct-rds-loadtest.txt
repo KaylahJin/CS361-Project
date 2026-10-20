@@ -1,0 +1,50 @@
+Issue #105 [V3-06.2] — Direct Lambda -> RDS connection, load evidence
+=====================================================================
+Captured : 2026-10-20 (UTC)
+Target   : https://z9ly6malij.execute-api.us-east-1.amazonaws.com/companies
+           (coop-portal-companies-api -> coop-portal-companies-lambda -> RDS,
+            direct connection, no RDS Proxy — proxy.tf was removed, see #88/#105)
+Method   : GET /companies, read-only, PUBLIC route (no token). RDS-backed
+           (103 seeded companies). No writes, no schema change.
+Database : coop-portal-coop-db-dev, PostgreSQL 16, db.t3.micro, default.postgres16.
+
+Client-side load test (concurrent GETs, waves)
+----------------------------------------------
+conc | reqs | errRate | connMs |  min |  avg |  p50 |  p95 |  max  | status
+-----+------+---------+--------+------+------+------+------+-------+--------
+   1 |    1 |      0% |   603  |  2396|  2396|  2396|  2396|  2396 | 200:1   (cold start)
+  10 |   10 |      0% |   610  |   612|  3017|  3693|  4300|  4300 | 200:10
+  20 |   20 |      0% |   576  |   755|  2327|  2852|  3929|  3929 | 200:20
+  50 |   50 |      0% |   592  |   795|  3469|  3479|  5051|  5061 | 200:50
+All latencies in ms. connMs = TCP+TLS connect; total = full response.
+Error rate 0% at every level, including 50 concurrent. No 5xx, no timeouts.
+
+Server-side confirmation (CloudWatch, same window)
+--------------------------------------------------
+AWS/RDS DatabaseConnections (coop-portal-coop-db-dev):
+  peak Maximum = 38 connections (held across 10:48-10:50, 0 before the burst).
+  db.t3.micro ceiling ~= 112 (default.postgres16 LEAST(DBInstanceClassMemory/9531392, 5000),
+  ~1 GiB class). Peak 38 / ~112 = ~34% of the connection ceiling used.
+
+AWS/Lambda coop-portal-companies-lambda (test minute):
+  Invocations          = 81   (matches 1+10+20+50 fired)
+  ConcurrentExecutions = 38   (Maximum)
+  Throttles            = 0
+  Errors               = 0
+  Duration             = 1189 ms avg, 2531 ms max (server-side compute only)
+
+Reading
+-------
+- 38 concurrent Lambda containers opened 38 DB connections (one per container
+  for the single query), ~34% of the ~112 ceiling. Connections lingered a few
+  minutes after the burst (idle containers holding their pg pool) then released.
+  Still well under the ceiling, 0 errors.
+- Latency (2-5 s) is dominated by Lambda cold-start init and per-container
+  first-connect, NOT by the database. Server-side Duration (<=2.5 s, excl.
+  init) is well under the client total, and DB connections never contended.
+- No RDS Proxy is in the path; the direct connection absorbed 50 concurrent
+  requests with 0 errors and ~34% connection-ceiling use.
+
+Conclusion: the direct Lambda->RDS connection supports the expected prototype
+load (<=50 concurrent reads) with large headroom and no connection exhaustion.
+See docs/direct-rds-connection-assessment.md for the full write-up.
