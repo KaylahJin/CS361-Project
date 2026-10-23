@@ -17,6 +17,7 @@ export default defineConfig({
             'infra/migrate/**/*.test.mjs',
             'infra/lambda/**/*.test.mjs',
             'infra/terraform/**/*.test.mjs',
+            '.github/scripts/**/*.test.mjs',
           ],
         },
       },
