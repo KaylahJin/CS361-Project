@@ -1,0 +1,92 @@
+name: LINE Notify
+
+# Reminders to each teammate's LINE chat with the team bot (docs/line-notify-setup.md).
+# The rules live in .github/scripts/line-notify.mjs; this file only gathers the data.
+on:
+  schedule:
+    - cron: '0 2 * * *' # 09:00 Asia/Bangkok
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: แสดงข้อความใน job summary แทนการส่ง LINE
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  checks: read
+
+jobs:
+  line-notify:
+    name: LINE Notify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: actions/github-script@v7
+        env:
+          TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          USER_IDS: ${{ secrets.LINE_USER_IDS }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          LINE_NOTIFY_ENABLED: ${{ vars.LINE_NOTIFY_ENABLED }}
+        with:
+          script: |
+            const dir = `${process.env.GITHUB_WORKSPACE}/.github/scripts`;
+            const lib = await import(`${dir}/line-notify.mjs`);
+            const team = JSON.parse(require('fs').readFileSync(`${dir}/line-notify-team.json`, 'utf8'));
+            const repo = context.repo;
+            const listEvents = (n) => github.paginate(github.rest.issues.listEvents, { ...repo, issue_number: n });
+            const lastEvent = (events, type, login) => events
+              .filter((e) => e.event === type && (!login || e.requested_reviewer?.login === login)).at(-1)?.created_at;
+
+            const { data: rules } = await github.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { ...repo, branch: 'main' });
+            const requiredChecks = rules.filter((r) => r.type === 'required_status_checks')
+              .flatMap((r) => r.parameters.required_status_checks.map((c) => c.context));
+            const milestone = (await github.paginate(github.rest.issues.listMilestones, repo)).find((m) => m.title === team.milestone);
+            if (!milestone) core.warning(`ไม่พบ milestone "${team.milestone}" ที่เปิดอยู่ แก้ใน line-notify-team.json`);
+            const rawIssues = milestone
+              ? await github.paginate(github.rest.issues.listForRepo, { ...repo, milestone: milestone.number, state: 'open' }) : [];
+            const issues = await Promise.all(rawIssues.filter((i) => !i.pull_request).map(async (i) => {
+              const labels = i.labels.map((l) => l.name);
+              // Only blocking work is timed, so only it costs an extra request.
+              const assignedAt = labels.includes(lib.BLOCKING_LABEL) && lastEvent(await listEvents(i.number), 'assigned');
+              return { number: i.number, assignees: i.assignees.map((a) => a.login), labels, assignedAt: assignedAt || i.created_at };
+            }));
+            const pulls = await Promise.all((await github.paginate(github.rest.pulls.list, { ...repo, state: 'open' })).map(async (pr) => {
+              const [reviews, events, checks] = await Promise.all([
+                github.paginate(github.rest.pulls.listReviews, { ...repo, pull_number: pr.number }),
+                listEvents(pr.number),
+                github.paginate(github.rest.checks.listForRef, { ...repo, ref: pr.head.sha }),
+              ]);
+              return {
+                number: pr.number, author: pr.user.login, draft: pr.draft, body: pr.body, branch: pr.head.ref,
+                requested: pr.requested_reviewers.map((u) => ({ login: u.login, since: lastEvent(events, 'review_requested', u.login) ?? pr.created_at })),
+                reviews: reviews.map((r) => ({ user: r.user?.login ?? 'unknown', state: r.state })),
+                checks: checks.map((c) => ({ name: c.name, conclusion: c.conclusion, startedAt: c.started_at })),
+              };
+            }));
+            const messages = lib.buildDigests({
+              now: new Date(), repo: `${repo.owner}/${repo.repo}`, requiredChecks, milestoneDue: milestone?.due_on ?? null, team, issues, pulls,
+            });
+
+            const env = process.env;
+            const mode = lib.sendMode({ event: context.eventName, dryRun: env.DRY_RUN !== 'false', hasSecrets: Boolean(env.TOKEN && env.USER_IDS), vars: env });
+            let results = [];
+            if (mode.send) {
+              let userIds;
+              try { userIds = JSON.parse(env.USER_IDS); } catch { throw new Error('LINE_USER_IDS ต้องเป็น JSON เช่น {"login": "U..."}'); }
+              results = await lib.pushAll(messages, { token: env.TOKEN, userIds });
+            }
+
+            const summary = core.summary.addHeading('LINE แจ้งเตือน')
+              .addRaw(`${mode.send ? 'ส่งจริง' : `dry run (${mode.reason})`} ${messages.length} ข้อความ`, true)
+              .addList(results.map((r) => r.line));
+            for (const m of messages) summary.addHeading(`ถึง ${m.to}`, 3).addCodeBlock(m.text);
+            await summary.write();
+            for (const r of results.filter((r) => r.status === 'skipped')) core.warning(r.line);
+            const failed = results.filter((r) => r.status === 'failed');
+            if (failed.length) core.setFailed(failed.map((r) => r.line).join('\n'));
