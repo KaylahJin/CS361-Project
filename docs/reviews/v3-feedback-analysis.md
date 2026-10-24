@@ -61,7 +61,7 @@
 | D5 | คัดเลือก | Committee เลือกจากแผนที่ `ELIGIBLE` ไม่เกินจำนวนรับของรอบ |
 | D6 | เกณฑ์ GPA | ตั้งแยกรายรอบใน DB, GPA > 2.80, กลุ่มวิชา ≥ 2.50 |
 | D7 | วิชาบังคับได้ FAILED | นับในค่าเฉลี่ยเหมือนเดิม ไม่ตัดสิทธิ์ทันที — เอกสารอาจารย์ไม่ได้ระบุ ใช้ตามโค้ดเดิม ถ้ามีโอกาสจะถามอาจารย์ในคาบ |
-| D8 | ไฟล์แนบ | Transcript เป็น PDF ไม่เกิน 5 MB, ยื่นได้แม้ไม่มีไฟล์ แล้ว Coordinator บันทึก `INCOMPLETE` |
+| D8 | ไฟล์แนบ | Transcript เป็น PDF ไม่เกิน 5 MB, ยื่นได้แม้ไม่มีไฟล์ แล้ว Coordinator บันทึก `INCOMPLETE` ใน `plan_reviews` และแผนกลับเป็น `RETURNED` |
 | D9 | ใครเห็นรายชื่อนักศึกษา | Coordinator ทั้งหมด, Advisor เฉพาะในที่ปรึกษา, Committee เฉพาะผู้สมัครที่ผ่านการตรวจ, Admin แค่ชื่อ + รหัส, Student ไม่เห็น |
 | D10 | กติกาทีม | ใช้ตาม #126 (issue ≤ 6 ชม., PR ≤ 400 บรรทัด, Reviewer หมุน, Tester ต่อ issue หลัก) |
 
@@ -85,13 +85,28 @@
 **User story ↔ FR:** อยู่ในภาคผนวก ก · เลขที่รู้แล้ว: FR4 (ส่งกลับแก้ไข) และ FR5 (สถานะแผน) ใน P4 · ที่เหลือรอไฟล์โจทย์
 
 **ลำดับ:** P1-①, P3-①, P4-①, P5-① ก่อน (เป็นงานที่ block คนอื่น ต้องมี draft PR ภายในวันที่ 2) → sub-issue ที่เหลือ → QA
-**กำหนดส่ง (เสนอ):** ยืนยันข้อตกลง 2026-10-24 · ปิด sub-issue ทั้งหมด 2026-10-30 · ทดสอบรวม 2026-10-31 — Wit ยืนยันวันในคาบ
+**กำหนดส่ง:** milestone ปิด พ. 28 ต.ค. ใช้ปฏิทินข้อ 13 ของ #126 (D-2 หยุดเพิ่มฟีเจอร์ · D-1 หยุดแก้โค้ด)
+
+| เมื่อไหร่ | ต้องเสร็จ |
+|---|---|
+| ส. 24 ต.ค. 23:59 | ยืนยันข้อตกลง แล้ว Wit สร้าง Issue ทันที |
+| อา. 25 ต.ค. 12:00 | draft PR ของงานที่ block คนอื่น: P1-①, P3-①, P4-①, P5-① |
+| อา. 25 ต.ค. 20:00 | PR ของงานกลุ่ม "ต้องเสร็จ" พร้อมให้รีวิว |
+| จ. 26 ต.ค. 10:00 | รีวิวและ merge ครบ (รอบนี้รีวิวภายใน 12 ชม.) |
+| จ. 26 ต.ค. (D-2) | หยุดเพิ่มฟีเจอร์ · QA นำทดสอบรวม Self-test 1–2 · บั๊กเปิดเป็น issue |
+| อ. 27 ต.ค. 12:00 (D-1) | แก้บั๊กจากทดสอบรวมและ merge ครบ แล้วหยุดแก้โค้ด |
+| อ. 27 ต.ค. | ทดสอบซ้ำ · คู่มือ setup (P1-④) · demo · evidence · ปิด issue |
+| พ. 28 ต.ค. | ส่งงาน |
+
+**ต้องเสร็จรอบนี้** (ใช้ใน Self-test 1–2 และความปลอดภัย): P1-①–④, P2-①–③, P3-①–②, P4-①–②, P5-①–②
+**ทำถ้าทัน ไม่ทันย้ายรอบหน้า** (ข้อ 13): P2-④, P4-③, P5-③ · role `COMMITTEE` ยังเพิ่มใน P4-① ตามเดิม
+**ชม. ที่ต้องเสร็จต่อคน:** Tatdanai 13 · Wit 10 · ruvcandyfruit 13 (รวม QA) · Sunanthida 11 · KaylahJin 10
 
 ---
 
 ## ภาคผนวก ก: ร่าง Issue P1–P5 และ sub-issue
 
-ใช้ template ของ #127 · 1 ปัญหาต่อ 1 คน · sub-issue ไม่เกิน 6 ชม. แตกตามสิ่งที่ผู้ใช้ทำได้ · Reviewer หมุนตาม #126 (16 sub-issue ÷ 5 คน = คนละไม่เกิน 4)
+ใช้ template ของ #127 · 1 ปัญหาต่อ 1 คน · sub-issue ไม่เกิน 6 ชม. แตกตามสิ่งที่ผู้ใช้ทำได้ · Reviewer หมุนตาม #126 (16 sub-issue ÷ 5 คน = คนละไม่เกิน 4 · ไม่นับ QA เพราะไม่มี PR)
 **FR ?** = รอไฟล์โจทย์ FR1–FR10 เพื่อเทียบเลข
 
 | P | ปัญหาหลัก | Owner | Tester | sub-issue | รวม |
@@ -103,8 +118,8 @@
 | P5 | เกณฑ์และข้อมูลทดสอบ | @KaylahJin | @Tatdanai6609611964 | 3 | 14 ชม. |
 | QA | ทดสอบรวม | @ruvcandyfruit | – | 1 | 3 ชม. |
 
-**งานที่ block คนอื่น (ต้องมี draft PR ภายในวันที่ 2):** P1-① → P4-① (บัญชีทดสอบ) · P4-① → P2-④, P5-③ (สถานะใหม่) · P3-① → P4-② · P5-① → P4-②, P4-③
-**ไฟล์ชน:** `CoopPlans.tsx` / `PlanDetailModal.tsx` (P2 merge ก่อน P3, P4) · migration ตั้งชื่อ `v3_02_*` (P3), `v3_03_*` (P5), `v3_04_*` (P4)
+**งานที่ block คนอื่น (ต้องมี draft PR ภายในวันที่ 2):** P1-① → P4-① (บัญชีทดสอบ) · P4-① → P2-④, P5-③ (สถานะใหม่) · P3-① → P4-② · P5-① → P4-②, P4-③, P5-③
+**ไฟล์ชน:** `CoopPlans.tsx` / `PlanDetailModal.tsx` (P2-①–③ merge ก่อน P3, P4 · P2-④ merge หลัง P4-①) · migration ตั้งชื่อ `v3_02_*` (P3), `v3_03_*` (P5), `v3_04_*` (P4)
 
 ---
 
@@ -220,8 +235,8 @@
 **Problem / Goal:** backend ส่งรหัส error 13 รหัส แต่หน้าเว็บรู้จักแค่ 4 (F08)
 **Demo:** หลังจบ issue นี้ นักศึกษาที่ยื่นไม่ผ่านเห็นเหตุผลภาษาไทยตรงสาเหตุทุกกรณี
 **Task:**
-- [ ] ทำตารางข้อความให้ตรงกับรหัสใน `submissionRules.mjs` และ `eligibility.mjs` ลบ 5 รหัสที่ backend ไม่เคยส่ง
-- [ ] รหัสที่ไม่รู้จัก แสดง `message` จาก backend
+- [ ] ทำตารางข้อความภาษาไทยครบทั้ง 13 รหัสใน `submissionRules.mjs` และ `eligibility.mjs` ลบ 5 รหัสที่ backend ไม่เคยส่ง
+- [ ] รหัสใหม่ที่ยังไม่มีในตาราง แสดง `message` จาก backend ไปก่อน กันหน้าจอว่าง
 
 **Acceptance Criteria:**
 - [ ] ทุกรหัสที่ backend ส่งมี test ว่าแสดงข้อความภาษาไทย
@@ -291,11 +306,12 @@
 - [ ] API ขอ presigned URL สำหรับ upload ตรวจว่าเป็นเจ้าของแผน
 - [ ] ตาราง `plan_attachments` + migration `v3_02_*` + rollback และอัปเดต `schema.sql`
 - [ ] UI อัปโหลดและลบไฟล์ตอน `PREPARING` / `RETURNED` รับเฉพาะ PDF ไม่เกิน 5 MB (D8)
+- [ ] API upload และลบไฟล์ ตรวจสถานะแผนฝั่ง server ด้วย ให้ทำได้เฉพาะ `PREPARING` / `RETURNED`
 
 **Acceptance Criteria:**
 - [ ] แนบ PDF แล้วเปิดใหม่ไฟล์ยังอยู่
 - [ ] ไฟล์ผิดประเภทหรือเกินขนาดถูกปฏิเสธพร้อมข้อความ
-- [ ] หลังยื่นแล้วแก้หรือลบไฟล์ไม่ได้
+- [ ] หลังยื่นแล้วแก้หรือลบไฟล์ไม่ได้ ทั้งจากหน้าเว็บและเรียก API ตรง (มี test ของสถานะ `SUBMITTED`, `ENDORSED`, `ELIGIBLE`)
 - [ ] migration รันซ้ำได้และ rollback ได้
 
 **Evidence:**
@@ -362,7 +378,7 @@
 - [ ] UI ฟอร์มตรวจ แสดงไฟล์แนบและผลตรวจคุณสมบัติตามเกณฑ์ของรอบ
 
 **Acceptance Criteria:**
-- [ ] เคส S02 (ไม่มี Transcript) บันทึก `INCOMPLETE` ได้ และไม่ถูกนับเป็น Eligible
+- [ ] เคส S02 (ไม่มี Transcript) บันทึก `INCOMPLETE` ได้ แผนกลับเป็น `RETURNED` และไม่ถูกนับเป็น Eligible
 - [ ] เคส S01 บันทึก `ELIGIBLE` ได้
 - [ ] role อื่นเรียก Screening ได้ `403`
 
@@ -376,13 +392,14 @@
 **Problem / Goal:** Eligible กับ Selected ไม่แยกกัน (F06)
 **Demo:** หลังจบ issue นี้ Committee เลือก `SELECTED` / `NOT_SELECTED` จากแผนที่ `ELIGIBLE` ได้ไม่เกินจำนวนรับ
 **Task:**
-- [ ] action Selection ใน `authorize.mjs` และ route ตรวจจำนวนรับจาก P5-①
+- [ ] action Selection ใน `authorize.mjs` และ route ตรวจจำนวนรับจาก P5-① ใน transaction เดียวกับการบันทึกผล โดยล็อกแถวของรอบก่อน (`SELECT ... FOR UPDATE`)
 - [ ] UI รายการผู้ผ่านการตรวจสำหรับ Committee
-- [ ] กฎ 1 แผนต่อรอบนับแผนที่ `SELECTED` (F10)
+- [ ] กฎ 1 แผนต่อรอบนับแผนที่ `SELECTED` และ `NOT_SELECTED` (F10)
 
 **Acceptance Criteria:**
 - [ ] เลือกเกินจำนวนรับได้ `409`
-- [ ] สร้างแผนใหม่หลัง `SELECTED` ในรอบเดิมไม่ได้
+- [ ] สร้างแผนใหม่หลัง `SELECTED` หรือ `NOT_SELECTED` ในรอบเดิมไม่ได้
+- [ ] Committee 2 คนกดเลือกพร้อมกันตอนเหลือ 1 ที่ ได้ `SELECTED` คนเดียว อีกคนได้ `409`
 - [ ] role อื่นเรียก Selection ได้ `403`
 
 **Evidence:**
@@ -412,6 +429,7 @@
 
 **Acceptance Criteria:**
 - [ ] S01, S03 ผ่าน · S04 (GPA 2.75) และ S05 (กลุ่มวิชา 2.30) ไม่ผ่าน
+- [ ] GPA เท่าเกณฑ์พอดี (2.80) ไม่ผ่าน · กลุ่มวิชาเท่าเกณฑ์พอดี (2.50) ผ่าน
 - [ ] เปลี่ยนเกณฑ์รอบหนึ่งไม่กระทบรอบอื่น
 
 **Evidence:**
@@ -441,7 +459,7 @@
 **Problem / Goal:** `schema.sql` / `schema.dbml` ไม่ตรงกับ migration (F19), constraint ของ `app_users` ขัดกัน (F21), import เขียนทับเป็น NULL (F23)
 **Demo:** หลังจบ issue นี้ สมาชิกสร้างฐานข้อมูลใหม่จาก `schema.sql` แล้วระบบทำงานได้ และ import ซ้ำไม่ทำข้อมูลหาย
 **Task:**
-- [ ] อัปเดต `schema.sql` / `schema.dbml` ให้ตรงกับหลัง migration ทั้งหมด (รวมของ P3, P4)
+- [ ] อัปเดต `schema.sql` / `schema.dbml` ให้ตรงกับหลัง migration ทั้งหมด (รวมของ P3, P4, P5-①)
 - [ ] แก้ constraint ของ `app_users`
 - [ ] import: ช่องว่างใน CSV ไม่เขียนทับข้อมูลเดิม
 
@@ -452,7 +470,7 @@
 **Evidence:**
 - [ ] diff ของ `schema.sql` และผล import
 
-**Labels:** database · **Blocked by:** P3-①, P4-① · **Estimate:** 4 ชม. · **Assignee:** @KaylahJin · **Reviewer:** @Pawit-Billamas
+**Labels:** database · **Blocked by:** P3-①, P4-①, P5-① · **Estimate:** 4 ชม. · **Assignee:** @KaylahJin · **Reviewer:** @Pawit-Billamas
 
 ---
 

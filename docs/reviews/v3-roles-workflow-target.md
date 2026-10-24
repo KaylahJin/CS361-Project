@@ -99,7 +99,7 @@ stateDiagram-v2
   - `SELECTED` หรือ `NOT_SELECTED` → **ไม่ได้** (ผ่านการคัดเลือกของรอบนี้ไปแล้ว)
   - `NOT_ELIGIBLE` → **ได้** (เช่น ข้อมูลผลการเรียนถูกแก้ไขแล้ว) ต้องผ่านทุกขั้นใหม่ตั้งแต่ต้น
 - **"`ELIGIBLE` ขึ้นไป"** ในเอกสารนี้หมายถึงสถานะ `ELIGIBLE`, `SELECTED` และ `NOT_SELECTED`
-- **จำนวนรับต่อรอบ (Quota):** Committee เลือก `SELECTED` ได้ไม่เกินจำนวนรับของรอบ ถ้าเต็มแล้วให้ตอบ `409 Conflict`
+- **จำนวนรับต่อรอบ (Quota):** Committee เลือก `SELECTED` ได้ไม่เกินจำนวนรับของรอบ ถ้าเต็มแล้วให้ตอบ `409 Conflict` นับจำนวนและบันทึกผลใน transaction เดียว โดยล็อกแถวของรอบก่อน (`SELECT ... FOR UPDATE`) กันกดพร้อมกันแล้วเกินจำนวน
 - **Concurrency:** แต่ละขั้นทำได้เฉพาะจากสถานะของขั้นนั้น (เช่น Endorse ได้เฉพาะ `SUBMITTED`) ถ้ามีคนบันทึกผลไปก่อนแล้ว รายการที่ตามมาได้ `409 Conflict` และไม่เขียนทับผลเดิม (ใช้หลักเดียวกับปัจจุบัน)
 - **Transaction:** การบันทึกผลและการเปลี่ยนสถานะต้องสำเร็จหรือยกเลิกพร้อมกัน
 
@@ -170,7 +170,7 @@ stateDiagram-v2
 
 | ส่วน | สิ่งที่ต้องแก้ |
 |---|---|
-| Database | Migration ใหม่ (เช่น `v3_02_roles_workflow.sql` พร้อม rollback) แก้ `CHECK` ของ `app_users.role`, `coop_plans.status`, `plan_reviews.decision` และเพิ่ม `plan_reviews.step` แปลงข้อมูลเดิม: `STAFF` → `COORDINATOR`, `APPROVED` → `SELECTED`, `REJECTED` → `NOT_SELECTED` |
+| Database | Migration ใหม่ (เช่น `v3_02_roles_workflow.sql` พร้อม rollback) แก้ `CHECK` ของ `app_users.role`, `coop_plans.status`, `plan_reviews.decision` และเพิ่ม `plan_reviews.step` แปลงข้อมูลเดิม: `STAFF` → `COORDINATOR` · แผนเดิมที่เป็น `APPROVED` / `REJECTED` ไม่แปลงเป็นผลคัดเลือก เพราะเป็นผลของผู้ตรวจเดิม ไม่ใช่ Committee ให้กลับเป็น `SUBMITTED` เพื่อเริ่มขั้นรับรองใหม่ ประวัติเดิมยังอยู่ใน `plan_reviews` (`decision` ยังรับค่าเดิมไว้) |
 | `infra/schema.sql` | อัปเดตให้ตรงกับผลหลัง Migration (ตอนนี้ยังเป็นของ V2) |
 | Lambda | `authorize.mjs` (กติกาตามหัวข้อ 5), แยก `reviewCoopPlan.mjs` เป็น 3 action (Endorse / Screen / Select), ตรวจ Quota ตอน Select |
 | API Gateway | route ใหม่ของแต่ละขั้น และอัปเดต `route-policy.mjs` |
@@ -188,7 +188,7 @@ stateDiagram-v2
 
 ## 9. เรื่องที่ทีมต้องตัดสินใจ
 
-ข้อที่เอกสารของอาจารย์ไม่ได้บอก ทีมตกลงกันใน #125
+ข้อที่เอกสารของอาจารย์ไม่ได้บอก **เป็นข้อเสนอ รอทีมยืนยันใน #125** (เลยเวลาแล้วไม่ตอบ = ยอมรับ)
 
 1. **Advisor ไม่รับรอง (D3):** ส่งกลับให้แก้ (`RETURNED`) พร้อมเหตุผล ไม่จบแผน
 2. **ยื่นใหม่หลังถูกส่งกลับ (D4):** ต้องให้ Advisor รับรองใหม่
