@@ -37,6 +37,7 @@ resource "aws_lambda_function" "companies" {
       DB_NAME     = var.db_name
       DB_USER     = var.db_username
       DB_PASSWORD = var.db_password
+      ATTACHMENTS_BUCKET = local.attachments_bucket
     }
   }
 }

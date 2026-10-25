@@ -20,7 +20,8 @@
     "db:seed-users": "bash infra/seed-app-users.sh",
     "db:test-migration": "bash infra/migrate/test-migration-roundtrip.sh",
     "verify:roles": "node infra/verify-roles.mjs",
-    "verify:scope": "node infra/verify-scope.mjs"
+    "verify:scope": "node infra/verify-scope.mjs",
+    "attachments:deploy": "bash infra/deploy-attachments-bucket.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -62,3 +62,15 @@ output "cognito_issuer" {
   description = "Token issuer URL — what the API Gateway JWT authorizer validates against"
   value       = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.app.id}"
 }
+
+# ---- Attachments (s3_attachments.tf) ----
+
+output "attachments_bucket_name" {
+  description = "Private S3 bucket for plan attachments (created by npm run attachments:deploy)"
+  value       = local.attachments_bucket
+}
+
+# deploy-attachments-bucket.sh needs both browser origins for the bucket CORS.
+output "cors_allow_origin" {
+  value = var.cors_allow_origin
+}
