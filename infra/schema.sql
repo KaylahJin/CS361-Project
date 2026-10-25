@@ -255,3 +255,24 @@ CREATE TABLE IF NOT EXISTS position_periods (
 );
 
 CREATE INDEX IF NOT EXISTS idx_position_periods_period ON position_periods(period_id);
+
+-- 9. plan_attachments — ไฟล์แนบของแผน (V3-02)
+-- uploaded_by -> app_users(cognito_sub) FK is added by
+-- infra/migrate/migrations/v3_02_attachments_upgrade.sql, because app_users
+-- does not exist yet when this file runs.
+CREATE TABLE IF NOT EXISTS plan_attachments (
+    attachment_id SERIAL PRIMARY KEY,
+    plan_id       INTEGER NOT NULL REFERENCES coop_plans(plan_id) ON DELETE CASCADE,
+    s3_key        TEXT NOT NULL UNIQUE,
+    file_name     TEXT NOT NULL,
+    content_type  VARCHAR(100) NOT NULL DEFAULT 'application/pdf',
+    size_bytes    INTEGER NOT NULL,
+    uploaded_by   VARCHAR(64) NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_plan_attachments_type CHECK (content_type = 'application/pdf'),
+    CONSTRAINT chk_plan_attachments_size CHECK (size_bytes > 0 AND size_bytes <= 5242880),
+    CONSTRAINT chk_plan_attachments_name CHECK (length(btrim(file_name)) > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_attachments_plan ON plan_attachments(plan_id);

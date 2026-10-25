@@ -97,6 +97,23 @@ q "UPDATE coop_plans SET status='RETURNED' WHERE plan_id=$PLAN_ID;" >/dev/null
 echo "RETURNED rows before rollback: $(q "SELECT count(*) FROM coop_plans WHERE status='RETURNED';")"
 echo
 
+echo "### 7b. attachments migration: upgrade, re-run, FK, rollback"
+runfile infra/migrate/migrations/v3_02_attachments_upgrade.sql
+runfile infra/migrate/migrations/v3_02_attachments_upgrade.sql   # idempotent: second run must not fail
+q "INSERT INTO plan_attachments (plan_id, s3_key, file_name, size_bytes, uploaded_by)
+   VALUES ($PLAN_ID, 'plans/$PLAN_ID/test.pdf', 'test.pdf', 1000, 'sub-staff-test');" >/dev/null
+echo "attachment insert ok"
+if q "INSERT INTO plan_attachments (plan_id, s3_key, file_name, size_bytes, uploaded_by)
+      VALUES ($PLAN_ID, 'plans/$PLAN_ID/big.pdf', 'big.pdf', 5242881, 'sub-staff-test');" >/dev/null 2>&1; then
+  echo "UNEXPECTED: 5 MB + 1 byte was accepted"
+else
+  echo "rejected as expected: over 5 MB"
+fi
+runfile infra/migrate/migrations/v3_02_attachments_rollback.sql
+runfile infra/migrate/migrations/v3_02_attachments_rollback.sql  # rollback is re-runnable too
+echo "plan_attachments after rollback: $(q "SELECT to_regclass('public.plan_attachments') IS NULL;") (t = gone)"
+echo
+
 echo "### 7. run v3_01_rollback.sql (ON_ERROR_STOP=1)"
 runfile infra/migrate/migrations/v3_01_rollback.sql
 echo "rollback exit: 0"

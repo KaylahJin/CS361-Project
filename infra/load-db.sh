@@ -32,6 +32,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="$REPO_ROOT/infra/terraform"
 V3_MIGRATION="$REPO_ROOT/infra/migrate/migrations/v3_01_upgrade.sql"
+V3_ATTACHMENTS_MIGRATION="$REPO_ROOT/infra/migrate/migrations/v3_02_attachments_upgrade.sql"
 
 RESET=0
 SEED_USERS=1
@@ -115,6 +116,13 @@ apply_v3_migration() {
 
   echo "--- migrate/migrations/v3_01_upgrade.sql"
   run_sql "$V3_MIGRATION"
+
+  if [ ! -f "$V3_ATTACHMENTS_MIGRATION" ]; then
+    echo "--- v3_02 attachments migration: NOT FOUND" >&2
+    return 1
+  fi
+  echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
+  run_sql "$V3_ATTACHMENTS_MIGRATION"
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no
@@ -223,3 +231,9 @@ fi
 
 echo "Done. Next: npm run env:sync   (points the frontend at this stack's API)"
 echo "Then:       npm run verify:auth -- <password>   (confirms the routes refuse an anonymous caller)"
+
+if [ "$(psql_q "SELECT to_regclass('public.plan_attachments') IS NOT NULL;")" = "t" ]; then
+  echo "attachments:      present"
+else
+  echo "attachments:      MISSING — uploads will fail"
+fi
