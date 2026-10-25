@@ -38,13 +38,13 @@ describe('getCoopPlanById', () => {
 
   it('returns 200 with the single plan object (not an array) when found', async () => {
     const plan = { plan_id: 101, student_id: '6100000002', status: 'APPROVED' };
-    queryMock.mockResolvedValue({ rows: [plan] });
+    queryMock.mockResolvedValueOnce({ rows: [plan] }).mockResolvedValueOnce({ rows: [] });
 
     const result = await getCoopPlanById({ pathParameters: { planId: '101' } });
 
     expect(result.statusCode).toBe(200);
     const body = JSON.parse(result.body);
-    expect(body).toEqual(plan);
+    expect(body).toEqual({ ...plan, reviews: [] });
     expect(Array.isArray(body)).toBe(false);
   });
 
@@ -148,12 +148,12 @@ describe('getCoopPlanById authorization', () => {
 
   it('STUDENT owner: returns 200 with the plan', async () => {
     signedInAs({ sub: 'sub-1', role: 'STUDENT', studentId: 'S001' });
-    queryMock.mockResolvedValue({ rows: [plan] });
+    queryMock.mockResolvedValueOnce({ rows: [plan] }).mockResolvedValueOnce({ rows: [] });
 
     const result = await getCoopPlanById({ pathParameters: { planId: '1' } });
 
     expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body)).toEqual(plan);
+    expect(JSON.parse(result.body)).toEqual({ ...plan, reviews: [] });
   });
 
   it("STUDENT non-owner: returns 403 and leaks none of the plan's data", async () => {
@@ -175,7 +175,8 @@ describe('getCoopPlanById authorization', () => {
     });
     queryMock
       .mockResolvedValueOnce({ rows: [plan] })
-      .mockResolvedValueOnce({ rows: [{ student_id: 'S001' }] });
+      .mockResolvedValueOnce({ rows: [{ student_id: 'S001' }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const result = await getCoopPlanById({ pathParameters: { planId: '1' } });
 
@@ -210,5 +211,43 @@ describe('getCoopPlanById authorization', () => {
     const result = await getCoopPlanById({ pathParameters: { planId: '999' } });
 
     expect(result.statusCode).toBe(404);
+  });
+
+  describe('review history', () => {
+    const history = [
+      { review_id: 2, decision: 'APPROVED', comment: null, reviewed_at: '2026-10-25T10:00:00Z', reviewer_name: 'staff1@example.com' },
+      { review_id: 1, decision: 'RETURNED', comment: 'add the transcript', reviewed_at: '2026-10-24T09:00:00Z', reviewer_name: 'advisor1@example.com' },
+    ];
+
+    it('returns every decision under `reviews`, in the order the query gives them', async () => {
+      queryMock.mockResolvedValueOnce({ rows: [plan] }).mockResolvedValueOnce({ rows: history });
+
+      const result = await getCoopPlanById({ pathParameters: { planId: '1' } });
+
+      expect(JSON.parse(result.body).reviews).toEqual(history);
+    });
+
+    it('asks for the history of this plan only, newest first, with a bound parameter', async () => {
+      queryMock.mockResolvedValueOnce({ rows: [{ ...plan, plan_id: 42 }] }).mockResolvedValueOnce({ rows: [] });
+
+      await getCoopPlanById({ pathParameters: { planId: '42' } });
+
+      const [text, values] = queryMock.mock.calls[1];
+      expect(text).toMatch(/FROM plan_reviews/);
+      expect(text).toMatch(/WHERE r\.plan_id\s*=\s*\$1/);
+      expect(text).toMatch(/ORDER BY r\.reviewed_at DESC/);
+      expect(values).toEqual([42]);
+    });
+
+    it('does not read the history of a plan the caller may not view', async () => {
+      signedInAs({ sub: 'sub-9', role: 'STUDENT', studentId: 'S999' });
+      queryMock.mockResolvedValueOnce({ rows: [plan] });
+
+      const result = await getCoopPlanById({ pathParameters: { planId: '1' } });
+
+      expect(result.statusCode).toBe(403);
+      expect(queryMock).toHaveBeenCalledTimes(1);
+      expect(result.body).not.toContain('reviews');
+    });
   });
 });
