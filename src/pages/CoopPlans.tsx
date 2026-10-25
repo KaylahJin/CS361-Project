@@ -46,6 +46,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { PlanFilters } from '../components/plans/PlanFilters';
+import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
@@ -587,6 +588,11 @@ function PlanDetail({
           <InfoRow label="ผู้ตรวจสอบ" value={plan.reviewer_name} />
           <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
           <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
+
+          <div className="pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
+            <ReviewHistory reviews={plan.reviews} />
+          </div>
         </section>
       </div>
 
