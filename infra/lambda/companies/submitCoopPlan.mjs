@@ -109,7 +109,7 @@ async function submitInTransaction(planId, studentId) {
 
     // The student comes from the plan row (already checked to be the caller's),
     // never from the request.
-    failures.push(...(await checkEligibility(client, locked.student_id)));
+    failures.push(...(await checkEligibility(client, locked.student_id, locked.period_id,)));
 
     if (failures.length > 0) {
       await client.query('ROLLBACK');
