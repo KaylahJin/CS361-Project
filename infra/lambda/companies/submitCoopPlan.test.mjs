@@ -72,6 +72,8 @@ function makeDb(overrides = {}) {
       gpa: 3.4,
     },
     minGpa: 2.75,
+    minGroupGpa: 2.5,
+    capacity: 2,
     failOn: null,
     updates: 0,
     log: [],
@@ -156,6 +158,18 @@ function makeDb(overrides = {}) {
       client?.unlock?.();
       return { rows: [] };
     }
+    
+    if (/FROM periods/.test(sql)) {
+      return {
+        rows: [
+          {
+            min_gpa: state.minGpa,
+            min_group_gpa: state.minGroupGpa,
+            capacity: state.capacity,
+          },
+        ],
+      };
+    }
 
     if (/FOR UPDATE/.test(sql)) {
       client.unlock = await acquire();
@@ -186,12 +200,6 @@ function makeDb(overrides = {}) {
     if (/FROM students/.test(sql)) {
       return {
         rows: state.student ? [state.student] : [],
-      };
-    }
-
-    if (/FROM coop_info/.test(sql)) {
-      return {
-        rows: [{ min_gpa: state.minGpa }],
       };
     }
 
