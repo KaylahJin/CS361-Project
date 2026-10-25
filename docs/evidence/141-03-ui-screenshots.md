@@ -23,13 +23,13 @@
 ไม่มีการกดบันทึกผลการตรวจในการถ่ายภาพ
 
 ## ทำซ้ำได้อย่างไร
-สคริปต์อยู่ในโปรเจกต์ `scripts/evidence/141-capture-role-screens.mjs` (วิธีใช้อยู่ในหัวไฟล์) มากับ PR #155 เพราะรวมกันใน PR นี้จะเกิน 400 บรรทัด
+สคริปต์อยู่ในโปรเจกต์ `docs/evidence/scripts/141-capture-role-screens.mjs` (วิธีใช้อยู่ในหัวไฟล์)
 
 ```bash
 npm i --no-save playwright-core
-EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com COOP_TEST_PASSWORD=...   node scripts/evidence/141-capture-role-screens.mjs 141-03            # ชุดที่ 1
-node scripts/evidence/141-capture-role-screens.mjs 141-04-submitted student,advisor   # ชุดที่ 2
+EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com COOP_TEST_PASSWORD=...   node docs/evidence/scripts/141-capture-role-screens.mjs 141-03            # ชุดที่ 1
+node docs/evidence/scripts/141-capture-role-screens.mjs 141-04-submitted student,advisor   # ชุดที่ 2
 ```
 
-ชุดที่ 2 ต้องตั้งสถานะแผนก่อนและคืนค่าหลังถ่าย ด้วย `scripts/evidence/141-set-plan-status.sql`
+ชุดที่ 2 ต้องตั้งสถานะแผนก่อนและคืนค่าหลังถ่าย ด้วย `docs/evidence/scripts/141-set-plan-status.sql`
 
