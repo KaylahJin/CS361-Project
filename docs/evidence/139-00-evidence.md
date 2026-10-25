@@ -10,3 +10,15 @@
 สาเหตุ: `getIdToken` อ่าน `statusRef` ซึ่งอัปเดตใน effect หน้าแผนที่เพิ่ง mount เพราะสถานะเปลี่ยนเป็นล็อกอินแล้ว รัน effect ของตัวเองก่อน effect ของ provider จึงเรียก API โดยไม่มี token
 
 ผล test อยู่ใน `139-06-test-output.txt` test ใหม่ 2 ข้อ fail เมื่อถอนการแก้ และผ่านเมื่อมีการแก้
+
+## GIF และวิดีโอ
+`139-07-login-from-plans-page.gif` และ `.mp4` (11 วินาที ภาพเต็มหน้าจอ ไม่ซูม) ตั้งแต่เปิดหน้าแผนสหกิจตอนยังไม่ล็อกอิน กรอกฟอร์ม กดเข้าสู่ระบบ จนเห็นรายการแผน
+
+## ทำซ้ำได้อย่างไร
+สคริปต์อยู่ในโปรเจกต์ `scripts/evidence/139-capture-login-from-plans.mjs` (วิธีใช้อยู่ในหัวไฟล์) ผ่านเมื่อไม่เหลือฟอร์มล็อกอิน เห็นหัวข้อรายการแผน และ `GET /coop-plans` ตอบ 200 หลังล็อกอิน
+
+```bash
+npm i --no-save playwright-core
+EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com COOP_TEST_PASSWORD=...   node scripts/evidence/139-capture-login-from-plans.mjs 139-07
+```
+
