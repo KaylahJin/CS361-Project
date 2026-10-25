@@ -14,6 +14,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { canViewStudentList } from '../auth/roles';
 
 export type TabType =
   | 'home'
@@ -48,7 +49,7 @@ const navItems = [
 // actions, not pages, and render in their own control below.
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
-  const { status, logout } = useAuth();
+  const { status, role, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -70,9 +71,12 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
 
   // Student records need a token, so the tab is no use to a signed-out
   // visitor. Everything else in navItems is public content.
-  const visibleNavItems = navItems.filter(
-    (item) => !('requiresAuth' in item && item.requiresAuth) || status === 'authenticated',
-  );
+  // The student list is only for the roles that look after students (D9), so a
+  // signed-in student does not get the tab either.
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.id === 'students') return status === 'authenticated' && canViewStudentList(role);
+    return !('requiresAuth' in item && item.requiresAuth) || status === 'authenticated';
+  });
 
   const handleLogout = () => {
     logout();
