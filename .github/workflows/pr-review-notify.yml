@@ -2,7 +2,9 @@
 
 on:
   pull_request:
-    types: [opened, ready_for_review, review_requested]
+    # Not `opened`: a PR opened with a reviewer also fires review_requested, and
+    # on `opened` itself the reviewer list is still empty, so it comments twice.
+    types: [ready_for_review, review_requested]
   pull_request_review:
     types: [submitted]
 
@@ -17,7 +19,7 @@ jobs:
     if: >
       github.event_name == 'pull_request' &&
       github.event.pull_request.draft == false &&
-      (github.event.action == 'opened' || github.event.action == 'ready_for_review' || github.event.action == 'review_requested')
+      (github.event.action == 'ready_for_review' || github.event.action == 'review_requested')
 
     steps:
       - name: Post comment to PR asking reviewer
