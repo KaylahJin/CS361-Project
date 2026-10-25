@@ -23,7 +23,7 @@
 ไม่มีการกดบันทึกผลการตรวจในการถ่ายภาพ
 
 ## ทำซ้ำได้อย่างไร
-สคริปต์อยู่ในโปรเจกต์ `scripts/evidence/141-capture-role-screens.mjs` (วิธีใช้อยู่ในหัวไฟล์)
+สคริปต์อยู่ในโปรเจกต์ `scripts/evidence/141-capture-role-screens.mjs` (วิธีใช้อยู่ในหัวไฟล์) มากับ PR #155 เพราะรวมกันใน PR นี้จะเกิน 400 บรรทัด
 
 ```bash
 npm i --no-save playwright-core
