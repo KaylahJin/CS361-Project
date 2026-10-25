@@ -8,14 +8,14 @@
 //
 // This WRITES a real review (a row in plan_reviews, and the plan's status
 // changes). Use it on the lab database and reset afterwards:
-//   psql ... -v plan=<id> -f scripts/evidence/142-reset-plan.sql
+//   psql ... -v plan=<id> -f docs/evidence/scripts/142-reset-plan.sql
 // For a history with two entries, put the plan back to SUBMITTED between runs:
-//   psql ... -v plan=<id> -v status=SUBMITTED -f scripts/evidence/142-set-plan-status.sql
+//   psql ... -v plan=<id> -v status=SUBMITTED -f docs/evidence/scripts/142-set-plan-status.sql
 //
 //   npm i --no-save playwright-core
 //   EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com \
 //   COOP_TEST_PASSWORD=... \
-//   node scripts/evidence/142-capture-review-history.mjs <file-prefix> <student-id> <decision> "<comment>"
+//   node docs/evidence/scripts/142-capture-review-history.mjs <file-prefix> <student-id> <decision> "<comment>"
 //
 //   decision  APPROVED, RETURNED or REJECTED (RETURNED and REJECTED need a comment)
 //

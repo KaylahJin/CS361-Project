@@ -3,7 +3,7 @@
 -- the plan and puts it back to a SUBMITTED plan with no result, the way the
 -- seed data has it.
 --
---   psql "host=<rds> user=postgres dbname=coop_db" -v plan=2 -f scripts/evidence/142-reset-plan.sql
+--   psql "host=<rds> user=postgres dbname=coop_db" -v plan=2 -f docs/evidence/scripts/142-reset-plan.sql
 BEGIN;
 DELETE FROM plan_reviews WHERE plan_id = :plan;
 UPDATE coop_plans
