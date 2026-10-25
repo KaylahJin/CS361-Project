@@ -8,15 +8,15 @@
 //   npm i --no-save playwright-core
 //   EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com \
 //   COOP_TEST_PASSWORD=... \
-//   node scripts/evidence/141-capture-role-screens.mjs <file-prefix> [roles]
+//   node docs/evidence/scripts/141-capture-role-screens.mjs <file-prefix> [roles]
 //
 //   file-prefix  e.g. 141-03  ->  docs/evidence/141-03-<role>-<size>-<shot>.png
 //   roles        comma list of student,advisor,staff,admin (default: all four)
 //
 // To photograph the "plan is waiting for review" state, set the plan to
 // SUBMITTED first and put it back afterwards:
-//   psql ... -f scripts/evidence/141-set-plan-status.sql -v status=SUBMITTED
-//   psql ... -f scripts/evidence/141-set-plan-status.sql -v status=PREPARING
+//   psql ... -f docs/evidence/scripts/141-set-plan-status.sql -v status=SUBMITTED
+//   psql ... -f docs/evidence/scripts/141-set-plan-status.sql -v status=PREPARING
 //
 // Env: EVIDENCE_OUT (default docs/evidence), CHROME_PATH (default: the usual
 // Chrome / Edge install on Windows, macOS and Linux).
