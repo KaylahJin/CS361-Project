@@ -13,12 +13,12 @@
 รหัสอื่นของ backend (13 รหัสทั้งหมด) ตรวจด้วย `submissionMessages.test.ts` ที่อ่านไฟล์ backend โดยตรง ผลอยู่ใน `140-01-test-output.txt`
 
 ## ทำซ้ำได้อย่างไร
-สคริปต์อยู่ในโปรเจกต์ `scripts/evidence/140-capture-submit-refusal.mjs` (วิธีใช้อยู่ในหัวไฟล์) ล็อกอิน student1 ยื่นแผน ถ่ายภาพกล่องที่ขึ้นมา และตรวจว่าทุกเหตุผลบนหน้าจอเป็นภาษาไทยและไม่มีชื่อรหัส ผลที่รัน: `SUBMISSION_WINDOW_CLOSED` และ `REQUIRED_COURSES_MISSING` ขึ้นเป็นภาษาไทยทั้งคู่
+สคริปต์อยู่ในโปรเจกต์ `docs/evidence/scripts/140-capture-submit-refusal.mjs` (วิธีใช้อยู่ในหัวไฟล์) ล็อกอิน student1 ยื่นแผน ถ่ายภาพกล่องที่ขึ้นมา และตรวจว่าทุกเหตุผลบนหน้าจอเป็นภาษาไทยและไม่มีชื่อรหัส ผลที่รัน: `SUBMISSION_WINDOW_CLOSED` และ `REQUIRED_COURSES_MISSING` ขึ้นเป็นภาษาไทยทั้งคู่
 
 ```bash
 npm i --no-save playwright-core
-EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com COOP_TEST_PASSWORD=...   node scripts/evidence/140-capture-submit-refusal.mjs 140-03-after-window-and-courses
+EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com COOP_TEST_PASSWORD=...   node docs/evidence/scripts/140-capture-submit-refusal.mjs 140-03-after-window-and-courses
 ```
 
-กรณี GPA ไม่ถึง ตั้ง GPA ก่อนและคืนค่าหลังถ่ายด้วย `scripts/evidence/140-set-student-gpa.sql`
+กรณี GPA ไม่ถึง ตั้ง GPA ก่อนและคืนค่าหลังถ่ายด้วย `docs/evidence/scripts/140-set-student-gpa.sql`
 

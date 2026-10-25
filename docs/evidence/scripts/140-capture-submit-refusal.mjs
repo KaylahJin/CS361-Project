@@ -8,13 +8,13 @@
 // The seeded student is refused for two reasons (submission window closed,
 // required course คพ.261 missing). To also get "GPA too low", lower the GPA
 // first and put it back afterwards:
-//   psql ... -v gpa=2.40 -f scripts/evidence/140-set-student-gpa.sql
-//   psql ... -v gpa=2.90 -f scripts/evidence/140-set-student-gpa.sql
+//   psql ... -v gpa=2.40 -f docs/evidence/scripts/140-set-student-gpa.sql
+//   psql ... -v gpa=2.90 -f docs/evidence/scripts/140-set-student-gpa.sql
 //
 //   npm i --no-save playwright-core
 //   EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com \
 //   COOP_TEST_PASSWORD=... \
-//   node scripts/evidence/140-capture-submit-refusal.mjs <file-prefix>
+//   node docs/evidence/scripts/140-capture-submit-refusal.mjs <file-prefix>
 //
 //   file-prefix  e.g. 140-04-after-window-gpa-courses -> docs/evidence/<prefix>.png
 //
