@@ -14,7 +14,7 @@
 //   npm i --no-save playwright-core
 //   EVIDENCE_SITE_URL=http://<bucket>.s3-website-us-east-1.amazonaws.com \
 //   COOP_TEST_PASSWORD=... \
-//   node scripts/evidence/139-capture-login-from-plans.mjs <file-prefix>
+//   node docs/evidence/scripts/139-capture-login-from-plans.mjs <file-prefix>
 //
 //   file-prefix  e.g. 139-07 -> docs/evidence/139-07-<size>-<shot>.png
 //                               docs/evidence/139-07-login-from-plans-page.mp4/.gif
