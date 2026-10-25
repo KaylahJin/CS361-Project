@@ -27,6 +27,7 @@ function signedIn() {
   useAuthMock.mockReturnValue({
     status: 'authenticated',
     user: { email: 'staff1@example.ac.th' },
+    role: 'STAFF',
     getIdToken: async () => 'a-token',
     logout: vi.fn(),
     login: vi.fn(),

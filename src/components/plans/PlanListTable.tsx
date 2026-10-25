@@ -99,6 +99,9 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
           <tbody className="divide-y divide-slate-100 text-sm">
             {plans.map((plan) => {
               const isPending = plan.status === 'SUBMITTED';
+              // Only a viewer who was given onReview can review. Without it the plan
+              // is read-only, so the button must not offer "ตรวจแผน".
+              const canReview = isPending && Boolean(onReview);
 
               return (
                 <tr
@@ -189,19 +192,19 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isPending && onReview) {
+                        if (canReview && onReview) {
                           onReview(plan);
                         } else {
                           onOpen(plan);
                         }
                       }}
                       className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-105 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 ${
-                        isPending
+                        canReview
                           ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs hover:shadow-md'
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-xs'
                       }`}
                     >
-                      <span>{isPending ? 'ตรวจแผน' : 'ดูรายละเอียด'}</span>
+                      <span>{canReview ? 'ตรวจแผน' : 'ดูรายละเอียด'}</span>
                       <ChevronRight className="h-3.5 w-3.5" />
                     </button>
                   </td>
