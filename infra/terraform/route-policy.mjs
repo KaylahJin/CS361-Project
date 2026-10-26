@@ -23,6 +23,7 @@ export const PRIVATE_ROUTES = [
   'POST /coop-plans',
   'PATCH /coop-plans/{planId}',
   'POST /coop-plans/{planId}/submit',
+  'POST /coop-plans/{planId}/attachments/upload-url',
 ];
 
 /** Routes that are public on purpose. */

@@ -11,6 +11,7 @@ const getCoopPlanByIdMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
+const requestAttachmentUploadMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -56,6 +57,10 @@ vi.mock('./submitCoopPlan.mjs', () => ({
   submitCoopPlan: submitCoopPlanMock,
 }));
 
+vi.mock('./requestAttachmentUpload.mjs', () => ({
+  requestAttachmentUpload: requestAttachmentUploadMock,
+}));
+
 const { handler } = await import('./index.mjs');
 
 describe('router (index.mjs handler)', () => {
@@ -70,6 +75,8 @@ describe('router (index.mjs handler)', () => {
     getCoopPlanByIdMock.mockReset();
     createCoopPlanMock.mockReset();
     updateCoopPlanMock.mockReset();
+    submitCoopPlanMock.mockReset();
+    requestAttachmentUploadMock.mockReset();
   });
 
   it('returns 404 for an unknown routeKey', async () => {
@@ -86,6 +93,8 @@ describe('router (index.mjs handler)', () => {
     expect(getCoopPlanByIdMock).not.toHaveBeenCalled();
     expect(createCoopPlanMock).not.toHaveBeenCalled();
     expect(updateCoopPlanMock).not.toHaveBeenCalled();
+    expect(submitCoopPlanMock).not.toHaveBeenCalled();
+    expect(requestAttachmentUploadMock).not.toHaveBeenCalled();
   });
 
   it('returns 404 for inherited Object.prototype property names used as routeKey', async () => {
@@ -224,6 +233,22 @@ describe('router (index.mjs handler)', () => {
     expect(submitCoopPlanMock).toHaveBeenCalledWith(event);
     expect(createCoopPlanMock).not.toHaveBeenCalled();
     expect(updateCoopPlanMock).not.toHaveBeenCalled();
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches POST /coop-plans/{planId}/attachments/upload-url to requestAttachmentUpload', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    requestAttachmentUploadMock.mockResolvedValue(handlerResponse);
+
+    const event = {
+      routeKey: 'POST /coop-plans/{planId}/attachments/upload-url',
+      pathParameters: { planId: '101' },
+      body: '{}',
+    };
+    const result = await handler(event);
+
+    expect(requestAttachmentUploadMock).toHaveBeenCalledWith(event);
+    expect(submitCoopPlanMock).not.toHaveBeenCalled();
     expect(result).toBe(handlerResponse);
   });
 
