@@ -1,14 +1,15 @@
-﻿name: Milestone Deadline Check
+﻿
+name: Milestone Deadline Check
 
 on:
   schedule:
     # Run every day at 08:00 UTC+7 (01:00 UTC)
     - cron: '0 1 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   check-milestones:
-    name: 📅 Check Upcoming & Overdue Milestones
+    name: Check Upcoming & Overdue Milestones
     runs-on: ubuntu-latest
 
     steps:
@@ -18,9 +19,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const now = new Date();
-            const warningDays = 3; // warn 3 days before deadline
+            const warningDays = 3;
 
-            // Fetch all open milestones
             const { data: milestones } = await github.rest.issues.listMilestones({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -42,16 +42,15 @@ jobs:
               if (diffDays < 0) {
                 alertType = 'overdue';
                 emoji = '🚨';
-                message = This milestone is **OVERDUE** by  day(s)!;
+                message = `This milestone is **OVERDUE** by ${Math.abs(diffDays)} day(s)!`;
               } else if (diffDays <= warningDays) {
                 alertType = 'warning';
                 emoji = '⚠️';
-                message = This milestone is due in ** day(s)**. Please wrap up!;
+                message = `This milestone is due in **${diffDays} day(s)**. Please wrap up!`;
               } else {
-                continue; // No alert needed
+                continue;
               }
 
-              // Get open issues in this milestone
               const { data: issues } = await github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -60,28 +59,33 @@ jobs:
                 per_page: 100,
               });
 
-              console.log(Milestone "": ,  open issues);
+              console.log(`Milestone "${ms.title}": ${issues.length} open issues`);
 
               for (const issue of issues) {
-                if (issue.pull_request) continue; // skip PRs
+                if (issue.pull_request) continue;
 
-                const assignees = issue.assignees.map(a => @).join(', ');
+                const assignees = issue.assignees
+                  .map(a => `@${a.login}`).join(', ') || 'None';
+
                 const dueStr = due.toLocaleDateString('th-TH', {
-                  year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Bangkok'
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  timeZone: 'Asia/Bangkok',
                 });
 
                 const body = [
-                  ##  Milestone Deadline Alert — ****,
-                  `,
-                  | | |,
-                  |---|---|,
-                  | **Deadline** |  |,
-                  | **Status** |  |,
-                  | **Assignee(s)** |  |,
-                  `,
+                  `## ${emoji} Milestone Deadline Alert — ${alertType.toUpperCase()}`,
+                  '',
+                  '| | |',
+                  '|---|---|',
+                  `| **Deadline** | ${dueStr} |`,
+                  `| **Status** | ${alertType} |`,
+                  `| **Assignee(s)** | ${assignees} |`,
+                  '',
                   message,
-                  `,
-                  > _This is an automated reminder from GitHub Actions. Please update the issue status or contact your team lead._,
+                  '',
+                  '> _This is an automated reminder from GitHub Actions. Please update the issue status or contact your team lead._',
                 ].join('\n');
 
                 await github.rest.issues.createComment({
@@ -92,4 +96,5 @@ jobs:
                 });
               }
             }
+
             console.log('Milestone check complete.');
