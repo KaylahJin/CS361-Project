@@ -68,8 +68,27 @@ fails with `ExpiredToken` once they do.
    passwords to the repository or share them in source files. Share
    credentials only through an appropriate private channel.
 
-   Repeat for all four allowlisted accounts to exercise the permission
-   matrix in `docs/permission-matrix.md`.
+   Repeat for all four role accounts to exercise the permission matrix in
+   `docs/permission-matrix.md`.
+
+   After creating the four accounts, retrieve each account's Cognito `sub`
+   from the Users page in the Cognito console. Confirm each account's identity
+   and intended role with the project administrator, then set these variables
+   in the same shell used to run `npm run db:seed-users`:
+
+   ```bash
+   export COOP_APPROVED_STUDENT_SUB='<student-cognito-sub>'
+   export COOP_APPROVED_ADVISOR_SUB='<advisor-cognito-sub>'
+   export COOP_APPROVED_STAFF_SUB='<staff-cognito-sub>'
+   export COOP_APPROVED_ADMIN_SUB='<admin-cognito-sub>'
+   npm run db:seed-users
+   ```
+
+   Replace each placeholder with the actual `sub` value from the configured
+   pool. These values are an administrator-controlled role allowlist: never
+   infer or assign a role from an email address. After a pool rebuild or
+   account recreation, verify the identities and update the approved `sub`
+   values before seeding again.
 
    Also create `nobody1@example.com` as a fifth Cognito account with its own
    distinct password satisfying the same policy. Do **not** insert this

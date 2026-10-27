@@ -58,12 +58,16 @@ authorised" path. The account can authenticate with Cognito, but because it
 has no `app_users` row, protected API requests should return `403`. Keep it
 unmapped so `verify:auth` can continue testing this behaviour.
 
-Only the four allowlisted role accounts are mapped by
-`infra/seed-app-users.sh`. The script does not assign roles to other Cognito
-accounts and deactivates existing active `app_users` mappings whose email is
-outside the allowlist. Public self-sign-up is disabled; new accounts must be
-created by an administrator and must not receive an application role unless
-they are explicitly allowlisted.
+Only the four administrator-approved Cognito `sub` values are mapped by
+`infra/seed-app-users.sh`. Configure `COOP_APPROVED_STUDENT_SUB`,
+`COOP_APPROVED_ADVISOR_SUB`, `COOP_APPROVED_STAFF_SUB`, and
+`COOP_APPROVED_ADMIN_SUB` explicitly in the shell before running the seed
+script. The script assigns roles by these immutable identity values, not by
+email, and deactivates active `app_users` rows whose `cognito_sub` is not in
+the approved set. Email is used only as the account's contact/login attribute.
+Public self-sign-up is disabled; new accounts must be created by an
+administrator and must not receive an application role unless their `sub` is
+explicitly allowlisted.
 
 Each Cognito test account must have a **different password**. Passwords
 must satisfy the policy in `infra/terraform/cognito.tf`: at least 12
@@ -85,10 +89,13 @@ default) and requires `COOP_UNMAPPED_PASSWORD` for
 `nobody1@example.com`. The unmapped account password must be distinct from
 all four role-account passwords.
 
-The intended role comes from the account's `app_users` row, not from Cognito.
-The rows are created by `npm run db:seed-users`, which reads each `sub` from
-the pool at run time. A rebuilt pool mints new `sub` values, so the mapping
-must be refreshed after rebuilding the pool.
+The intended role comes from the account's `app_users` row, not from Cognito
+claims or email addresses. `npm run db:seed-users` resolves the four explicitly
+approved `sub` values in the configured pool and updates those database rows.
+After rebuilding the pool or recreating an account, an administrator must
+review the new `sub` values and update the four `COOP_APPROVED_*_SUB` variables
+before running the seed script. Do not approve accounts automatically by
+matching their email address.
 
 Change a password using an administrator operation:
 
@@ -259,6 +266,8 @@ stored in this repository. Set `COOP_STUDENT_PASSWORD` and
 `COOP_UNMAPPED_PASSWORD` before running `npm run verify:auth`; set all four
 role-account variables before running `npm run verify:roles`.
 
+`verify:scope` requires both `COOP_STUDENT_PASSWORD` and
+`COOP_STAFF_PASSWORD`, because it signs in as both accounts.
 `verify:auth` reads the API URL and pool ids from Terraform outputs, then
 checks: public routes answer 200 with no token; coop-plan routes answer 401
 with no token and 401 with a forged token; a real SRP sign-in produces a token
