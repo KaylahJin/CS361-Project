@@ -68,8 +68,14 @@ fails with `ExpiredToken` once they do.
    passwords to the repository or share them in source files. Share
    credentials only through an appropriate private channel.
 
-   Repeat for all four accounts to exercise the permission matrix in
-   `docs/permission-matrix.md`.
+   Repeat for all four allowlisted accounts to exercise the permission
+   matrix in `docs/permission-matrix.md`.
+
+   Also create `nobody1@example.com` as a fifth Cognito account with its own
+   distinct password satisfying the same policy. Do **not** insert this
+   account into `app_users`; `npm run verify:auth` uses it to check that a
+   valid Cognito identity without an application mapping receives `403`.
+   Set its password in `COOP_UNMAPPED_PASSWORD`.
 
 3. Role assignment means inserting the matching `app_users` row. The tables
    arrived with issue #98 (V3-03.1), and `npm run db:seed-users` writes a row

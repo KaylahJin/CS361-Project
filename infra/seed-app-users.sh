@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# Seed only the explicitly approved Cognito demo accounts into app_users.
-# Unknown accounts, including nobody1@example.com, are never assigned roles.
-# Re-runnable: approved accounts are upserted.
+# Seed allowlisted Cognito test accounts into app_users and assign the
+# advisor to the demo student.
+#
+#   npm run db:seed-users
+#
+# Re-runnable: writes use upserts. Only the four documented test accounts
+# are activated. Other existing app_users rows are deactivated.
 
 set -euo pipefail
 
@@ -37,106 +41,108 @@ echo "database: $PGDATABASE@$PGHOST"
 echo "student:  $STUDENT_ID"
 echo
 
-psql_q() {
-  psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-    -v ON_ERROR_STOP=1 -tAc "$1"
+# Pass SQL through stdin so psql variable interpolation works.
+psql_var() {
+  local sql="$1"
+  shift
+  psql -X -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
+    -v ON_ERROR_STOP=1 "$@" <<< "$sql"
 }
 
-if [ "$(psql_q "SELECT to_regclass('public.app_users') IS NOT NULL;")" != "t" ]; then
-  echo "error: app_users does not exist. Run the V3 migration first." >&2
+if [ "$(psql_var "SELECT to_regclass('public.app_users') IS NOT NULL;" -tA)" != "t" ]; then
+  echo "error: app_users does not exist. Run the V3 migration first:" >&2
+  echo "  psql -f infra/migrate/migrations/v3_01_upgrade.sql" >&2
   exit 1
 fi
 
-if [ "$(psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-    -v ON_ERROR_STOP=1 -v student_id="$STUDENT_ID" -tAc \
-    "SELECT EXISTS (SELECT 1 FROM students WHERE student_id = :'student_id');")" != "t" ]; then
+if [ "$(psql_var "SELECT EXISTS (SELECT 1 FROM students WHERE student_id = :'student_id');" \
+    -v student_id="$STUDENT_ID" -tA)" != "t" ]; then
   echo "error: student $STUDENT_ID is not in the students table." >&2
-  echo "Load seed data first or set SEED_STUDENT_ID." >&2
+  echo "  Load seed data first (npm run db:load), or set SEED_STUDENT_ID." >&2
   exit 1
 fi
 
-# Exact allowlist: never infer roles from an email prefix.
+# Read Cognito accounts and emit JSON so email addresses and subs are passed
+# safely to psql variables without SQL string interpolation in the shell.
 aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
-  node --input-type=module -e '
+  node -e '
     let raw = "";
-    for await (const chunk of process.stdin) raw += chunk;
-
-    const allowed = new Map([
-      ["student1@example.com", "STUDENT"],
-      ["advisor1@example.com", "ADVISOR"],
-      ["staff1@example.com", "STAFF"],
-      ["admin1@example.com", "ADMIN"],
-    ]);
-
-    for (const user of JSON.parse(raw).Users ?? []) {
-      const attr = (name) =>
-        user.Attributes?.find((a) => a.Name === name)?.Value;
-      const email = attr("email")?.toLowerCase();
-      const sub = attr("sub");
-      const role = allowed.get(email);
-
-      if (!role || !sub) {
-        if (email) console.log(JSON.stringify({ skip: email }));
-        continue;
+    process.stdin.on("data", (c) => (raw += c));
+    process.stdin.on("end", () => {
+      const allowed = new Map([
+        ["student1@example.com", "STUDENT"],
+        ["advisor1@example.com", "ADVISOR"],
+        ["staff1@example.com", "STAFF"],
+        ["admin1@example.com", "ADMIN"],
+      ]);
+      for (const user of JSON.parse(raw).Users ?? []) {
+        const attr = (name) => user.Attributes?.find((a) => a.Name === name)?.Value;
+        const sub = attr("sub");
+        const email = attr("email")?.toLowerCase();
+        if (!email || !allowed.has(email)) continue;
+        if (!sub) {
+          console.error(`error: missing Cognito sub for ${email}`);
+          process.exitCode = 1;
+          continue;
+        }
+        console.log(JSON.stringify({ sub, email, role: allowed.get(email) }));
       }
-
-      console.log(JSON.stringify({ sub, email, role }));
-    }
+    });
   ' | while IFS= read -r ACCOUNT; do
-
-  SKIP="$(node -e 'const a=JSON.parse(process.argv[1]);process.stdout.write(a.skip||"")' "$ACCOUNT")"
-  if [ -n "$SKIP" ]; then
-    echo "skip: $SKIP (not allowlisted)"
-    continue
-  fi
 
   SUB="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).sub)' "$ACCOUNT")"
   EMAIL="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).email)' "$ACCOUNT")"
   ROLE="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).role)' "$ACCOUNT")"
 
-  case "$EMAIL:$ROLE" in
-    student1@example.com:STUDENT|advisor1@example.com:ADVISOR|staff1@example.com:STAFF|admin1@example.com:ADMIN) ;;
-    *) echo "error: unexpected account-role mapping" >&2; exit 1 ;;
-  esac
-
   if [ "$ROLE" = "STUDENT" ]; then
-    psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-      -v ON_ERROR_STOP=1 \
-      -v sub="$SUB" -v email="$EMAIL" -v role="$ROLE" -v student_id="$STUDENT_ID" \
-      -c "INSERT INTO app_users (cognito_sub, email, role, student_id, is_active)
-          VALUES (:'sub', :'email', :'role', :'student_id', TRUE)
-          ON CONFLICT (cognito_sub) DO UPDATE
-            SET email = EXCLUDED.email,
-                role = EXCLUDED.role,
-                student_id = EXCLUDED.student_id,
-                is_active = TRUE;" >/dev/null
+    psql_var "
+      INSERT INTO app_users (cognito_sub, email, role, student_id, is_active)
+      VALUES (:'sub', :'email', :'role', :'student_id', TRUE)
+      ON CONFLICT (cognito_sub) DO UPDATE
+        SET email = EXCLUDED.email,
+            role = EXCLUDED.role,
+            student_id = EXCLUDED.student_id,
+            is_active = TRUE;
+    " -v sub="$SUB" -v email="$EMAIL" -v role="$ROLE" -v student_id="$STUDENT_ID" >/dev/null
   else
-    psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-      -v ON_ERROR_STOP=1 \
-      -v sub="$SUB" -v email="$EMAIL" -v role="$ROLE" \
-      -c "INSERT INTO app_users (cognito_sub, email, role, student_id, is_active)
-          VALUES (:'sub', :'email', :'role', NULL, TRUE)
-          ON CONFLICT (cognito_sub) DO UPDATE
-            SET email = EXCLUDED.email,
-                role = EXCLUDED.role,
-                student_id = EXCLUDED.student_id,
-                is_active = TRUE;" >/dev/null
+    psql_var "
+      INSERT INTO app_users (cognito_sub, email, role, student_id, is_active)
+      VALUES (:'sub', :'email', :'role', NULL, TRUE)
+      ON CONFLICT (cognito_sub) DO UPDATE
+        SET email = EXCLUDED.email,
+            role = EXCLUDED.role,
+            student_id = EXCLUDED.student_id,
+            is_active = TRUE;
+    " -v sub="$SUB" -v email="$EMAIL" -v role="$ROLE" >/dev/null
   fi
 
   echo "upsert: $EMAIL -> $ROLE"
 
   if [ "$ROLE" = "ADVISOR" ]; then
-    psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-      -v ON_ERROR_STOP=1 \
-      -v sub="$SUB" -v student_id="$STUDENT_ID" \
-      -c "INSERT INTO advisor_student_assignments (advisor_sub, student_id)
-          VALUES (:'sub', :'student_id')
-          ON CONFLICT DO NOTHING;" >/dev/null
+    psql_var "
+      INSERT INTO advisor_student_assignments (advisor_sub, student_id)
+      VALUES (:'sub', :'student_id')
+      ON CONFLICT DO NOTHING;
+    " -v sub="$SUB" -v student_id="$STUDENT_ID" >/dev/null
     echo "assign: $EMAIL supervises $STUDENT_ID"
   fi
 done
 
+# Deactivate legacy mappings that are outside the explicit allowlist.
+psql_var "
+  UPDATE app_users
+  SET is_active = FALSE
+  WHERE lower(COALESCE(email, '')) NOT IN (
+    'student1@example.com',
+    'advisor1@example.com',
+    'staff1@example.com',
+    'admin1@example.com'
+  )
+  AND is_active = TRUE;
+" >/dev/null
+
 echo
 echo "accounts now in app_users:"
-psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" -c \
-  "SELECT role, email, student_id, is_active FROM app_users ORDER BY role;"
+psql -X -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
+  -v ON_ERROR_STOP=1 \
+  -c "SELECT role, email, student_id, is_active FROM app_users ORDER BY role;"

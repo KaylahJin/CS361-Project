@@ -1,6 +1,6 @@
 // Proves that a student_id supplied by the caller is never used as identity.
 //
-//   COOP_TEST_PASSWORD='...' npm run verify:scope
+//   COOP_STUDENT_PASSWORD='...' npm run verify:scope
 //
 // Acceptance criteria on #100: "ส่ง student_id ของผู้อื่นมาใน Body/Query แล้วระบบ
 // ไม่นำไปใช้ระบุตัวตน". Identity comes from the verified `sub` claim only; a
@@ -27,14 +27,12 @@ const TF_DIR = path.join(__dirname, 'terraform');
 const tfOutput = (name) =>
   execFileSync('terraform', ['output', '-raw', name], { cwd: TF_DIR, encoding: 'utf-8' }).trim();
 
-const PASSWORD = process.argv[2] || process.env.COOP_TEST_PASSWORD;
+const PASSWORD = process.argv[2] || process.env.COOP_STUDENT_PASSWORD;
 
 if (!PASSWORD) {
-  console.error('error: no password given.\n');
+  console.error('error: no student password given.\n');
   console.error('  node infra/verify-scope.mjs <password>');
-  console.error('  COOP_TEST_PASSWORD=... node infra/verify-scope.mjs\n');
-  console.error('The test-account password is shared with the team out of band;');
-  console.error('docs/v3-02-auth.md says who to ask.');
+  console.error('  COOP_STUDENT_PASSWORD=... node infra/verify-scope.mjs\n');
   process.exit(2);
 }
 

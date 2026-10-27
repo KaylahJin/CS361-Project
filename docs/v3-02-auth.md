@@ -59,25 +59,31 @@ has no `app_users` row, protected API requests should return `403`. Keep it
 unmapped so `verify:auth` can continue testing this behaviour.
 
 Only the four allowlisted role accounts are mapped by
-`infra/seed-app-users.sh`. The script skips accounts that do not match the
-allowlist. Public self-sign-up is disabled; new accounts must be created by
-an administrator and must not receive an application role unless they are
-explicitly allowlisted.
+`infra/seed-app-users.sh`. The script does not assign roles to other Cognito
+accounts and deactivates existing active `app_users` mappings whose email is
+outside the allowlist. Public self-sign-up is disabled; new accounts must be
+created by an administrator and must not receive an application role unless
+they are explicitly allowlisted.
 
-Each test account must have a **different password**. Passwords must satisfy
-the policy in `infra/terraform/cognito.tf`: at least 12 characters, with
-lowercase, uppercase, numbers, and symbols. Do not commit passwords to the
-repository. The verification scripts accept the password through
-`COOP_TEST_PASSWORD`:
+Each Cognito test account must have a **different password**. Passwords
+must satisfy the policy in `infra/terraform/cognito.tf`: at least 12
+characters, including lowercase, uppercase, numbers, and symbols. Do not
+commit passwords to the repository. Set these five account-specific
+variables in your shell:
 
 ```bash
-COOP_TEST_PASSWORD='...' npm run verify:auth
-COOP_TEST_PASSWORD='...' npm run verify:roles
+export COOP_STUDENT_PASSWORD='...'
+export COOP_ADVISOR_PASSWORD='...'
+export COOP_STAFF_PASSWORD='...'
+export COOP_ADMIN_PASSWORD='...'
+export COOP_UNMAPPED_PASSWORD='...'
 ```
 
-The `COOP_TEST_PASSWORD` value must match the account used by the relevant
-verification script. If the scripts use different test accounts, provide
-the corresponding account password without committing it to source control.
+`verify:roles` requires all four role-account variables.
+`verify:auth` uses the variable matching its primary account (student by
+default) and requires `COOP_UNMAPPED_PASSWORD` for
+`nobody1@example.com`. The unmapped account password must be distinct from
+all four role-account passwords.
 
 The intended role comes from the account's `app_users` row, not from Cognito.
 The rows are created by `npm run db:seed-users`, which reads each `sub` from
@@ -190,7 +196,7 @@ editing it.
 
 | Setting | Current | Notes |
 |---|---|---|
-| `password_policy` | 8 chars, no character classes | Relaxed for the demo. Tighten before any real use — the sign-in endpoint is public. |
+| `password_policy` | 12 chars; lowercase, uppercase, numbers, and symbols required | Matches `infra/terraform/cognito.tf`. |
 | `id_token_validity` | 60 minutes | Lower it to exercise the refresh path sooner. |
 | `refresh_token_validity` | 30 days | How long a user stays signed in across reloads. |
 | `explicit_auth_flows` | SRP + refresh | Leaving `USER_PASSWORD_AUTH` out is why the AWS CLI cannot mint a token for these accounts. Keep it that way. |
@@ -248,8 +254,10 @@ npm run verify:roles     # the permission matrix, against the deployed stack
 npm run verify:scope     # a caller-supplied student_id cannot widen scope
 ```
 
-The three `verify:*` scripts need the test-account password, which is not in
-this repository: `COOP_TEST_PASSWORD='...' npm run verify:auth`.
+The `verify:*` scripts need account-specific passwords, which must not be
+stored in this repository. Set `COOP_STUDENT_PASSWORD` and
+`COOP_UNMAPPED_PASSWORD` before running `npm run verify:auth`; set all four
+role-account variables before running `npm run verify:roles`.
 
 `verify:auth` reads the API URL and pool ids from Terraform outputs, then
 checks: public routes answer 200 with no token; coop-plan routes answer 401
