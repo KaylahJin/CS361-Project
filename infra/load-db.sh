@@ -102,30 +102,20 @@ run_sql_file() {
 }
 
 create_app_role() {
-  local app_password
-  printf 'Password for coop_app (must match Terraform app_db_password): ' >&2
-  read -rs app_password
-  printf '\n' >&2
-
-  if [ -z "$app_password" ]; then
-    echo "error: app password cannot be empty" >&2
-    return 1
-  fi
-
+  # Create the fixed application role without putting its password in SQL
+  # arguments or environment variables.
   psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
-    -v ON_ERROR_STOP=1 \
-    -v app_password="$app_password" <<'SQL'
-SELECT format(
-  'CREATE ROLE coop_app LOGIN PASSWORD %L',
-  :'app_password'
-)
+    -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE ROLE coop_app LOGIN'
 WHERE NOT EXISTS (
   SELECT 1 FROM pg_roles WHERE rolname = 'coop_app'
 )
 \gexec
-
-ALTER ROLE coop_app LOGIN PASSWORD :'app_password';
 SQL
+
+  # psql prompts for the password twice and hashes it client-side.
+  psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
+    -v ON_ERROR_STOP=1 -c '\password coop_app'
 }
 
 # Every statement in the V3 migration is guarded (CREATE TABLE IF NOT EXISTS,

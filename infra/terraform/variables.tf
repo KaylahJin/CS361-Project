@@ -111,12 +111,6 @@ variable "db_instance_class" {
   default     = "db.t4g.micro"
 }
 
-variable "app_db_username" {
-  description = "Least-privilege PostgreSQL login used by the Lambda API"
-  type        = string
-  default     = "coop_app"
-}
-
 variable "app_db_password" {
   description = "Password for the Lambda application database role; set locally and never commit it."
   type        = string
@@ -128,7 +122,7 @@ variable "app_db_password" {
   }
 
   validation {
-    condition     = !can(regex("(?i)change.?me", var.app_db_password))
-    error_message = "Set a real app_db_password; do not use the placeholder."
+    condition     = !can(regex("(?i)change.?me|replace-with-a-unique-password", var.app_db_password))
+    error_message = "Set a real app_db_password; do not use a placeholder."
   }
 }

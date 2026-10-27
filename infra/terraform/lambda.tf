@@ -35,7 +35,7 @@ resource "aws_lambda_function" "companies" {
       DB_HOST     = aws_db_instance.coop_db.address
       DB_PORT     = "5432"
       DB_NAME     = var.db_name
-      DB_USER     = var.app_db_username
+      DB_USER     = "coop_app"
       DB_PASSWORD = var.app_db_password
     }
   }
