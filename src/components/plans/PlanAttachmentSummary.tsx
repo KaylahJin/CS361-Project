@@ -17,11 +17,13 @@ import {
 type Props = {
   planId: number;
   getIdToken: () => Promise<string | null>;
+  showEditHint?: boolean;
 };
 
 export default function PlanAttachmentSummary({
   planId,
   getIdToken,
+  showEditHint = true,
 }: Props) {
   const [attachments, setAttachments] = useState<PlanAttachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,9 +158,11 @@ export default function PlanAttachmentSummary({
             ยังไม่ได้แนบไฟล์
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
-            หากต้องการเพิ่มเอกสาร สามารถไปที่หน้าแก้ไขแผนได้
-          </p>
+            {showEditHint && (
+            <p className="mt-1 text-xs text-slate-500">
+                หากต้องการเพิ่มเอกสาร สามารถไปที่หน้าแก้ไขแผนได้
+            </p>
+            )}
         </div>
       )}
 

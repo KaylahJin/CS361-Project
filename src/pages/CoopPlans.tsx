@@ -1069,6 +1069,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
           if (!open) setReviewPlan(null);
         }}
         reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+        getIdToken={getIdToken}
         onSubmitReview={async ({ planId, decision, comment }) => {
           const token = await getIdToken();
           await reviewCoopPlan(planId, decision, comment, token);
