@@ -9,11 +9,22 @@ import {
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { buildContentDisposition } from './attachmentRules.mjs';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 
 let client = null;
 
 function getClient() {
-  if (!client) client = new S3Client({ region: process.env.AWS_REGION });
+  if (!client) {
+    client = new S3Client({
+      region: process.env.AWS_REGION,
+      maxAttempts: 1,
+      requestHandler: new NodeHttpHandler({
+        connectionTimeout: 2000,
+        requestTimeout: 3000,
+      }),
+    });
+  }
+
   return client;
 }
 

@@ -33,13 +33,18 @@ WHERE plan_id = $1
 FOR UPDATE`;
 
 export async function withEditablePlan({ event, label, planId, work }) {
+  console.log(`[${label}] before resolveCaller`);
   const caller = await resolveCaller(event, label);
+  console.log(`[${label}] after resolveCaller`);
+
   if (caller.response) return caller.response;
   const { user } = caller;
 
   let client;
   try {
+    console.log(`[${label}] before connect`);
     client = await getPool().connect();
+    console.log(`[${label}] after connect`);
   } catch (err) {
     console.error(`${label} could not get a connection`, err);
     return internalError();
@@ -47,9 +52,14 @@ export async function withEditablePlan({ event, label, planId, work }) {
 
   let outcome;
   try {
+    console.log(`[${label}] before BEGIN`);
     await client.query('BEGIN');
+    console.log(`[${label}] after BEGIN`);
 
+    console.log(`[${label}] before LOCK_PLAN`);
     const plan = (await client.query(LOCK_PLAN, [planId])).rows[0];
+    console.log(`[${label}] after LOCK_PLAN`);
+
     if (!plan) {
       await client.query('ROLLBACK');
       return errorResponse(404, 'PLAN_NOT_FOUND', 'Coop plan not found.');
