@@ -34,14 +34,16 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'fk_plan_attachments_uploader'
-      AND conrelid = 'public.plan_attachments'::regclass
+    FROM pg_constraint c
+    JOIN pg_attribute a
+      ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+    WHERE c.conrelid = 'public.plan_attachments'::regclass
+      AND c.contype = 'f'
+      AND a.attname = 'uploaded_by'
   ) THEN
     ALTER TABLE plan_attachments
       ADD CONSTRAINT fk_plan_attachments_uploader
-      FOREIGN KEY (uploaded_by)
-      REFERENCES app_users(cognito_sub);
+      FOREIGN KEY (uploaded_by) REFERENCES app_users(cognito_sub);
   END IF;
 END $$;
 

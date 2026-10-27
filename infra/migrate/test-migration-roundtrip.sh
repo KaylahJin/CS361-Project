@@ -86,7 +86,8 @@ echo
 echo "### 5. refuse a bad row (FK must reject an unknown reviewer)"
 if q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, comment)
       VALUES ($PLAN_ID, 'sub-does-not-exist', 'APPROVED', NULL);" >/dev/null 2>&1; then
-  echo "UNEXPECTED: unknown reviewer_sub was accepted"
+  echo "UNEXPECTED: unknown reviewer_sub was accepted" >&2
+  exit 1
 else
   echo "rejected as expected: unknown reviewer_sub violates the foreign key"
 fi
@@ -105,10 +106,23 @@ q "INSERT INTO plan_attachments (plan_id, s3_key, file_name, size_bytes, uploade
 echo "attachment insert ok"
 if q "INSERT INTO plan_attachments (plan_id, s3_key, file_name, size_bytes, uploaded_by)
       VALUES ($PLAN_ID, 'plans/$PLAN_ID/big.pdf', 'big.pdf', 5242881, 'sub-staff-test');" >/dev/null 2>&1; then
-  echo "UNEXPECTED: 5 MB + 1 byte was accepted"
+  echo "UNEXPECTED: 5 MB + 1 byte was accepted" >&2
+  exit 1
 else
   echo "rejected as expected: over 5 MB"
 fi
+
+echo "### refuse an attachment with an unknown uploader"
+if q "INSERT INTO plan_attachments
+       (plan_id, s3_key, file_name, size_bytes, uploaded_by)
+       VALUES ($PLAN_ID, 'plans/$PLAN_ID/invalid.pdf',
+               'invalid.pdf', 1000, 'sub-does-not-exist');" >/dev/null 2>&1; then
+  echo "UNEXPECTED: unknown uploaded_by was accepted" >&2
+  exit 1
+else
+  echo "rejected as expected: unknown uploaded_by"
+fi
+
 runfile infra/migrate/migrations/v3_02_attachments_rollback.sql
 runfile infra/migrate/migrations/v3_02_attachments_rollback.sql  # rollback is re-runnable too
 echo "plan_attachments after rollback: $(q "SELECT to_regclass('public.plan_attachments') IS NULL;") (t = gone)"

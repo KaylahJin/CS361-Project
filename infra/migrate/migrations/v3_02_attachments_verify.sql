@@ -23,7 +23,16 @@ SELECT expected AS name,
        CASE WHEN c.conname IS NULL THEN 'MISSING' ELSE 'ok' END AS status
 FROM (VALUES ('chk_plan_attachments_type'), ('chk_plan_attachments_size'),
              ('chk_plan_attachments_name')) AS e(expected)
-LEFT JOIN pg_constraint c ON c.conname = e.expected;
+LEFT JOIN pg_constraint c
+       ON c.conname = e.expected
+      AND c.conrelid = 'public.plan_attachments'::regclass;
+SELECT 'fk on uploaded_by' AS name,
+       CASE WHEN EXISTS (
+         SELECT 1 FROM pg_constraint c
+         JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+         WHERE c.conrelid = 'public.plan_attachments'::regclass
+           AND c.contype = 'f' AND a.attname = 'uploaded_by'
+       ) THEN 'ok' ELSE 'MISSING' END AS status;
 
 \echo '== index =='
 SELECT 'idx_plan_attachments_plan' AS name,

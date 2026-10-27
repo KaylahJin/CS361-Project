@@ -146,7 +146,7 @@ fi
 
 # An anonymous request must be refused (403), never served.
 CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-  "https://$BUCKET.s3.$REGION.amazonaws.com/" || echo 000)"
+  "https://$BUCKET.s3.$REGION.amazonaws.com/" || true)"
 case "$CODE" in
   403) echo "anonymous GET: HTTP 403 — bucket is private" ;;
   000) echo "no response — DNS for a new bucket can take a minute; re-run to verify." >&2 ;;
