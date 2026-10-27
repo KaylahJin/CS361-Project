@@ -187,20 +187,6 @@ function UnauthenticatedState({
           </button>
         )}
       </div>
-
-      <div className="mt-8 rounded-xl bg-slate-50 border border-slate-200/70 p-3.5 text-xs text-slate-500 text-left w-full">
-        <span className="font-semibold text-slate-700 block mb-1">
-          💡 บัญชีทดสอบสำหรับผู้ตรวจ (Test Accounts):
-        </span>
-        <ul className="list-disc list-inside space-y-0.5 text-slate-600">
-          <li>
-            อาจารย์ที่ปรึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">advisor1@example.com</code>
-          </li>
-          <li>
-            เจ้าหน้าที่สหกิจศึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">staff1@example.com</code>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

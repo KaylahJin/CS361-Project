@@ -43,7 +43,7 @@ Cognito only answers *who is this*. The database answers *what may they do*.
 
 ## Test accounts
 
-Five accounts exist in the pool, all `CONFIRMED`:
+Five accounts exist in the pool for authentication and permission testing:
 
 | Email | Intended role | `app_users` row |
 |---|---|---|
@@ -51,47 +51,57 @@ Five accounts exist in the pool, all `CONFIRMED`:
 | `advisor1@example.com` | ADVISOR (teacher / อาจารย์ที่ปรึกษา) | yes |
 | `staff1@example.com` | STAFF (co-op office) | yes |
 | `admin1@example.com` | ADMIN | yes |
-| `nobody1@example.com` | none, on purpose | **no** |
+| `nobody1@example.com` | none, intentionally unmapped | **no** |
 
-`nobody1@` is a fixture, not an oversight. It is the only way to exercise the
-"authenticated but not authorised" path: a real, confirmed Cognito account
-that no admin has given a role to, which is the normal state of a brand-new
-sign-up. `verify:auth` signs in as it and expects 403. Leave it unmapped —
-`db:seed-users` skips it, because the address matches no role rule.
+`nobody1@example.com` is a test fixture for the "authenticated but not
+authorised" path. The account can authenticate with Cognito, but because it
+has no `app_users` row, protected API requests should return `403`. Keep it
+unmapped so `verify:auth` can continue testing this behaviour.
 
-All five share one password, which is **not written down in this repository**.
-Ask the team for it, or set your own with the `admin-set-user-password` recipe
-below. `#99` requires that no credential be committed, and a throwaway lab
-password is still a credential — so the scripts that sign in take it as an
-argument or in `COOP_TEST_PASSWORD`:
+Only the four allowlisted role accounts are mapped by
+`infra/seed-app-users.sh`. The script skips accounts that do not match the
+allowlist. Public self-sign-up is disabled; new accounts must be created by
+an administrator and must not receive an application role unless they are
+explicitly allowlisted.
+
+Each test account must have a **different password**. Passwords must satisfy
+the policy in `infra/terraform/cognito.tf`: at least 12 characters, with
+lowercase, uppercase, numbers, and symbols. Do not commit passwords to the
+repository. The verification scripts accept the password through
+`COOP_TEST_PASSWORD`:
 
 ```bash
 COOP_TEST_PASSWORD='...' npm run verify:auth
 COOP_TEST_PASSWORD='...' npm run verify:roles
 ```
 
-These are demo accounts in a lab pool with a deliberately relaxed password
-policy, so they are quick to type while marking. That relaxed policy is not a
-pattern to reuse anywhere real.
+The `COOP_TEST_PASSWORD` value must match the account used by the relevant
+verification script. If the scripts use different test accounts, provide
+the corresponding account password without committing it to source control.
 
-The "intended role" column describes what each account is set up as, but the
-role itself comes from the account's `app_users` row, not from Cognito. The
-rows are created by `npm run db:seed-users`, which reads each `sub` from the
-pool at run time — a rebuilt pool mints new subs, so re-run it after one.
+The intended role comes from the account's `app_users` row, not from Cognito.
+The rows are created by `npm run db:seed-users`, which reads each `sub` from
+the pool at run time. A rebuilt pool mints new `sub` values, so the mapping
+must be refreshed after rebuilding the pool.
 
-Change a password:
+Change a password using an administrator operation:
 
 ```bash
 POOL=$(terraform -chdir=infra/terraform output -raw cognito_user_pool_id)
+read -rs NEW_PASSWORD
 aws cognito-idp admin-set-user-password \
-  --user-pool-id "$POOL" --username student1@example.com \
-  --password 'newpassword' --permanent
+  --user-pool-id "$POOL" \
+  --username student1@example.com \
+  --password "$NEW_PASSWORD" \
+  --permanent
 ```
 
-`--permanent` matters: without it the account lands in
-`NEW_PASSWORD_REQUIRED`, and the login form has no screen for that challenge.
+Choose a password that satisfies the pool's password policy. `--permanent`
+avoids the `NEW_PASSWORD_REQUIRED` challenge, which the login form does not
+implement.
 
-Add an account: `docs/cognito-setup.md` has the `admin-create-user` recipe.
+See `docs/cognito-setup.md` for the administrator-controlled account creation
+procedure.
 
 ## How an account is matched to a person
 

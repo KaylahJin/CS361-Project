@@ -50,38 +50,26 @@ fails with `ExpiredToken` once they do.
    both are compiled into the shipped JavaScript bundle. They live in `.env`
    because they differ per stack, not because they need protecting.
 
-2. Create one test user per role for manual QA:
+2. Create the allowlisted test users for manual QA. Public self-sign-up is
+   disabled; an administrator must create accounts through Cognito admin
+   operations. The test accounts are `student1@example.com`,
+   `advisor1@example.com`, `staff1@example.com`, and
+   `admin1@example.com`.
 
-   ```bash
-   POOL=$(terraform -chdir=infra/terraform output -raw cognito_user_pool_id)
+   Create each account with `aws cognito-idp admin-create-user`, using
+   `--message-action SUPPRESS` and setting `email_verified=true`. Then set
+   a permanent password with `aws cognito-idp admin-set-user-password`
+   so the SPA does not encounter the unsupported `NEW_PASSWORD_REQUIRED`
+   challenge.
 
-   aws cognito-idp admin-create-user \
-     --user-pool-id "$POOL" \
-     --username student1@example.com \
-     --user-attributes Name=email,Value=student1@example.com Name=email_verified,Value=true \
-     --message-action SUPPRESS
+   Choose a **different password for each account** that satisfies the
+   password policy in `infra/terraform/cognito.tf` (at least 12 characters,
+   including lowercase, uppercase, numbers, and symbols). Do not commit
+   passwords to the repository or share them in source files. Share
+   credentials only through an appropriate private channel.
 
-   # Pick the password here rather than reading one out of the repository:
-   # no credential is committed (#99). Use the same value for all four
-   # accounts, and share it with the team out of band.
-   read -rs TEST_PASSWORD
-
-   # Make the password permanent so the login form does not hit the
-   # NEW_PASSWORD_REQUIRED challenge (which the SPA does not implement).
-   aws cognito-idp admin-set-user-password \
-     --user-pool-id "$POOL" \
-     --username student1@example.com \
-     --password "$TEST_PASSWORD" \
-     --permanent
-   ```
-
-   Repeat for `advisor1@`, `staff1@`, `admin1@` to exercise the full
-   permission matrix in `docs/permission-matrix.md`.
-
-   The pool's password policy is relaxed on purpose (8 characters, no
-   character-class rules) so these demo passwords are quick to type during
-   marking. **Tighten `password_policy` in `infra/terraform/cognito.tf`
-   before any non-lab use** — the pool's sign-in endpoint is public.
+   Repeat for all four accounts to exercise the permission matrix in
+   `docs/permission-matrix.md`.
 
 3. Role assignment means inserting the matching `app_users` row. The tables
    arrived with issue #98 (V3-03.1), and `npm run db:seed-users` writes a row
@@ -94,11 +82,12 @@ fails with `ExpiredToken` once they do.
 
 ## AWS Academy Lab limitations
 
-If `admin-create-user` or any `cognito-idp` admin call is denied by
-`LabRole`, record the exact error here and fall back to self-service
-sign-up (`CognitoUser.signUp` from the frontend) plus
-`admin-confirm-sign-up`. That is the fallback plan ("แผนสำรอง") issue #99
-asks to be documented before V3-02.2 starts.
+If `admin-create-user` or another Cognito admin operation is denied by
+`LabRole`, record the exact error and investigate the permissions available
+in the current lab. Do not enable public self-sign-up as a workaround:
+account creation must remain administrator-controlled. If the required
+admin operations are unavailable, document the limitation and coordinate
+with the team before changing the authentication design.
 
 Known Lab constraint already hit by this stack: no CloudFront permissions
 at all, which is why the site is an HTTP-only S3 website endpoint
