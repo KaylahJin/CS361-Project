@@ -65,7 +65,7 @@ jobs:
             const review = context.payload.review;
             const pr = context.payload.pull_request;
             const reviewer = review.user.login;
-            const state = review.state;
+            const state = review.state.toUpperCase();
             const assignees = pr.assignees
               .map(a => `@${a.login}`).join(', ');
 
@@ -88,7 +88,9 @@ jobs:
               assignees
                 ? `**Assignee(s):** ${assignees} — please check the review and respond accordingly.`
                 : '',
-              review.body ? `> _"${review.body}"_` : '',
+              review.body
+                ? `> _"${review.body.replace(/\r?\n/g, '\n> ')}"_`
+                : '',
             ].filter(Boolean).join('\n');
 
             await github.rest.issues.createComment({
