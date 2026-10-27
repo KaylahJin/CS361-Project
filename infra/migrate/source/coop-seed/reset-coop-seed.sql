@@ -1,0 +1,104 @@
+-- =====================================================================
+-- reset-coop-seed.sql
+-- Issue #152: Reset preparation for COOP-2569-01
+--
+-- =====================================================================
+
+BEGIN;
+
+-- Prevent deletion of the round if it contains plans belonging
+-- to students outside the seed-owned test group.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM coop_plans
+        WHERE period_id = 'COOP-2569-01'
+          AND student_id NOT IN (
+              '6900000001',
+              '6900000002',
+              '6900000003',
+              '6900000004',
+              '6900000005'
+          )
+    ) THEN
+        RAISE EXCEPTION
+            'Reset aborted: COOP-2569-01 contains plans belonging to non-seed students.';
+    END IF;
+END
+$$;
+
+-- Delete reviews associated with plans owned by the synthetic
+-- seed students only.
+DELETE FROM plan_reviews
+WHERE plan_id IN (
+    SELECT plan_id
+    FROM coop_plans
+    WHERE student_id IN (
+        '6900000001',
+        '6900000002',
+        '6900000003',
+        '6900000004',
+        '6900000005'
+    )
+);
+
+-- Delete plans belonging to the synthetic seed students only.
+-- Do not delete plans based solely on period_id.
+DELETE FROM coop_plans
+WHERE student_id IN (
+    '6900000001',
+    '6900000002',
+    '6900000003',
+    '6900000004',
+    '6900000005'
+);
+
+-- Delete synthetic seed students.
+-- Related student_courses records are expected to be removed
+-- automatically through the ON DELETE CASCADE foreign key.
+DELETE FROM students
+WHERE student_id IN (
+    '6900000001',
+    '6900000002',
+    '6900000003',
+    '6900000004',
+    '6900000005'
+);
+
+-- Delete only the schedule with the dedicated seed-owned ID.
+DELETE FROM coop_schedules
+WHERE schedule_id = 'SCH-COOP-2569-01-APP'
+  AND period_id = 'COOP-2569-01';
+
+-- Delete the test period only when no plans reference it.
+DELETE FROM periods
+WHERE period_id = 'COOP-2569-01'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM coop_plans
+      WHERE period_id = 'COOP-2569-01'
+  );
+
+COMMIT;
+
+-- Verify that no seed-owned students remain.
+SELECT COUNT(*) AS remaining_test_students
+FROM students
+WHERE student_id IN (
+    '6900000001',
+    '6900000002',
+    '6900000003',
+    '6900000004',
+    '6900000005'
+);
+
+-- Verify that the dedicated seed schedule was removed.
+SELECT COUNT(*) AS remaining_seed_schedule
+FROM coop_schedules
+WHERE schedule_id = 'SCH-COOP-2569-01-APP';
+
+-- Verify that the test period was removed.
+SELECT COUNT(*) AS remaining_test_period
+FROM periods
+WHERE period_id = 'COOP-2569-01';
