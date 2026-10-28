@@ -75,6 +75,7 @@ ON CONFLICT (position_id, period_id) DO NOTHING;
 -- ---------------------------------------------------------------------
 -- 4. Synthetic students S01-S05
 -- Dedicated IDs: 6900000001 through 6900000005
+-- Curriculum 66: use the curriculum 66 eligibility rules.
 -- ---------------------------------------------------------------------
 INSERT INTO students (
     student_id, first_name, last_name, email,
@@ -108,54 +109,81 @@ VALUES
     )
 ON CONFLICT (student_id) DO NOTHING;
 -- ---------------------------------------------------------------------
--- 5. Synthetic course grades
--- These six sample courses have the target averages shown below.
--- Confirm the actual required course list in coop_course_rules before
+-- 5. Synthetic course records for curriculum 66
+--
+-- Required graded courses:
+--   คพ.100, คพ.101, คพ.102, คพ.111, คพ.251, คพ.261
+-- Alternative:
+--   คพ.213 or คพ.216
+-- Ongoing/studied groups:
+--   คพ.180 and one of คพ.262 / คพ.331 / คพ.240
+--
+-- ENROLLED courses use NULL grade_point.
+-- Existing sample grades are preserved.
 -- ---------------------------------------------------------------------
 INSERT INTO student_courses (
     student_id, course_code, status, grade_point
 )
 VALUES
     -- S01: target sample group GPA 3.40; overall GPA 3.65
-    ('6900000001', 'คพ.101', 'PASSED', 3.00),
+    ('6900000001', 'คพ.100', 'PASSED', 3.50),
+    ('6900000001', 'คพ.101', 'PASSED', 3.20),
     ('6900000001', 'คพ.102', 'PASSED', 3.50),
     ('6900000001', 'คพ.111', 'PASSED', 3.00),
     ('6900000001', 'คพ.216', 'PASSED', 3.50),
     ('6900000001', 'คพ.251', 'PASSED', 3.50),
-    ('6900000001', 'คพ.264', 'PASSED', 3.90),
+    ('6900000001', 'คพ.261', 'PASSED', 3.50),
+    ('6900000001', 'คพ.180', 'ENROLLED', NULL),
+    ('6900000001', 'คพ.331', 'ENROLLED', NULL),
+    ('6900000001', 'คพ.301', 'PASSED', 3.50),
 
     -- S02: target sample group GPA 3.55; missing Transcript is not
-    -- represented here because the document table/schema is unknown.
-    ('6900000002', 'คพ.101', 'PASSED', 3.50),
+    ('6900000002', 'คพ.100', 'PASSED', 3.50),
+    ('6900000002', 'คพ.101', 'PASSED', 3.90),
     ('6900000002', 'คพ.102', 'PASSED', 3.50),
     ('6900000002', 'คพ.111', 'PASSED', 3.50),
     ('6900000002', 'คพ.216', 'PASSED', 3.50),
     ('6900000002', 'คพ.251', 'PASSED', 3.50),
-    ('6900000002', 'คพ.264', 'PASSED', 3.80),
+    ('6900000002', 'คพ.261', 'PASSED', 3.50),
+    ('6900000002', 'คพ.180', 'ENROLLED', NULL),
+    ('6900000002', 'คพ.262', 'ENROLLED', NULL),
+    ('6900000002', 'คพ.301', 'PASSED', 3.50),
 
     -- S03: target sample group GPA 3.10; overall GPA 3.25
-    ('6900000003', 'คพ.101', 'PASSED', 3.00),
-    ('6900000003', 'คพ.102', 'PASSED', 3.00),
+    ('6900000003', 'คพ.100', 'PASSED', 3.50),
+    ('6900000003', 'คพ.101', 'PASSED', 3.20),
+    ('6900000003', 'คพ.102', 'PASSED', 3.20),
     ('6900000003', 'คพ.111', 'PASSED', 3.50),
     ('6900000003', 'คพ.216', 'PASSED', 3.00),
     ('6900000003', 'คพ.251', 'PASSED', 3.00),
-    ('6900000003', 'คพ.264', 'PASSED', 3.10),
+    ('6900000003', 'คพ.261', 'PASSED', 3.00),
+    ('6900000003', 'คพ.180', 'ENROLLED', NULL),
+    ('6900000003', 'คพ.331', 'ENROLLED', NULL),
+    ('6900000003', 'คพ.301', 'PASSED', 3.00),
 
     -- S04: target sample group GPA 3.00; overall GPA 2.75
+    ('6900000004', 'คพ.100', 'PASSED', 3.00),
     ('6900000004', 'คพ.101', 'PASSED', 3.00),
     ('6900000004', 'คพ.102', 'PASSED', 3.00),
     ('6900000004', 'คพ.111', 'PASSED', 3.00),
     ('6900000004', 'คพ.216', 'PASSED', 3.00),
     ('6900000004', 'คพ.251', 'PASSED', 3.00),
-    ('6900000004', 'คพ.264', 'PASSED', 3.00),
+    ('6900000004', 'คพ.261', 'PASSED', 3.00),
+    ('6900000004', 'คพ.180', 'ENROLLED', NULL),
+    ('6900000004', 'คพ.331', 'ENROLLED', NULL),
+    ('6900000004', 'คพ.301', 'PASSED', 3.00),
 
     -- S05: target sample group GPA 2.30; overall GPA 3.10
+    ('6900000005', 'คพ.100', 'PASSED', 2.30),
     ('6900000005', 'คพ.101', 'PASSED', 2.00),
     ('6900000005', 'คพ.102', 'PASSED', 2.50),
     ('6900000005', 'คพ.111', 'PASSED', 2.00),
     ('6900000005', 'คพ.216', 'PASSED', 2.50),
     ('6900000005', 'คพ.251', 'PASSED', 2.50),
-    ('6900000005', 'คพ.264', 'PASSED', 2.30)
+    ('6900000005', 'คพ.261', 'PASSED', 2.30),
+    ('6900000005', 'คพ.180', 'ENROLLED', NULL),
+    ('6900000005', 'คพ.331', 'ENROLLED', NULL),
+    ('6900000005', 'คพ.301', 'PASSED', 2.30)
 ON CONFLICT (student_id, course_code) DO NOTHING;
 
 COMMIT;
@@ -178,25 +206,34 @@ WHERE student_id IN (
 )
 ORDER BY student_id;
 
--- Verify the number of seeded course records for each test student.
+-- Verify required, alternative, and ongoing course records.
 SELECT
     student_id,
-    COUNT(*) AS course_count
+    COUNT(*) FILTER (
+        WHERE course_code IN (
+            'คพ.100', 'คพ.101', 'คพ.102',
+            'คพ.111', 'คพ.251', 'คพ.261'
+        )
+        AND status = 'PASSED'
+        AND grade_point IS NOT NULL
+    ) AS required_courses_passed,
+    COUNT(*) FILTER (
+        WHERE course_code IN ('คพ.213', 'คพ.216')
+        AND status = 'PASSED'
+        AND grade_point IS NOT NULL
+    ) AS alternatives_passed,
+    COUNT(*) FILTER (
+        WHERE course_code = 'คพ.180'
+        AND status IN ('PASSED', 'ENROLLED')
+    ) AS course_180_present,
+    COUNT(*) FILTER (
+        WHERE course_code IN ('คพ.262', 'คพ.331', 'คพ.240')
+        AND status IN ('PASSED', 'ENROLLED')
+    ) AS second_group_present
 FROM student_courses
 WHERE student_id IN (
-    '6900000001',
-    '6900000002',
-    '6900000003',
-    '6900000004',
-    '6900000005'
-)
-AND course_code IN (
-    'คพ.101',
-    'คพ.102',
-    'คพ.111',
-    'คพ.216',
-    'คพ.251',
-    'คพ.264'
+    '6900000001', '6900000002', '6900000003',
+    '6900000004', '6900000005'
 )
 GROUP BY student_id
 ORDER BY student_id;
