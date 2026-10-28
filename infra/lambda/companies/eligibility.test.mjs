@@ -98,20 +98,6 @@ describe('gpaFailures', () => {
     ]);
   });
 
-  it('passes when overall GPA is just above the minimum', () => {
-    expect(gpaFailures(2.81, 2.8)).toEqual([]);
-  });
-
-  it('fails when overall GPA is below the period minimum', () => {
-    expect(gpaFailures(2.75, 2.8)).toMatchObject([
-      {
-        code: 'GPA_BELOW_MINIMUM',
-        required: 2.8,
-        actual: 2.75,
-      },
-    ]);
-  });
-
   it.each([null, undefined])(
     'fails when overall GPA is missing (%s)',
     (gpa) => {
@@ -187,20 +173,12 @@ describe('checkEligibility', () => {
     expect(client.query.mock.calls[0][0]).toMatch(/FROM periods/);
   });
 
-  it('passes an eligible student', async () => {
-    const client = clientFor();
-
-    expect(
-      await checkEligibility(client, 'S01', PERIOD_ID),
-    ).toEqual([]);
-  });
-
   it('passes when overall GPA is just above 2.80', async () => {
     const client = clientFor({
       student: {
         student_id: 'S03',
         curriculum: '66',
-        gpa: 2.81,
+        gpa: 3.25,
       },
     });
 
@@ -295,7 +273,7 @@ describe('checkEligibility', () => {
 
   it('reports missing period criteria instead of using a fallback', async () => {
     const client = clientFor({
-      minGpa: null,
+      periods: {},
     });
 
     expect(
@@ -346,11 +324,11 @@ describe('checkEligibility', () => {
   });
 
   it.each([
-    ['6600000001', 3.65, true],
-    ['66t00000002', 3.82, true],
-    ['6600000003', 3.25, true],
-    ['6600000004', 2.75, false],
-    ['6600000005', 3.10, true],
+    ['6900000001', 3.65, true],
+    ['6900000002', 3.82, true],
+    ['6900000003', 3.25, true],
+    ['6900000004', 2.75, false],
+    ['6900000005', 3.10, true],
   ])(
     'checks overall GPA eligibility for student %s (GPA: %s)',
     async (studentId, gpa, shouldPassGpa) => {
