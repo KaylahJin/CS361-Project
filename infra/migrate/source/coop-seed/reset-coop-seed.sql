@@ -6,6 +6,9 @@
 
 BEGIN;
 
+-- Lock the period so concurrent plan inserts wait until this reset ends.
+SELECT 1 FROM periods WHERE period_id = 'COOP-2569-01' FOR UPDATE;
+
 -- Prevent deletion of the round if it contains plans belonging
 -- to students outside the seed-owned test group.
 DO $$
@@ -41,6 +44,7 @@ WHERE plan_id IN (
         '6900000004',
         '6900000005'
     )
+    AND period_id = 'COOP-2569-01'
 );
 
 -- Delete plans belonging to the synthetic seed students only.
@@ -52,18 +56,24 @@ WHERE student_id IN (
     '6900000003',
     '6900000004',
     '6900000005'
-);
+)
+AND period_id = 'COOP-2569-01';
 
 -- Delete synthetic seed students.
 -- Related student_courses records are expected to be removed
 -- automatically through the ON DELETE CASCADE foreign key.
-DELETE FROM students
-WHERE student_id IN (
+DELETE FROM students AS s
+WHERE s.student_id IN (
     '6900000001',
     '6900000002',
     '6900000003',
     '6900000004',
     '6900000005'
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM coop_plans AS p
+    WHERE p.student_id = s.student_id
 );
 
 -- Delete only the schedule with the dedicated seed-owned ID.
@@ -78,7 +88,13 @@ WHERE period_id = 'COOP-2569-01'
       SELECT 1
       FROM coop_plans
       WHERE period_id = 'COOP-2569-01'
-  );
+  )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM coop_schedules
+        WHERE period_id = 'COOP-2569-01'
+            AND schedule_id <> 'SCH-COOP-2569-01-APP'
+   );
 
 COMMIT;
 
