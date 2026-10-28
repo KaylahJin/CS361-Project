@@ -74,6 +74,12 @@ AND NOT EXISTS (
     SELECT 1
     FROM coop_plans AS p
     WHERE p.student_id = s.student_id
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM app_users AS u
+    WHERE u.student_id = s.student_id
+      AND u.role = 'STUDENT'
 );
 
 -- Delete only the schedule with the dedicated seed-owned ID.
@@ -81,7 +87,11 @@ DELETE FROM coop_schedules
 WHERE schedule_id = 'SCH-COOP-2569-01-APP'
   AND period_id = 'COOP-2569-01';
 
--- Delete the test period only when no plans reference it.
+-- Delete position-period links for the test period.
+DELETE FROM position_periods
+WHERE period_id = 'COOP-2569-01';
+
+-- Delete the test period only when no records reference it.
 DELETE FROM periods
 WHERE period_id = 'COOP-2569-01'
   AND NOT EXISTS (
@@ -89,12 +99,16 @@ WHERE period_id = 'COOP-2569-01'
       FROM coop_plans
       WHERE period_id = 'COOP-2569-01'
   )
-    AND NOT EXISTS (
-        SELECT 1
-        FROM coop_schedules
-        WHERE period_id = 'COOP-2569-01'
-            AND schedule_id <> 'SCH-COOP-2569-01-APP'
-   );
+  AND NOT EXISTS (
+      SELECT 1
+      FROM coop_schedules
+      WHERE period_id = 'COOP-2569-01'
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM position_periods
+      WHERE period_id = 'COOP-2569-01'
+  );
 
 COMMIT;
 
