@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -169,6 +169,66 @@ describe('role from GET /me', () => {
     await userEvent.click(screen.getByText('sign out'));
 
     await expectRole('none');
+  });
+});
+
+// A page that mounts because the status just changed asks for a token in its
+// first effect. That effect runs before the provider's own, so the token has to
+// be available the moment the status flips, not one render later.
+function PageThatLoadsOnMount() {
+  const { getIdToken } = useAuth();
+  const [token, setToken] = useState('pending');
+
+  useEffect(() => {
+    void getIdToken().then((t) => setToken(t ?? 'null'));
+  }, [getIdToken]);
+
+  return <span data-testid="first-token">{token}</span>;
+}
+
+function Gate() {
+  const { status, login } = useAuth();
+  return status === 'authenticated' ? (
+    <PageThatLoadsOnMount />
+  ) : (
+    <button onClick={() => login('a@b.com', 'test-password').catch(() => {})}>sign in</button>
+  );
+}
+
+describe('first request of a page that mounts on login', () => {
+  beforeEach(() => {
+    loginMock.mockReset();
+    logoutMock.mockReset();
+    getCurrentSessionMock.mockReset();
+    getMeMock.mockReset();
+    getMeMock.mockResolvedValue({ role: 'STUDENT', studentId: null });
+  });
+
+  it('gets the token right after a login', async () => {
+    // Signed out when the page loads; once login succeeds Cognito holds the session.
+    getCurrentSessionMock.mockResolvedValueOnce(null);
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'fresh', email: 'a@b.com' });
+    loginMock.mockResolvedValue({ idToken: 'fresh', email: 'a@b.com' });
+    render(
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(await screen.findByText('sign in'));
+
+    await waitFor(() => expect(screen.getByTestId('first-token')).toHaveTextContent('fresh'));
+  });
+
+  it('gets the token right after restoring a stored session', async () => {
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'restored', email: 'a@b.com' });
+    render(
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('first-token')).toHaveTextContent('restored'));
   });
 });
 
