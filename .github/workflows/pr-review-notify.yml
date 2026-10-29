@@ -3,9 +3,13 @@ name: PR Review Notifications
 
 on:
   pull_request:
-    types: [opened, ready_for_review, review_requested]
+    types: [ready_for_review, review_requested]
   pull_request_review:
     types: [submitted]
+
+permissions:
+  issues: write
+  pull-requests: write
 
 jobs:
   notify-reviewer:
@@ -13,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'pull_request' &&
-      (github.event.action == 'opened' ||
-       github.event.action == 'ready_for_review' ||
+      github.event.pull_request.draft == false &&
+      (github.event.action == 'ready_for_review' ||
        github.event.action == 'review_requested')
 
     steps:

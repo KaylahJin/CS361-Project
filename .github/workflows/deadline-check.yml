@@ -1,11 +1,14 @@
-﻿
-name: Milestone Deadline Check
+﻿name: Milestone Deadline Check
 
 on:
   schedule:
     # Run every day at 08:00 UTC+7 (01:00 UTC)
     - cron: '0 1 * * *'
   workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
 
 jobs:
   check-milestones:
