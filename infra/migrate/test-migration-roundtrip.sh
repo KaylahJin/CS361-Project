@@ -62,7 +62,8 @@ echo
 
 echo "### 3. run v3_01_upgrade.sql (ON_ERROR_STOP=1)"
 runfile infra/migrate/migrations/v3_01_upgrade.sql
-echo "upgrade exit: 0 (no FK type conflict, no constraint violation)"
+runfile infra/migrate/migrations/v3_02_cognito_sub_cascade.sql
+echo "upgrade exit: 0 (V3 schema and Cognito sub cascade migration applied)"
 echo "UNDER_REVIEW rows after upgrade:  $(q "SELECT count(*) FROM coop_plans WHERE status='UNDER_REVIEW';")"
 echo "statuses now: $(q "SELECT string_agg(status || '=' || n, ', ' ORDER BY status) FROM (SELECT status, count(*) n FROM coop_plans GROUP BY status) s;")"
 echo "V3 status constraint: $(q "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='chk_coop_plans_status';")"
@@ -75,6 +76,28 @@ PLAN_ID="$(q 'SELECT min(plan_id) FROM coop_plans;')"
 q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, comment)
    VALUES ($PLAN_ID, 'sub-staff-test', 'RETURNED', 'please attach the signed form');" >/dev/null
 echo "plan_reviews insert ok: plan_id=$PLAN_ID (INTEGER) -> coop_plans.plan_id, reviewer_sub -> app_users.cognito_sub"
+
+# Exercise both foreign keys that must follow a re-keyed Cognito identity.
+STUDENT_ID="$(q 'SELECT min(student_id) FROM students;')"
+q "INSERT INTO app_users (cognito_sub, email, role)
+   VALUES ('sub-advisor-test', 'advisor-test@example.com', 'ADVISOR');" >/dev/null
+q "INSERT INTO advisor_student_assignments (advisor_sub, student_id)
+   VALUES ('sub-advisor-test', '$STUDENT_ID');" >/dev/null
+q "UPDATE app_users SET cognito_sub='sub-staff-renewed'
+   WHERE cognito_sub='sub-staff-test';" >/dev/null
+q "UPDATE app_users SET cognito_sub='sub-advisor-renewed'
+   WHERE cognito_sub='sub-advisor-test';" >/dev/null
+
+if [ "$(q "SELECT count(*) FROM plan_reviews WHERE reviewer_sub='sub-staff-renewed';")" != "1" ]; then
+  echo "ERROR: plan review did not follow the updated staff sub" >&2
+  exit 1
+fi
+if [ "$(q "SELECT count(*) FROM advisor_student_assignments WHERE advisor_sub='sub-advisor-renewed' AND student_id='$STUDENT_ID';")" != "1" ]; then
+  echo "ERROR: advisor assignment did not follow the updated advisor sub" >&2
+  exit 1
+fi
+echo "ON UPDATE CASCADE verified: review history and advisor assignment preserved"
+
 echo "FK columns as built:"
 psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -t -A -F' | ' -c "
   SELECT c.conname, pg_get_constraintdef(c.oid)

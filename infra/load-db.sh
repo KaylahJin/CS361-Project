@@ -115,14 +115,16 @@ apply_v3_migration() {
   fi
 
   echo "--- migrate/migrations/v3_01_upgrade.sql"
-  run_sql "$V3_MIGRATION"
+  run_sql "$V3_MIGRATION" || return 1
+  echo "--- migrate/migrations/v3_02_cognito_sub_cascade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" || return 1
 
   if [ ! -f "$V3_ATTACHMENTS_MIGRATION" ]; then
     echo "--- v3_02 attachments migration: NOT FOUND" >&2
     return 1
   fi
   echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
-  run_sql "$V3_ATTACHMENTS_MIGRATION"
+  run_sql "$V3_ATTACHMENTS_MIGRATION" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no
