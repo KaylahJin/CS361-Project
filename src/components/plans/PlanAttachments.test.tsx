@@ -5,12 +5,7 @@ import '@testing-library/jest-dom/vitest';
 
 import PlanAttachments, { errorText } from './PlanAttachments';
 import { AttachmentApiError } from '../../data/attachmentApi';
-import {
-  listPlanAttachments,
-  uploadPlanAttachment,
-  deletePlanAttachment,
-  getAttachmentDownloadUrl,
-} from '../../data/attachmentApi';
+import { listPlanAttachments } from '../../data/attachmentApi';
 
 vi.mock('../../data/attachmentApi', async (importOriginal) => {
   const actual =
