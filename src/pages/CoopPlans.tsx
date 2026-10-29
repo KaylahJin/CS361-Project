@@ -52,6 +52,7 @@ import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
 import { PlanDetailModal } from '../components/plans/PlanDetailModal';
+import PlanAttachmentSummary from '../components/plans/PlanAttachmentSummary';
 
 const PAGE_SIZE = 50;
 
@@ -554,6 +555,11 @@ function PlanDetail({
           <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
           <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
         </section>
+
+        <PlanAttachmentSummary
+          planId={plan.plan_id}
+          getIdToken={getIdToken}
+        />
       </div>
 
       {confirmSubmit && (
@@ -1033,6 +1039,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             if (!open) setReviewPlan(null);
           }}
           reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+          getIdToken={getIdToken}
           onSubmitReview={async ({ planId, decision, comment }) => {
             const token = await getIdToken();
             await reviewCoopPlan(planId, decision, comment, token);
