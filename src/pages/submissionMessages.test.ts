@@ -16,8 +16,8 @@ function backendCodes(): string[] {
 describe('submission failure messages', () => {
   const codes = [...new Set(backendCodes())];
 
-  it('finds the 13 codes the backend can send', () => {
-    expect(codes).toHaveLength(13);
+  it('finds the 14 codes the backend can send', () => {
+    expect(codes).toHaveLength(14);
   });
 
   it.each(codes)('%s has Thai text', (code) => {

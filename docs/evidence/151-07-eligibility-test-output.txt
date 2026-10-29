@@ -1,0 +1,33 @@
+﻿> cs361-project@0.0.0 test
+> vitest run
+
+ RUN  v3.2.7 C:/Users/ACER/OneDrive - Thammasat University/CS361/CS361-Project         
+
+ ✓  backend  infra/lambda/companies/eligibility.test.mjs (22 tests) 8ms
+   ✓ gpaFailures > passes when overall GPA is above the period minimum 1ms
+   ✓ gpaFailures > fails when overall GPA equals the period minimum 1ms
+   ✓ gpaFailures > fails when overall GPA is missing (null) 0ms
+   ✓ gpaFailures > fails when overall GPA is missing (undefined) 0ms
+   ✓ courseFailures > passes when all required courses are satisfied 0ms
+   ✓ courseFailures > fails when required courses are missing 1ms
+   ✓ courseFailures > fails when course-group GPA is below 2.50 0ms
+   ✓ courseFailures > passes when course-group GPA equals 2.50 0ms
+   ✓ courseFailures > rejects unsupported curricula 0ms
+   ✓ checkEligibility > reads eligibility criteria from the requested period 1ms
+   ✓ checkEligibility > passes when overall GPA is just above 2.80 0ms
+   ✓ checkEligibility > fails when overall GPA equals the configured threshold 0ms
+   ✓ checkEligibility > fails when overall GPA is below the configured threshold 0ms
+   ✓ checkEligibility > fails when course-group GPA is below the configured threshold 0ms
+   ✓ checkEligibility > reports a missing student record 0ms
+   ✓ checkEligibility > reports missing period criteria instead of using a fallback 0ms
+   ✓ checkEligibility > uses the criteria belonging to each requested period 0ms
+   ✓ checkEligibility > checks overall GPA eligibility for student 6900000001 (GPA: 3.65) 0ms
+   ✓ checkEligibility > checks overall GPA eligibility for student 6900000002 (GPA: 3.82) 0ms
+   ✓ checkEligibility > checks overall GPA eligibility for student 6900000003 (GPA: 3.25) 0ms
+   ✓ checkEligibility > checks overall GPA eligibility for student 6900000004 (GPA: 2.75) 0ms
+   ✓ checkEligibility > checks overall GPA eligibility for student 6900000005 (GPA: 3.1) 0ms
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  21:01:15
+   Duration  605ms (transform 35ms, setup 0ms, collect 50ms, tests 8ms, environment 0ms, prepare 189ms)

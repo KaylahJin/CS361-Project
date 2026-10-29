@@ -11,26 +11,19 @@
 // guaranteed by the trusted import/administrative process. To verify the
 // disciplinary criterion, add a trusted disciplinary-clearance field/source.
 
-export const FALLBACK_MIN_GPA = 2.75;
-export const MIN_COURSE_GROUP_GPA = 2.5;
-
 const SELECT_STUDENT = `
   SELECT student_id, curriculum, gpa::float8 AS gpa
   FROM students
   WHERE student_id = $1
 `;
 
-const SELECT_MIN_GPA = `
-  SELECT MAX(gpa_requirement)::float8 AS min_gpa
-  FROM coop_info
-  WHERE gpa_requirement IS NOT NULL
-    AND curriculum IN ($1, 'all')
-    AND academic_year = (
-      SELECT MAX(academic_year)
-      FROM coop_info
-      WHERE gpa_requirement IS NOT NULL
-        AND curriculum IN ($1, 'all')
-    )
+const SELECT_PERIOD_CRITERIA = `
+  SELECT
+    min_gpa::float8 AS min_gpa,
+    min_group_gpa::float8 AS min_group_gpa,
+    capacity
+  FROM periods
+  WHERE period_id = $1
 `;
 
 const SELECT_STUDENT_COURSES = `
@@ -79,24 +72,28 @@ const CURRICULUM_RULES = Object.freeze({
 });
 
 export function gpaFailures(gpa, minGpa) {
-  if (gpa === null || gpa === undefined) {
+  if (
+    gpa === null ||
+    gpa === undefined ||
+    !Number.isFinite(Number(gpa))
+  ) {
     return [
       {
         code: 'GPA_MISSING',
         message:
-          'There is no GPA on record for this student, so eligibility cannot be confirmed.',
+          'There is no valid GPA on record for this student, so eligibility cannot be confirmed.',
         required: minGpa,
       },
     ];
   }
 
-  if (Number(gpa) < minGpa) {
+  if (Number(gpa) <= minGpa) {
     return [
       {
         code: 'GPA_BELOW_MINIMUM',
-        message: `GPA ${Number(gpa).toFixed(2)} is below the required ${Number(
+        message: `Overall GPA must be greater than ${Number(
           minGpa,
-        ).toFixed(2)}.`,
+        ).toFixed(2)}. Actual GPA: ${Number(gpa).toFixed(2)}.`,
         required: minGpa,
         actual: Number(gpa),
       },
@@ -124,7 +121,7 @@ function courseLabel(code) {
  * The graded course-group requires a completed course with a recorded grade
  * (PASSED or FAILED); a missing grade cannot be used to calculate the average.
  */
-export function courseFailures(curriculum, courseRows) {
+export function courseFailures(curriculum, courseRows, minGroupGpa) {
   const rules = CURRICULUM_RULES[String(curriculum ?? '').trim()];
 
   if (!rules) {
@@ -228,14 +225,14 @@ export function courseFailures(curriculum, courseRows) {
 
     if (
       groupGrades.some((grade) => !Number.isFinite(grade)) ||
-      average < MIN_COURSE_GROUP_GPA
+      average < minGroupGpa
     ) {
       failures.push({
         code: 'COURSE_GROUP_GPA_BELOW_MINIMUM',
-        message: `The average grade point for the required course group must be at least ${MIN_COURSE_GROUP_GPA.toFixed(
-          2,
-        )}.`,
-        required: MIN_COURSE_GROUP_GPA,
+        message: `The average grade point for the required course group must be at least ${Number(
+          minGroupGpa,
+        ).toFixed(2)}.`,
+        required: minGroupGpa,
         actual: Number.isFinite(average)
           ? Number(average.toFixed(2))
           : null,
@@ -277,11 +274,41 @@ export function courseFailures(curriculum, courseRows) {
 }
 
 /**
- * @param {{query: Function}} client transaction client
- * @param {string} studentId student id from the locked plan row, never request input
+ * @param {{ query: Function }} client transaction client
+ * @param {string} studentId student id from the locked plan row
+ * @param {string} periodId period id from the plan row
  * @returns {Promise<object[]>} failures; empty means all verifiable checks pass
  */
-export async function checkEligibility(client, studentId) {
+export async function checkEligibility(client, studentId, periodId) {
+  // Read criteria for this specific period.
+  const criteriaResult = await client.query(
+    SELECT_PERIOD_CRITERIA,
+    [periodId],
+  );
+
+  const criteria = criteriaResult.rows[0];
+
+  if (
+    !criteria ||
+    criteria.min_gpa === null ||
+    criteria.min_gpa === undefined ||
+    criteria.min_group_gpa === null ||
+    criteria.min_group_gpa === undefined ||
+    !Number.isFinite(Number(criteria.min_gpa)) ||
+    !Number.isFinite(Number(criteria.min_group_gpa))
+  ) {
+    return [
+      {
+        code: 'PERIOD_CRITERIA_MISSING',
+        message: `Eligibility criteria are missing or invalid for period "${periodId}".`,
+      },
+    ];
+  }
+
+  const minGpa = Number(criteria.min_gpa);
+  const minGroupGpa = Number(criteria.min_group_gpa);
+
+  // Find the student.
   const found = await client.query(SELECT_STUDENT, [studentId]);
   const student = found.rows[0];
 
@@ -294,24 +321,25 @@ export async function checkEligibility(client, studentId) {
     ];
   }
 
-  const failures = [];
   const curriculum = String(student.curriculum ?? '').trim();
 
   if (!CURRICULUM_RULES[curriculum]) {
-    failures.push(...courseFailures(curriculum, []));
-    return failures;
+    return courseFailures(curriculum, [], minGroupGpa);
   }
 
-  const req = await client.query(SELECT_MIN_GPA, [curriculum]);
-  const minGpa = req.rows[0]?.min_gpa ?? FALLBACK_MIN_GPA;
+  const failures = [];
 
+  // Overall GPA must be STRICTLY greater than minGpa.
   failures.push(...gpaFailures(student.gpa, minGpa));
 
+  // Check the course group against this period's own threshold.
   const courses = await client.query(SELECT_STUDENT_COURSES, [
     studentId,
   ]);
 
-  failures.push(...courseFailures(curriculum, courses.rows));
+  failures.push(
+    ...courseFailures(curriculum, courses.rows, minGroupGpa),
+  );
 
   return failures;
 }

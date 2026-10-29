@@ -20,6 +20,7 @@ export const SUBMISSION_FAILURE_LABELS: Record<string, string> = {
   COURSE_GROUP_GPA_BELOW_MINIMUM: 'เกรดเฉลี่ยในกลุ่มรายวิชายังไม่ผ่านเกณฑ์ที่กำหนด',
   REQUIRED_COURSES_MISSING: 'ยังเรียนรายวิชาบังคับไม่ครบตามที่กำหนด',
   ONGOING_OR_STUDIED_COURSE_MISSING: 'ยังไม่ผ่านเงื่อนไขรายวิชาที่กำหนด',
+  PERIOD_CRITERIA_MISSING: "ไม่พบเกณฑ์การสมัครของรอบสหกิจศึกษา กรุณาติดต่อผู้ดูแลระบบ",
 };
 
 const GENERIC = 'กรุณาตรวจสอบข้อมูลและเงื่อนไขก่อนยื่นแผน';
