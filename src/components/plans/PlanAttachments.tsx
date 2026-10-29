@@ -29,16 +29,31 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const formatSize = (bytes: number) =>
   `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 
-const errorText = (error: unknown) => {
+
+export const errorText = (error: unknown) => {
   if (error instanceof AttachmentApiError) {
-    if (error.code === 'ATTACHMENT_INVALID_TYPE') {
-      return 'ไฟล์ไม่ถูกประเภท กรุณาเลือก PDF เท่านั้น';
+    // ตรวจ error code ก่อน status เพราะหลาย error อาจมี status เดียวกัน
+    switch (error.code) {
+      case 'ATTACHMENT_INVALID_TYPE':
+        return 'ไฟล์ไม่ถูกประเภท กรุณาเลือก PDF เท่านั้น';
+
+      case 'ATTACHMENT_TOO_LARGE':
+        return 'ไฟล์มีขนาดเกิน 5 MB กรุณาเลือกไฟล์ที่เล็กกว่านี้';
+
+      case 'ATTACHMENT_NOT_UPLOADED':
+        return 'ยังอัปโหลดไฟล์ไม่สำเร็จหรือลิงก์อัปโหลดหมดอายุ กรุณาเลือกไฟล์และอัปโหลดใหม่';
+
+      case 'ATTACHMENT_NOT_FOUND':
+        return 'ไม่พบไฟล์แนบนี้ อาจถูกลบไปแล้ว กรุณาโหลดหน้าใหม่';
+
+      case 'ATTACHMENT_LIMIT_REACHED':
+        return 'แผนนี้มีไฟล์แนบครบจำนวนที่กำหนดแล้ว กรุณาโหลดหน้าใหม่';
+
+      default:
+        break;
     }
 
-    if (error.code === 'ATTACHMENT_TOO_LARGE') {
-      return 'ไฟล์มีขนาดเกิน 5 MB กรุณาเลือกไฟล์ที่เล็กกว่านี้';
-    }
-
+    // ใช้ status สำหรับ error ที่ไม่มี code เฉพาะรองรับ
     if (error.status === 401) {
       return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
     }
@@ -51,11 +66,12 @@ const errorText = (error: unknown) => {
       return 'แผนนี้แก้ไขไฟล์แนบไม่ได้แล้ว กรุณาโหลดหน้าใหม่';
     }
 
-    return error.message;
+    return 'เกิดข้อผิดพลาดในการจัดการไฟล์ กรุณาลองอีกครั้ง';
   }
 
   return 'เกิดข้อผิดพลาดในการจัดการไฟล์ กรุณาลองอีกครั้ง';
 };
+
 
 export default function PlanAttachments({
   planId,
