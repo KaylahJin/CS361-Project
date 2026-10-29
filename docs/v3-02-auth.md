@@ -43,7 +43,7 @@ Cognito only answers *who is this*. The database answers *what may they do*.
 
 ## Test accounts
 
-Five accounts exist in the pool, all `CONFIRMED`:
+Five accounts exist in the pool for authentication and permission testing:
 
 | Email | Intended role | `app_users` row |
 |---|---|---|
@@ -51,47 +51,70 @@ Five accounts exist in the pool, all `CONFIRMED`:
 | `advisor1@example.com` | ADVISOR (teacher / อาจารย์ที่ปรึกษา) | yes |
 | `staff1@example.com` | STAFF (co-op office) | yes |
 | `admin1@example.com` | ADMIN | yes |
-| `nobody1@example.com` | none, on purpose | **no** |
+| `nobody1@example.com` | none, intentionally unmapped | **no** |
 
-`nobody1@` is a fixture, not an oversight. It is the only way to exercise the
-"authenticated but not authorised" path: a real, confirmed Cognito account
-that no admin has given a role to, which is the normal state of a brand-new
-sign-up. `verify:auth` signs in as it and expects 403. Leave it unmapped —
-`db:seed-users` skips it, because the address matches no role rule.
+`nobody1@example.com` is a test fixture for the "authenticated but not
+authorised" path. The account can authenticate with Cognito, but because it
+has no `app_users` row, protected API requests should return `403`. Keep it
+unmapped so `verify:auth` can continue testing this behaviour.
 
-All five share one password, which is **not written down in this repository**.
-Ask the team for it, or set your own with the `admin-set-user-password` recipe
-below. `#99` requires that no credential be committed, and a throwaway lab
-password is still a credential — so the scripts that sign in take it as an
-argument or in `COOP_TEST_PASSWORD`:
+Only the four administrator-approved Cognito `sub` values are mapped by
+`infra/seed-app-users.sh`. Configure `COOP_APPROVED_STUDENT_SUB`,
+`COOP_APPROVED_ADVISOR_SUB`, `COOP_APPROVED_STAFF_SUB`, and
+`COOP_APPROVED_ADMIN_SUB` explicitly in the shell before running the seed
+script. The script assigns roles by these immutable identity values, not by
+email, and deactivates active `app_users` rows whose `cognito_sub` is not in
+the approved set. Email is used only as the account's contact/login attribute.
+Public self-sign-up is disabled; new accounts must be created by an
+administrator and must not receive an application role unless their `sub` is
+explicitly allowlisted.
+
+Each Cognito test account must have a **different password**. Passwords
+must satisfy the policy in `infra/terraform/cognito.tf`: at least 12
+characters, including lowercase, uppercase, numbers, and symbols. Do not
+commit passwords to the repository. Set these five account-specific
+variables in your shell:
 
 ```bash
-COOP_TEST_PASSWORD='...' npm run verify:auth
-COOP_TEST_PASSWORD='...' npm run verify:roles
+export COOP_STUDENT_PASSWORD='...'
+export COOP_ADVISOR_PASSWORD='...'
+export COOP_STAFF_PASSWORD='...'
+export COOP_ADMIN_PASSWORD='...'
+export COOP_UNMAPPED_PASSWORD='...'
 ```
 
-These are demo accounts in a lab pool with a deliberately relaxed password
-policy, so they are quick to type while marking. That relaxed policy is not a
-pattern to reuse anywhere real.
+`verify:roles` requires all four role-account variables.
+`verify:auth` uses the variable matching its primary account (student by
+default) and requires `COOP_UNMAPPED_PASSWORD` for
+`nobody1@example.com`. The unmapped account password must be distinct from
+all four role-account passwords.
 
-The "intended role" column describes what each account is set up as, but the
-role itself comes from the account's `app_users` row, not from Cognito. The
-rows are created by `npm run db:seed-users`, which reads each `sub` from the
-pool at run time — a rebuilt pool mints new subs, so re-run it after one.
+The intended role comes from the account's `app_users` row, not from Cognito
+claims or email addresses. `npm run db:seed-users` resolves the four explicitly
+approved `sub` values in the configured pool and updates those database rows.
+After rebuilding the pool or recreating an account, an administrator must
+review the new `sub` values and update the four `COOP_APPROVED_*_SUB` variables
+before running the seed script. Do not approve accounts automatically by
+matching their email address.
 
-Change a password:
+Change a password using an administrator operation:
 
 ```bash
 POOL=$(terraform -chdir=infra/terraform output -raw cognito_user_pool_id)
+read -rs NEW_PASSWORD
 aws cognito-idp admin-set-user-password \
-  --user-pool-id "$POOL" --username student1@example.com \
-  --password 'newpassword' --permanent
+  --user-pool-id "$POOL" \
+  --username student1@example.com \
+  --password "$NEW_PASSWORD" \
+  --permanent
 ```
 
-`--permanent` matters: without it the account lands in
-`NEW_PASSWORD_REQUIRED`, and the login form has no screen for that challenge.
+Choose a password that satisfies the pool's password policy. `--permanent`
+avoids the `NEW_PASSWORD_REQUIRED` challenge, which the login form does not
+implement.
 
-Add an account: `docs/cognito-setup.md` has the `admin-create-user` recipe.
+See `docs/cognito-setup.md` for the administrator-controlled account creation
+procedure.
 
 ## How an account is matched to a person
 
@@ -180,7 +203,7 @@ editing it.
 
 | Setting | Current | Notes |
 |---|---|---|
-| `password_policy` | 8 chars, no character classes | Relaxed for the demo. Tighten before any real use — the sign-in endpoint is public. |
+| `password_policy` | 12 chars; lowercase, uppercase, numbers, and symbols required | Matches `infra/terraform/cognito.tf`. |
 | `id_token_validity` | 60 minutes | Lower it to exercise the refresh path sooner. |
 | `refresh_token_validity` | 30 days | How long a user stays signed in across reloads. |
 | `explicit_auth_flows` | SRP + refresh | Leaving `USER_PASSWORD_AUTH` out is why the AWS CLI cannot mint a token for these accounts. Keep it that way. |
@@ -238,9 +261,13 @@ npm run verify:roles     # the permission matrix, against the deployed stack
 npm run verify:scope     # a caller-supplied student_id cannot widen scope
 ```
 
-The three `verify:*` scripts need the test-account password, which is not in
-this repository: `COOP_TEST_PASSWORD='...' npm run verify:auth`.
+The `verify:*` scripts need account-specific passwords, which must not be
+stored in this repository. Set `COOP_STUDENT_PASSWORD` and
+`COOP_UNMAPPED_PASSWORD` before running `npm run verify:auth`; set all four
+role-account variables before running `npm run verify:roles`.
 
+`verify:scope` requires both `COOP_STUDENT_PASSWORD` and
+`COOP_STAFF_PASSWORD`, because it signs in as both accounts.
 `verify:auth` reads the API URL and pool ids from Terraform outputs, then
 checks: public routes answer 200 with no token; coop-plan routes answer 401
 with no token and 401 with a forged token; a real SRP sign-in produces a token

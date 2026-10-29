@@ -114,7 +114,9 @@ apply_v3_migration() {
   fi
 
   echo "--- migrate/migrations/v3_01_upgrade.sql"
-  run_sql "$V3_MIGRATION"
+  run_sql "$V3_MIGRATION" || return 1
+  echo "--- migrate/migrations/v3_02_cognito_sub_cascade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no
