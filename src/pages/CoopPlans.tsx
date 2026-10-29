@@ -45,6 +45,7 @@ import type {
 
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
+import { submissionFailureLabel } from './submissionMessages';
 import { canReviewPlans } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
@@ -52,6 +53,7 @@ import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
 import { PlanDetailModal } from '../components/plans/PlanDetailModal';
+import PlanAttachmentSummary from '../components/plans/PlanAttachmentSummary';
 
 const PAGE_SIZE = 50;
 
@@ -189,20 +191,6 @@ function UnauthenticatedState({
           </button>
         )}
       </div>
-
-      <div className="mt-8 rounded-xl bg-slate-50 border border-slate-200/70 p-3.5 text-xs text-slate-500 text-left w-full">
-        <span className="font-semibold text-slate-700 block mb-1">
-          💡 บัญชีทดสอบสำหรับผู้ตรวจ (Test Accounts):
-        </span>
-        <ul className="list-disc list-inside space-y-0.5 text-slate-600">
-          <li>
-            อาจารย์ที่ปรึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">advisor1@example.com</code>
-          </li>
-          <li>
-            เจ้าหน้าที่สหกิจศึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">staff1@example.com</code>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }
@@ -281,28 +269,6 @@ function InfoRow({
   );
 }
 
-function submissionFailureLabel(code?: string): string {
-  const labels: Record<string, string> = {
-    POSITION_REQUIRED: 'กรุณาเลือกตำแหน่งงานก่อนยื่นแผน',
-    ACKNOWLEDGEMENT_REQUIRED: 'กรุณารับทราบเงื่อนไขก่อนเริ่มสหกิจ',
-    TERMS_NOT_ACCEPTED: 'กรุณายอมรับข้อกำหนดและเงื่อนไข',
-    STUDENT_NOT_ELIGIBLE: 'คุณสมบัตินักศึกษายังไม่ผ่านเกณฑ์การยื่นแผน',
-    GPA_TOO_LOW: 'เกรดเฉลี่ยยังไม่ถึงเกณฑ์ที่กำหนด',
-    COURSE_GROUP_GPA_TOO_LOW: 'เกรดเฉลี่ยในกลุ่มรายวิชายังไม่ถึงเกณฑ์ที่กำหนด',
-    ONGOING_OR_STUDIED_COURSE_MISSING: 'ยังไม่ผ่านเงื่อนไขรายวิชาที่กำหนด',
-    SUBMISSION_WINDOW_CLOSED: 'ยังไม่อยู่ในช่วงเวลาที่เปิดรับยื่นแผน',
-    APPLICATION_WINDOW_CLOSED: 'ยังไม่อยู่ในช่วงเวลาที่เปิดรับยื่นแผน',
-  };
-
-  if (code && labels[code]) {
-    return labels[code];
-  }
-
-  return code
-    ? `ยังไม่ผ่านเงื่อนไขข้อ ${code.replace(/_/g, ' ').toLowerCase()}`
-    : 'กรุณาตรวจสอบข้อมูลและเงื่อนไขก่อนยื่นแผน';
-}
-
 function describeSubmissionError(error: unknown): string[] {
   if (!(error instanceof CoopPlanApiError)) {
     return ['เชื่อมต่อระบบไม่สำเร็จ กรุณาลองอีกครั้ง'];
@@ -326,7 +292,7 @@ function describeSubmissionError(error: unknown): string[] {
 
   if (error.code === 'SUBMISSION_REQUIREMENTS_NOT_MET') {
     const details =
-      error.details?.map((item) => submissionFailureLabel(item.code)) ?? [];
+      error.details?.map((item) => submissionFailureLabel(item.code, item.message)) ?? [];
 
     return details.length
       ? details
@@ -595,6 +561,11 @@ function PlanDetail({
             <ReviewHistory reviews={plan.reviews} />
           </div>
         </section>
+
+        <PlanAttachmentSummary
+          planId={plan.plan_id}
+          getIdToken={getIdToken}
+        />
       </div>
 
       {confirmSubmit && (
@@ -798,6 +769,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         if (!open) setReviewPlan(null);
       }}
       reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+      getIdToken={getIdToken}
       onSubmitReview={async ({ planId, decision, comment }) => {
         const token = await getIdToken();
         await reviewCoopPlan(planId, decision, comment, token);

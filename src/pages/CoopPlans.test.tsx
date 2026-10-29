@@ -36,6 +36,24 @@ vi.mock('../data/periodAPI', () => ({ getPeriodTimeline: getPeriodTimelineMock }
 const getPositionsMock = vi.fn();
 vi.mock('../data/positionApi', () => ({ getPositions: getPositionsMock }));
 
+// These tests cover coop plans, not attachment API requests.
+const listPlanAttachmentsMock = vi.fn().mockResolvedValue({
+  attachments: [],
+  maxFiles: 1,
+  maxBytes: 5 * 1024 * 1024,
+});
+
+vi.mock('../data/attachmentApi', async () => {
+  const actual = await vi.importActual<typeof import('../data/attachmentApi')>(
+    '../data/attachmentApi',
+  );
+
+  return {
+    ...actual,
+    listPlanAttachments: listPlanAttachmentsMock,
+  };
+});
+
 const { CoopPlanApiError } = await import('../data/coopPlanApi');
 const { default: CoopPlans } = await import('./CoopPlans');
 
