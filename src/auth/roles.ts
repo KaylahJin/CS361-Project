@@ -2,10 +2,11 @@
 // role again on every request (infra/lambda/companies/authorize.mjs), so a role
 // missing here loses a button, never gains access.
 //
-// When #147 (P4.1) renames STAFF to COORDINATOR and adds COMMITTEE, change
-// these lists and authorize.mjs together.
+// STAFF is the Coordinator of D1 in #125 (#147 kept the name: the project
+// brief calls them เจ้าหน้าที่สหกิจศึกษา). Change these lists and
+// authorize.mjs together.
 
-export type Role = 'STUDENT' | 'ADVISOR' | 'STAFF' | 'ADMIN';
+export type Role = 'STUDENT' | 'ADVISOR' | 'STAFF' | 'COMMITTEE' | 'ADMIN';
 
 /** Roles that open the review form on a submitted plan. */
 export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF'];

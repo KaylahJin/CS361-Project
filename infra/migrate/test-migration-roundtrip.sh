@@ -121,6 +121,37 @@ q "UPDATE coop_plans SET status='RETURNED' WHERE plan_id=$PLAN_ID;" >/dev/null
 echo "RETURNED rows before rollback: $(q "SELECT count(*) FROM coop_plans WHERE status='RETURNED';")"
 echo
 
+echo "### 7a. review-steps migration (v3_04): upgrade, re-run, verify, rollback"
+PLANS_BEFORE="$(q 'SELECT count(*) FROM coop_plans;')"
+runfile infra/migrate/migrations/v3_04_review_steps_upgrade.sql
+runfile infra/migrate/migrations/v3_04_review_steps_upgrade.sql   # idempotent
+psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -v ON_ERROR_STOP=1 \
+  -v plans_before="$PLANS_BEFORE" -f infra/migrate/migrations/v3_04_review_steps_verify.sql
+END_PLAN="$(q "SELECT min(plan_id) FROM coop_plans WHERE status='SUBMITTED' AND plan_id <> $PLAN_ID;")"
+q "INSERT INTO app_users (cognito_sub, email, role)
+   VALUES ('sub-committee-test', 'committee-test@example.com', 'COMMITTEE');" >/dev/null
+q "UPDATE coop_plans SET status='ENDORSED' WHERE plan_id=$END_PLAN;" >/dev/null
+q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step)
+   VALUES ($END_PLAN, 'sub-advisor-renewed', 'ENDORSED', 'ENDORSEMENT');" >/dev/null
+echo "COMMITTEE account and ENDORSED plan $END_PLAN accepted"
+if q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step)
+      VALUES ($END_PLAN, 'sub-advisor-renewed', 'NOT_ENDORSED', 'ENDORSEMENT');" >/dev/null 2>&1; then
+  echo "UNEXPECTED: NOT_ENDORSED without a reason was accepted" >&2
+  exit 1
+fi
+if q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step)
+      VALUES ($END_PLAN, 'sub-advisor-renewed', 'ENDORSED', 'SELECTION');" >/dev/null 2>&1; then
+  echo "UNEXPECTED: an endorsement recorded under SELECTION was accepted" >&2
+  exit 1
+fi
+echo "rejected as expected: NOT_ENDORSED without a reason, decision under the wrong step"
+runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql
+runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql  # re-runnable
+echo "plan $END_PLAN after rollback: $(q "SELECT status FROM coop_plans WHERE plan_id=$END_PLAN;") (expected SUBMITTED)"
+echo "committee account after rollback: $(q "SELECT role || ' active=' || is_active FROM app_users WHERE cognito_sub='sub-committee-test';")"
+echo "plans: $PLANS_BEFORE before, $(q 'SELECT count(*) FROM coop_plans;') after rollback"
+echo
+
 echo "### 7b. attachments migration: upgrade, re-run, FK, rollback"
 runfile infra/migrate/migrations/v3_02_attachments_upgrade.sql
 runfile infra/migrate/migrations/v3_02_attachments_upgrade.sql   # idempotent: second run must not fail

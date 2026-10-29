@@ -125,6 +125,9 @@ apply_v3_migration() {
   fi
   echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
   run_sql "$V3_ATTACHMENTS_MIGRATION" || return 1
+  # Before the account seeding: the COMMITTEE role only exists from here on.
+  echo "--- migrate/migrations/v3_04_review_steps_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_04_review_steps_upgrade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no
