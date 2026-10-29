@@ -36,7 +36,12 @@
 import { getPool } from './db.mjs';
 import { jsonResponse } from './response.mjs';
 import { getAuthenticatedUser } from './auth.mjs';
-import { buildStudentScope, studentColumnsFor, ForbiddenError } from './authorize.mjs';
+import {
+  assertCanListStudents,
+  buildStudentScope,
+  studentColumnsFor,
+  ForbiddenError,
+} from './authorize.mjs';
 
 /**
  * True when a query-string value is actually usable (non-empty string).
@@ -69,6 +74,7 @@ export async function listStudents(event) {
       return jsonResponse(denied.status, { error: denied.error });
     }
 
+    assertCanListStudents(user);
     scope = await buildStudentScope(user);
     columns = studentColumnsFor(user).columns;
   } catch (err) {

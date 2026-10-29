@@ -12,7 +12,7 @@ resource "aws_apigatewayv2_api" "companies" {
       var.cors_allow_origin,
       local.web_url,
     ]
-    allow_methods = ["GET", "POST", "PATCH", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
     # `authorization` has to be listed: the browser sends the ID token in that
     # header, and a header missing here fails the preflight before the real
     # request is sent. That shows up as a CORS error, not a 401, which is easy
@@ -64,6 +64,16 @@ resource "aws_apigatewayv2_route" "list_periods" {
   api_id    = aws_apigatewayv2_api.companies.id
   route_key = "GET /periods"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+# The web app asks who the signed-in account is so it can hide what that role
+# may not use. Role lives in app_users, so the Lambda answers, not the token.
+resource "aws_apigatewayv2_route" "get_me" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /me"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
 # Student records are personal data in every column, so these two require a
@@ -140,4 +150,52 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.companies.id
   name        = "$default"
   auto_deploy = true
+}
+
+resource "aws_apigatewayv2_route" "request_attachment_upload" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans/{planId}/attachments/upload-url"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+# Confirm attachment metadata after the file has been uploaded to S3.
+resource "aws_apigatewayv2_route" "confirm_attachment" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "POST /coop-plans/{planId}/attachments"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+# Delete an attachment from a co-op plan.
+resource "aws_apigatewayv2_route" "delete_attachment" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "DELETE /coop-plans/{planId}/attachments/{attachmentId}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+# List attachments belonging to a co-op plan.
+resource "aws_apigatewayv2_route" "list_attachments" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /coop-plans/{planId}/attachments"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+# Generate a download URL for an attachment.
+resource "aws_apigatewayv2_route" "download_attachment_url" {
+  api_id    = aws_apigatewayv2_api.companies.id
+  route_key = "GET /coop-plans/{planId}/attachments/{attachmentId}/download-url"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }

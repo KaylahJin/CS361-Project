@@ -10,6 +10,7 @@ const {
   buildCoopPlanListFilter,
   assertCanViewPlan,
   buildStudentScope,
+  assertCanListStudents,
   studentColumnsFor,
   assertCanCreatePlan,
   assertCanEditPlan,
@@ -315,5 +316,21 @@ describe('assertCanSubmitPlan', () => {
 
   it.each(['ADVISOR', 'STAFF', 'ADMIN', 'SOMETHING_NEW'])('refuses the %s role: only the owning student submits', (role) => {
     expect(() => assertCanSubmitPlan({ role, studentId: 'S001' }, plan)).toThrow(ForbiddenError);
+  });
+});
+
+describe('assertCanListStudents', () => {
+  it.each(['ADVISOR', 'STAFF', 'ADMIN'])('%s: may list students', (role) => {
+    expect(() => assertCanListStudents({ sub: 's', role, studentId: null })).not.toThrow();
+  });
+
+  it('STUDENT: refused, even with a linked student record', () => {
+    expect(() => assertCanListStudents(STUDENT)).toThrow(ForbiddenError);
+  });
+
+  it('an unknown role is refused', () => {
+    expect(() => assertCanListStudents({ sub: 's', role: 'GUEST', studentId: null })).toThrow(
+      ForbiddenError,
+    );
   });
 });
