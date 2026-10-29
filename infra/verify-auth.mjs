@@ -66,7 +66,7 @@ const SAMPLE_IDS = {
 
 const toPath = (routeKey) =>
   routeKey
-    .replace(/^GET\s+/, '')
+    .replace(/^[A-Z]+\s+/, '')
     .replace(/\{[a-zA-Z]+\}/g, (match) => SAMPLE_IDS[match] ?? match);
 
 // Must stay readable with no token at all.

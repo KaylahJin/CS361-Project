@@ -202,6 +202,17 @@ Four things worth knowing:
   instead, idempotently, on every deploy.
 
 ---
+
+## 6b. Create the private attachments bucket
+
+    npm run attachments:deploy
+
+Run it once after `terraform apply` (the apply computes the name and passes it
+to the Lambda). Re-running is safe. Delete with
+`npm run attachments:deploy -- --destroy`.
+
+---
+
 ## 7. Verify
 
 ```bash

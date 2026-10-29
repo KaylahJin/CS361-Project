@@ -141,3 +141,11 @@ resource "aws_apigatewayv2_stage" "default" {
   name        = "$default"
   auto_deploy = true
 }
+
+resource "aws_apigatewayv2_route" "request_attachment_upload" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans/{planId}/attachments/upload-url"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
