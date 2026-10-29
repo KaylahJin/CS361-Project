@@ -73,9 +73,10 @@ const PLAN = {
   review_comment: null,
 };
 
-function signedIn() {
+function signedIn(role: string | null = 'STAFF') {
   useAuthMock.mockReturnValue({
     status: 'authenticated',
+    role,
     getIdToken: async () => 'a-token',
   });
 }
@@ -321,6 +322,32 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  it.each([['STUDENT'], [null]])('role %s: no review button, no review form (D9)', async (role) => {
+    signedIn(role);
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6609600001')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ตรวจแผน/ })).not.toBeInTheDocument();
+
+    // The row still opens, read-only: the plan page offers no review action.
+    fireEvent.click(screen.getByRole('button', { name: /ดูรายละเอียด/ }));
+    expect(await screen.findByText('Software Engineer Intern')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ตรวจพิจารณาแผน/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it.each([['ADVISOR'], ['STAFF']])('role %s: sees the review button', async (role) => {
+    signedIn(role);
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByRole('button', { name: /ตรวจแผน/ })).toBeInTheDocument();
   });
 
   it('switches view mode between table and cards view', async () => {

@@ -1,0 +1,8 @@
+# #141 backend: npx vitest run infra  (2026-10-25)
+# branch feat/141-me-endpoint @ 6995e8e
+ ✓  backend  infra/lambda/companies/listStudents.test.mjs (21 tests) 20ms
+ ✓  backend  infra/lambda/companies/authorize.test.mjs (54 tests) 29ms
+ ✓  backend  infra/lambda/companies/getMe.test.mjs (7 tests) 11ms
+ ✓  backend  infra/terraform/route-policy.test.mjs (17 tests) 11ms
+ Test Files  21 passed (21)
+      Tests  425 passed (425)

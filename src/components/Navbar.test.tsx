@@ -76,12 +76,20 @@ describe('Navbar and the student tab', () => {
     expect(screen.queryByRole('button', { name: /นักศึกษา/ })).not.toBeInTheDocument();
   });
 
-  it('shows the student tab to a signed-in user', () => {
-    useAuthMock.mockReturnValue({ status: 'authenticated', logout });
+  it.each([['ADVISOR'], ['STAFF'], ['ADMIN']])('shows the student tab to %s', (role) => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', role, logout });
 
     renderNavbar('home');
 
     expect(screen.getAllByRole('button', { name: /นักศึกษา/ }).length).toBeGreaterThan(0);
+  });
+
+  it.each([['STUDENT'], [null]])('hides the student tab from role %s even when signed in', (role) => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', role, logout });
+
+    renderNavbar('home');
+
+    expect(screen.queryByRole('button', { name: /นักศึกษา/ })).not.toBeInTheDocument();
   });
 
   it('leaves the student page when signing out', async () => {

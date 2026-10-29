@@ -33,20 +33,23 @@ const DEFAULT_EMAIL = 'student1@example.com';
 // "authenticated but not authorised" path has something to test against.
 const UNMAPPED_EMAIL = process.env.COOP_UNMAPPED_EMAIL || 'nobody1@example.com';
 
-// No password default. Even a throwaway lab password is a credential, and
-// #99 requires that none be committed. Pass it as an argument, or set
-// COOP_TEST_PASSWORD, and the team shares the value out of band.
-function readPassword() {
-  const password = process.argv[3] || process.env.COOP_TEST_PASSWORD;
+// Each Cognito test account has a distinct password. An optional CLI password
+// applies only to the primary account, never to the unmapped account.
+const PASSWORD_ENV_BY_EMAIL = {
+  'student1@example.com': 'COOP_STUDENT_PASSWORD',
+  'advisor1@example.com': 'COOP_ADVISOR_PASSWORD',
+  'staff1@example.com': 'COOP_STAFF_PASSWORD',
+  'admin1@example.com': 'COOP_ADMIN_PASSWORD',
+};
+
+function readPassword(email) {
+  const password = process.argv[3] || process.env[PASSWORD_ENV_BY_EMAIL[email]];
   if (password) return password;
 
-  console.error('error: no password given.');
-  console.error();
-  console.error('  node infra/verify-auth.mjs [email] <password>');
-  console.error('  COOP_TEST_PASSWORD=... node infra/verify-auth.mjs');
-  console.error();
-  console.error('The test-account password is shared with the team out of band;');
-  console.error('docs/v3-02-auth.md says who to ask.');
+  const envName = PASSWORD_ENV_BY_EMAIL[email];
+  console.error(`error: no password supplied for ${email}.`);
+  if (envName) console.error(`Set ${envName}, or pass the password as the third argument.`);
+  else console.error('Pass the account password as the third argument.');
   process.exit(2);
 }
 
@@ -94,7 +97,12 @@ const status = async (api, route, token) =>
 
 async function main() {
   const email = process.argv[2] || DEFAULT_EMAIL;
-  const password = readPassword();
+  const password = readPassword(email);
+
+  if (!process.env.COOP_UNMAPPED_PASSWORD) {
+    console.error('error: set COOP_UNMAPPED_PASSWORD to the distinct password for the unmapped account.');
+    process.exit(2);
+  }
 
   const api = tfOutput('api_url');
   const userPoolId = tfOutput('cognito_user_pool_id');
@@ -170,7 +178,7 @@ async function main() {
       userPoolId,
       clientId,
       email: UNMAPPED_EMAIL,
-      password,
+      password: process.env.COOP_UNMAPPED_PASSWORD,
     });
     console.log('  ok    token acquired, so the account itself is valid');
     for (const route of PROTECTED_ROUTES) {

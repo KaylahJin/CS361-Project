@@ -99,11 +99,8 @@ export async function confirmAttachment(event) {
         );
       }
 
-      console.log(`[${LABEL}] before headObject`);
       const object = await headObject(key);
-      console.log(`[${LABEL}] after headObject`, {
-        found: Boolean(object),
-      });
+
       if (!object) {
         return refuse(
           errorResponse(

@@ -36,6 +36,7 @@ import { createCoopPlan } from './createCoopPlan.mjs';
 import { updateCoopPlan } from './updateCoopPlan.mjs';
 import { submitCoopPlan } from './submitCoopPlan.mjs';
 import { reviewCoopPlan } from './reviewCoopPlan.mjs';
+import { getMe } from './getMe.mjs';
 import { requestAttachmentUpload } from './requestAttachmentUpload.mjs';
 import { confirmAttachment } from './confirmAttachment.mjs';
 import { deleteAttachment } from './deleteAttachment.mjs';
@@ -48,6 +49,7 @@ const ROUTES = Object.assign(Object.create(null), {
   'GET /positions': listPositions,
   'GET /positions/{positionId}': getPositionById,
   'GET /coop-info': listCoopInfo,
+  'GET /me': getMe,
   'GET /students': listStudents,
   'GET /students/{studentId}': getStudentById,
   'GET /periods': listPeriods,
