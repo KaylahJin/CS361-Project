@@ -140,6 +140,18 @@ export async function buildStudentScope(user) {
 }
 
 /**
+ * The student list page is for the people who look after students: Advisor,
+ * Staff and Admin (D9 in #125). A student has no use for it and sees their own
+ * record through the plan pages, so listing is refused for them and for any
+ * role this module does not know. Fetching one student by id is not covered
+ * here: buildStudentScope still lets a student read their own row.
+ */
+export function assertCanListStudents(user) {
+  if (user.role === 'ADVISOR' || user.role === 'STAFF' || user.role === 'ADMIN') return;
+  throw new ForbiddenError(`role ${user.role} may not list student records`);
+}
+
+/**
  * The columns this caller may read, plus whether student_courses should be
  * joined at all.
  *

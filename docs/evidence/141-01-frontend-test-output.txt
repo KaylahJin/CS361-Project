@@ -1,0 +1,18 @@
+# #141 frontend: npx vitest run, tsc -b, build  (2026-10-25)
+# branch feat/141-role-aware-ui @ 139212f
+ ✓  frontend  src/auth/AuthContext.test.tsx (13 tests) 1181ms
+ ✓  backend  infra/lambda/companies/listCoopPlans.test.mjs (21 tests) 27ms
+ ✓  frontend  src/components/Navbar.test.tsx (11 tests) 2142ms
+   ✓ Navbar sign-out > leaves the account page when signing out  612ms
+ ✓  frontend  src/App.test.tsx (2 tests) 1529ms
+ ✓  frontend  src/pages/CoopPlans.test.tsx (38 tests) 8017ms
+   ✓ CoopPlans and the signed-in session > loads the plans the signed-in caller may see  475ms
+   ✓ CoopPlans says why the list is empty > asks a signed-out caller to sign in, with no retry button  343ms
+   ✓ CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107) > filters plans by status tab  306ms
+   ✓ CoopPlans: create and edit > creating a plan > opens the form, saves a draft, and shows the new plan on the way back  456ms
+   ✓ CoopPlans: create and edit > editing a plan > saves, and the detail page then shows what the API returned  745ms
+   ✓ CoopPlans: create and edit > editing a plan > leaving the form without saving shows the plan unchanged  540ms
+   ✓ CoopPlans: create and edit > editing a plan > a refused save keeps the form open with the reason  435ms
+ Test Files  31 passed (31)
+      Tests  593 passed (593)
+tsc -b: ok

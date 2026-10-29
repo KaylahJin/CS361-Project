@@ -1,0 +1,55 @@
+# #141 live API check, 2026-10-25T13:18:06Z
+# node infra/verify-roles.mjs against the deployed stack (branch feat/141-me-endpoint + verify-roles update)
+
+api:           <live API Gateway URL>
+own plan:      1
+other plan:    2
+own student:   6600000001
+other student: 6100000001
+
+  ROLE     ACTION                                   RESULT         expected      
+  STUDENT  GET /me                                  200            expected 200  ok
+  STUDENT  GET /coop-plans                          200 (1 rows)   expected 200  ok
+  STUDENT  GET /coop-plans/1 (own)                  200            expected 200  ok
+  STUDENT  GET /coop-plans/2 (other student)        403            expected 403  ok
+  STUDENT  GET /students                            403            expected 403  ok
+  STUDENT  GET /students/6600000001 (in scope)      200            expected 200  ok
+  STUDENT  GET /students/6100000001 (out of scope)  404            expected 404  ok
+  ADVISOR  GET /me                                  200            expected 200  ok
+  ADVISOR  GET /coop-plans                          200 (1 rows)   expected 200  ok
+  ADVISOR  GET /coop-plans/1 (own)                  200            expected 200  ok
+  ADVISOR  GET /coop-plans/2 (other student)        403            expected 403  ok
+  ADVISOR  GET /students                            200 (1 rows)   expected 200  ok
+  ADVISOR  GET /students/6600000001 (in scope)      200            expected 200  ok
+  ADVISOR  GET /students/6100000001 (out of scope)  404            expected 404  ok
+  STAFF    GET /me                                  200            expected 200  ok
+  STAFF    GET /coop-plans                          200 (10 rows)  expected 200  ok
+  STAFF    GET /coop-plans/1 (own)                  200            expected 200  ok
+  STAFF    GET /coop-plans/2 (other student)        200            expected 200  ok
+  STAFF    GET /students                            200 (10 rows)  expected 200  ok
+  STAFF    GET /students/6600000001 (in scope)      200            expected 200  ok
+  STAFF    GET /students/6100000001 (out of scope)  200            expected 200  ok
+  ADMIN    GET /me                                  200            expected 200  ok
+  ADMIN    GET /coop-plans                          403            expected 403  ok
+  ADMIN    GET /coop-plans/1 (own)                  403            expected 403  ok
+  ADMIN    GET /coop-plans/2 (other student)        403            expected 403  ok
+  ADMIN    GET /students                            200 (10 rows)  expected 200  ok
+  ADMIN    GET /students/6600000001 (in scope)      200            expected 200  ok
+  ADMIN    GET /students/6100000001 (out of scope)  200            expected 200  ok
+
+  FIELD SCOPE on GET /students/{id}
+  STUDENT   9 fields, all permitted                           ok
+  ADVISOR   8 fields, all permitted                           ok
+  STAFF     8 fields, all permitted                           ok
+  ADMIN     4 fields, all permitted                           ok
+
+  STUDENT  own plan and own student record only, no student list (D9)
+  ADVISOR  assigned students only
+  STAFF    every plan and every student
+  ADMIN    no plans; student identity only, to map an id to a person
+
+every row matches docs/permission-matrix.md
+
+# no token:
+GET /me -> HTTP 401
+GET /students -> HTTP 401

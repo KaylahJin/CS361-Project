@@ -66,6 +66,16 @@ resource "aws_apigatewayv2_route" "list_periods" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# The web app asks who the signed-in account is so it can hide what that role
+# may not use. Role lives in app_users, so the Lambda answers, not the token.
+resource "aws_apigatewayv2_route" "get_me" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /me"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
 # Student records are personal data in every column, so these two require a
 # token like the coop-plan routes do. Which routes must is declared in
 # route-policy.mjs and checked by route-policy.test.mjs — add a route here

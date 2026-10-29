@@ -15,6 +15,7 @@
 
 /** Routes that must carry `authorization_type = "JWT"` and an authorizer. */
 export const PRIVATE_ROUTES = [
+  'GET /me',
   'GET /coop-plans',
   'GET /coop-plans/{planId}',
   'POST /coop-plans/{planId}/review',
