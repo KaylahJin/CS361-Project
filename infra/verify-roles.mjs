@@ -26,19 +26,21 @@ const TF_DIR = path.join(__dirname, 'terraform');
 const tfOutput = (name) =>
   execFileSync('terraform', ['output', '-raw', name], { cwd: TF_DIR, encoding: 'utf-8' }).trim();
 
-// No password default. Even a throwaway lab password is a credential, and
-// #99 requires that none be committed. All four test accounts share one
-// password, passed as an argument or in COOP_TEST_PASSWORD.
-const PASSWORD = process.argv[2] || process.env.COOP_TEST_PASSWORD;
+// Each allowlisted Cognito account has its own password. Keep credentials
+// out of source control and pass them through environment variables.
+const PASSWORD_ENV = {
+  STUDENT: 'COOP_STUDENT_PASSWORD',
+  ADVISOR: 'COOP_ADVISOR_PASSWORD',
+  STAFF: 'COOP_STAFF_PASSWORD',
+  ADMIN: 'COOP_ADMIN_PASSWORD',
+};
 
-if (!PASSWORD) {
-  console.error('error: no password given.');
+const missingPasswords = Object.values(PASSWORD_ENV).filter((name) => !process.env[name]);
+if (missingPasswords.length) {
+  console.error('error: missing password environment variables:');
+  for (const name of missingPasswords) console.error(`  ${name}`);
   console.error();
-  console.error('  node infra/verify-roles.mjs <password>');
-  console.error('  COOP_TEST_PASSWORD=... node infra/verify-roles.mjs');
-  console.error();
-  console.error('The test-account password is shared with the team out of band;');
-  console.error('docs/v3-02-auth.md says who to ask.');
+  console.error('Set each account password separately, then run npm run verify:roles.');
   process.exit(2);
 }
 
@@ -160,7 +162,7 @@ async function main() {
   let failures = 0;
 
   for (const account of ROLES) {
-    const token = await signIn({ userPoolId, clientId, email: account.email, password: PASSWORD });
+    const token = await signIn({ userPoolId, clientId, email: account.email, password: process.env[PASSWORD_ENV[account.role]] });
 
     const list = await call(api, '/coop-plans', token);
     const own = await call(api, `/coop-plans/${OWN_PLAN}`, token);

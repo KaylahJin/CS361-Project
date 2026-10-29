@@ -379,6 +379,9 @@ Two things Terraform deliberately does **not** do:
 - **Run SQL.** It creates an empty database; `npm run db:load` fills it. A
   stack that is fully healthy but never loaded returns `[]` from
   `GET /companies`, which reads like a broken API but isn't.
+
+> Note: `npm run db:load` already includes the migration operations for the files `v3_01_upgrade.sql` and `v3_02_attachments_upgrade.sql`.
+
 - **Create IAM roles.** Learner Lab accounts block `iam:CreateRole`, so the
   pre-existing `LabRole` is looked up and reused for both the Lambda execution
   role and the RDS Proxy role.

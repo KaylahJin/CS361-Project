@@ -8,18 +8,21 @@
 resource "aws_cognito_user_pool" "app" {
   name = "${var.name_prefix}-users"
 
+  # Accounts must be created by an administrator; public self-sign-up is disabled.
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+  }
+
   auto_verified_attributes = ["email"]
 
-  # Loose on purpose for the demo: the test accounts are typed into a login
-  # form by hand. Tighten these (require_uppercase, require_numbers,
-  # require_symbols) before any real use — this sign-in endpoint is reachable
-  # from the public internet.
+  # Require strong passwords for accounts created in this user pool.
   password_policy {
-    minimum_length    = 8
-    require_lowercase = false
-    require_uppercase = false
-    require_numbers   = false
-    require_symbols   = false
+    minimum_length                   = 12
+    require_lowercase                = true
+    require_uppercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
+    temporary_password_validity_days = 7
   }
 
   # Sign in by email, not a separate username: accounts are matched to
