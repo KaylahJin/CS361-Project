@@ -11,6 +11,11 @@ const getCoopPlanByIdMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
+const requestAttachmentUploadMock = vi.fn();
+const confirmAttachmentMock = vi.fn();
+const deleteAttachmentMock = vi.fn();
+const listAttachmentsMock = vi.fn();
+const downloadAttachmentUrlMock = vi.fn();
 
 vi.mock('./listCompanies.mjs', () => ({
   listCompanies: listCompaniesMock,
@@ -56,6 +61,26 @@ vi.mock('./submitCoopPlan.mjs', () => ({
   submitCoopPlan: submitCoopPlanMock,
 }));
 
+vi.mock('./requestAttachmentUpload.mjs', () => ({
+  requestAttachmentUpload: requestAttachmentUploadMock,
+}));
+
+vi.mock('./confirmAttachment.mjs', () => ({
+  confirmAttachment: confirmAttachmentMock,
+}));
+
+vi.mock('./deleteAttachment.mjs', () => ({
+  deleteAttachment: deleteAttachmentMock,
+}));
+
+vi.mock('./listAttachments.mjs', () => ({
+  listAttachments: listAttachmentsMock,
+}));
+
+vi.mock('./downloadAttachmentUrl.mjs', () => ({
+  downloadAttachmentUrl: downloadAttachmentUrlMock,
+}));
+
 const { handler } = await import('./index.mjs');
 
 describe('router (index.mjs handler)', () => {
@@ -70,6 +95,12 @@ describe('router (index.mjs handler)', () => {
     getCoopPlanByIdMock.mockReset();
     createCoopPlanMock.mockReset();
     updateCoopPlanMock.mockReset();
+    submitCoopPlanMock.mockReset();
+    requestAttachmentUploadMock.mockReset();
+    confirmAttachmentMock.mockReset();
+    deleteAttachmentMock.mockReset();
+    listAttachmentsMock.mockReset();
+    downloadAttachmentUrlMock.mockReset();
   });
 
   it('returns 404 for an unknown routeKey', async () => {
@@ -86,6 +117,12 @@ describe('router (index.mjs handler)', () => {
     expect(getCoopPlanByIdMock).not.toHaveBeenCalled();
     expect(createCoopPlanMock).not.toHaveBeenCalled();
     expect(updateCoopPlanMock).not.toHaveBeenCalled();
+    expect(submitCoopPlanMock).not.toHaveBeenCalled();
+    expect(requestAttachmentUploadMock).not.toHaveBeenCalled();
+    expect(confirmAttachmentMock).not.toHaveBeenCalled();
+    expect(deleteAttachmentMock).not.toHaveBeenCalled();
+    expect(listAttachmentsMock).not.toHaveBeenCalled();
+    expect(downloadAttachmentUrlMock).not.toHaveBeenCalled();
   });
 
   it('returns 404 for inherited Object.prototype property names used as routeKey', async () => {
@@ -225,6 +262,61 @@ describe('router (index.mjs handler)', () => {
     expect(createCoopPlanMock).not.toHaveBeenCalled();
     expect(updateCoopPlanMock).not.toHaveBeenCalled();
     expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches POST /coop-plans/{planId}/attachments/upload-url to requestAttachmentUpload', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    requestAttachmentUploadMock.mockResolvedValue(handlerResponse);
+
+    const event = {
+      routeKey: 'POST /coop-plans/{planId}/attachments/upload-url',
+      pathParameters: { planId: '101' },
+      body: '{}',
+    };
+    const result = await handler(event);
+
+    expect(requestAttachmentUploadMock).toHaveBeenCalledWith(event);
+    expect(submitCoopPlanMock).not.toHaveBeenCalled();
+    expect(result).toBe(handlerResponse);
+  });
+
+  it.each([
+    ['POST /coop-plans/{planId}/attachments', confirmAttachmentMock],
+    ['GET /coop-plans/{planId}/attachments', listAttachmentsMock],
+    ['GET /coop-plans/{planId}/attachments/{attachmentId}/download-url', downloadAttachmentUrlMock],
+    ['DELETE /coop-plans/{planId}/attachments/{attachmentId}', deleteAttachmentMock],
+  ])('dispatches %s to its own handler and no other', async (routeKey, expected) => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    expected.mockResolvedValue(handlerResponse);
+    const all = [
+      confirmAttachmentMock,
+      listAttachmentsMock,
+      downloadAttachmentUrlMock,
+      deleteAttachmentMock,
+      requestAttachmentUploadMock,
+    ];
+
+    const event = { routeKey, pathParameters: { planId: '101', attachmentId: '5' } };
+    const result = await handler(event);
+
+    expect(expected).toHaveBeenCalledWith(event);
+    for (const other of all.filter((m) => m !== expected)) {
+      expect(other).not.toHaveBeenCalled();
+    }
+    expect(result).toBe(handlerResponse);
+  });
+
+  it('does not route attachment methods that have no handler', async () => {
+    for (const routeKey of [
+      'PUT /coop-plans/{planId}/attachments/{attachmentId}',
+      'PATCH /coop-plans/{planId}/attachments/{attachmentId}',
+      'GET /coop-plans/{planId}/attachments/{attachmentId}',
+      'DELETE /coop-plans/{planId}/attachments',
+    ]) {
+      expect((await handler({ routeKey })).statusCode).toBe(404);
+    }
+    expect(deleteAttachmentMock).not.toHaveBeenCalled();
+    expect(confirmAttachmentMock).not.toHaveBeenCalled();
   });
 
   it('does not route methods that have no handler (PUT / DELETE on a plan)', async () => {

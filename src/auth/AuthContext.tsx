@@ -13,12 +13,18 @@ import React, {
   useState,
 } from 'react';
 import * as cognitoClient from './cognitoClient';
+import { getMe } from '../data/meApi';
 
 type Status = 'loading' | 'authenticated' | 'anonymous';
 
 interface AuthState {
   status: Status;
   user: { email: string } | null;
+  /**
+   * Role from GET /me, or null while it loads, after a failed lookup, and when
+   * signed out. Treat null as "no role": show only what everyone may see.
+   */
+  role: string | null;
   /**
    * ID token for the `Authorization: Bearer` header on protected API calls.
    * Call it right before each fetch and never keep the result: the token only
@@ -35,14 +41,32 @@ const AuthContext = createContext<AuthState | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUser] = useState<{ email: string } | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   // Mirrors `status` so getIdToken can read it without being rebuilt on every
   // status change. Callers put getIdToken in dependency arrays, where a new
   // function identity would trigger another fetch.
+  //
+  // The ref is written together with the state, never from an effect. A page
+  // that mounts because status just became 'authenticated' runs its own effect
+  // before this component's effects, so a ref updated there would still say
+  // 'anonymous' and the page's first request would go out without a token.
   const statusRef = useRef<Status>('loading');
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
+  const applyStatus = useCallback((next: Status) => {
+    statusRef.current = next;
+    setStatus(next);
+  }, []);
+
+  // A failed lookup leaves the role null on purpose: the role-only screens stay
+  // hidden rather than guessing. The API still decides what each call may do.
+  const loadRole = useCallback(async (idToken: string) => {
+    try {
+      const me = await getMe(idToken);
+      setRole(me.role);
+    } catch {
+      setRole(null);
+    }
+  }, []);
 
   useEffect(() => {
     // Unmounting mid-restore must not set state on a dead component.
@@ -53,16 +77,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session) {
         setUser({ email: session.email });
-        setStatus('authenticated');
+        applyStatus('authenticated');
+        void loadRole(session.idToken);
       } else {
-        setStatus('anonymous');
+        applyStatus('anonymous');
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadRole, applyStatus]);
 
   // Dropping to 'anonymous' on failure matters: once the refresh token is gone
   // the user has to see the login form, not a signed-in UI where every request
@@ -73,12 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const session = await cognitoClient.getCurrentSession();
     if (!session) {
       setUser(null);
-      setStatus('anonymous');
+      setRole(null);
+      applyStatus('anonymous');
       return null;
     }
 
     return session.idToken;
-  }, []);
+  }, [applyStatus]);
 
   // A rejection propagates to the Login page and leaves status at 'anonymous'.
   // Half-applying it would leave the app claiming to be signed in with no
@@ -86,17 +112,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (email: string, password: string) => {
     const session = await cognitoClient.login(email, password);
     setUser({ email: session.email });
-    setStatus('authenticated');
-  }, []);
+    applyStatus('authenticated');
+    void loadRole(session.idToken);
+  }, [loadRole, applyStatus]);
 
   const logout = useCallback(() => {
     cognitoClient.logout();
     setUser(null);
-    setStatus('anonymous');
-  }, []);
+    setRole(null);
+    applyStatus('anonymous');
+  }, [applyStatus]);
 
   return (
-    <AuthContext.Provider value={{ status, user, getIdToken, login, logout }}>
+    <AuthContext.Provider value={{ status, user, role, getIdToken, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -227,32 +227,17 @@ describe('listStudents and the role of the caller', () => {
     expect(queryMock).not.toHaveBeenCalled();
   });
 
-  it('STUDENT: narrows the query to their own row', async () => {
+  it('STUDENT: 403 and no query, the list page is not for students (D9)', async () => {
     signedInAs('STUDENT', '6600000001');
 
     const result = await listStudents({});
 
-    expect(result.statusCode).toBe(200);
-    const [text, values] = queryMock.mock.calls[0];
-    expect(text).toMatch(/WHERE/i);
-    expect(text).toMatch(/s\.student_id\s*=\s*\$1/);
-    expect(values).toEqual(['6600000001']);
+    expect(result.statusCode).toBe(403);
+    expect(queryMock).not.toHaveBeenCalled();
   });
 
-  it('STUDENT: a search term narrows further and never widens the scope', async () => {
-    signedInAs('STUDENT', '6600000001');
-
-    await listStudents({ queryStringParameters: { search: 'เอเอ' } });
-
-    const [text, values] = queryMock.mock.calls[0];
-    expect(text).toMatch(/AND/i);
-    expect(text).toMatch(/s\.student_id\s*=/);
-    expect(values).toContain('6600000001');
-    expect(values).toContain('%เอเอ%');
-  });
-
-  it('STUDENT with no linked student record: 403, no query', async () => {
-    signedInAs('STUDENT', null);
+  it('an unknown role: 403 and no query', async () => {
+    signedInAs('SOMETHING_ELSE');
 
     const result = await listStudents({});
 

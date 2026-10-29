@@ -53,3 +53,24 @@ resource "aws_security_group_rule" "rds_ingress_from_dev_ip" {
   cidr_blocks       = [var.my_ip_cidr]
   description       = "Dev direct access"
 }
+
+data "aws_route_tables" "default" {
+  vpc_id = data.aws_vpc.default.id
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = data.aws_vpc.default.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = data.aws_route_tables.default.ids
+}
+
+resource "aws_security_group_rule" "lambda_egress_to_s3" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.lambda.id
+  prefix_list_ids   = [aws_vpc_endpoint.s3.prefix_list_id]
+  description       = "To S3 via gateway endpoint"
+}

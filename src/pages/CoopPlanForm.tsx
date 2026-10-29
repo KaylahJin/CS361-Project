@@ -45,6 +45,7 @@ import {
 } from '../data/coopPlanApi';
 import { getPeriodTimeline } from '../data/periodAPI';
 import { getPositions } from '../data/positionApi';
+import PlanAttachments from '../components/plans/PlanAttachments';
 
 import {
   MAX_STUDENT_NOTE,
@@ -790,6 +791,13 @@ export default function CoopPlanForm({
             </button>
           </div>
         </form>
+      )}
+      {current && (
+        <PlanAttachments
+          planId={current.plan_id}
+          status={current.status}
+          getIdToken={getIdToken}
+        />
       )}
     </main>
   );
