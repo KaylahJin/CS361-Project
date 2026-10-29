@@ -126,6 +126,8 @@ apply_v3_migration() {
 
   for migration in \
     "$REPO_ROOT/infra/migrate/migrations/v3_01_upgrade.sql" \
+    "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" \
+    "$REPO_ROOT/infra/migrate/migrations/v3_02_attachments_upgrade.sql" \
     "$REPO_ROOT/infra/migrate/migrations/v3_02_least_privilege.sql"
   do
     if [ ! -f "$migration" ]; then
@@ -134,7 +136,7 @@ apply_v3_migration() {
     fi
 
     echo "--- ${migration#"$REPO_ROOT/infra/"}"
-    run_sql "$migration"
+    run_sql "$migration" || return 1
   done
 }
 

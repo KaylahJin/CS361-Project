@@ -54,4 +54,10 @@ GRANT USAGE, SELECT ON SEQUENCE
     public.plan_reviews_review_id_seq
 TO coop_app;
 
+-- File attachment metadata is stored here; file bytes remain in private S3.
+GRANT SELECT, INSERT, DELETE ON TABLE public.plan_attachments TO coop_app;
+GRANT USAGE, SELECT ON SEQUENCE
+    public.plan_attachments_attachment_id_seq
+TO coop_app;
+
 COMMIT;
