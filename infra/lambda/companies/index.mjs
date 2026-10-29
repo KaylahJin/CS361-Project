@@ -37,6 +37,10 @@ import { updateCoopPlan } from './updateCoopPlan.mjs';
 import { submitCoopPlan } from './submitCoopPlan.mjs';
 import { reviewCoopPlan } from './reviewCoopPlan.mjs';
 import { requestAttachmentUpload } from './requestAttachmentUpload.mjs';
+import { confirmAttachment } from './confirmAttachment.mjs';
+import { deleteAttachment } from './deleteAttachment.mjs';
+import { listAttachments } from './listAttachments.mjs';
+import { downloadAttachmentUrl } from './downloadAttachmentUrl.mjs';
 
 const ROUTES = Object.assign(Object.create(null), {
   'GET /companies': listCompanies,
@@ -53,7 +57,11 @@ const ROUTES = Object.assign(Object.create(null), {
   'PATCH /coop-plans/{planId}': updateCoopPlan,
   'POST /coop-plans/{planId}/submit': submitCoopPlan,
   'POST /coop-plans/{planId}/review': reviewCoopPlan,
-    'POST /coop-plans/{planId}/attachments/upload-url': requestAttachmentUpload,
+  'POST /coop-plans/{planId}/attachments/upload-url': requestAttachmentUpload,
+  'POST /coop-plans/{planId}/attachments': confirmAttachment,
+  'GET /coop-plans/{planId}/attachments': listAttachments,
+  'GET /coop-plans/{planId}/attachments/{attachmentId}/download-url': downloadAttachmentUrl,
+  'DELETE /coop-plans/{planId}/attachments/{attachmentId}': deleteAttachment,
 });
 
 /**
