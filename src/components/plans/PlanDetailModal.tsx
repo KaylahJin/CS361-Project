@@ -12,11 +12,12 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { CoopPlan } from '../../types/coopPlan';
-import type { ReviewDecision } from '../../types/planReview';
+import type { EndorseDecision, ReviewDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { CircleCheckFill } from './CircleCheckFill';
 import { CoopPlanApiError } from '../../data/coopPlanApi';
 import PlanAttachmentSummary from './PlanAttachmentSummary';
+import EndorseForm from './EndorseForm';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -30,6 +31,12 @@ export interface PlanDetailModalProps {
     decision: ReviewDecision;
     comment: string;
   }) => Promise<void>;
+  /** Given for an advisor: shows the endorse form instead of the review form (#147). */
+  onEndorse?: (payload: {
+    planId: number;
+    decision: EndorseDecision;
+    comment: string;
+  }) => Promise<CoopPlan>;
 }
 
 function formatDate(isoString: string | null): string {
@@ -56,6 +63,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   onSaved,
   getIdToken,
   onSubmitReview,
+  onEndorse,
 }) => {
   const [decision, setDecision] = useState<ReviewDecision>('APPROVED');
   const [comment, setComment] = useState('');
@@ -347,7 +355,18 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </div>
           )}
 
-          {/* Section 2: Form ผลการพิจารณา (V3-05.2 Readiness) */}
+          {/* Section 2: Form ผลการพิจารณา (V3-05.2 Readiness), or the advisor's endorse form (#147) */}
+          {onEndorse ? (
+            <EndorseForm
+              advisorName={reviewerName}
+              onCancel={() => onOpenChange(false)}
+              onEndorse={async (decision, endorseComment) => {
+                const saved = await onEndorse({ planId: plan.plan_id, decision, comment: endorseComment });
+                onSaved?.(saved);
+                onOpenChange(false);
+              }}
+            />
+          ) : (
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border-2 border-blue-100 bg-blue-50/30 p-5 space-y-4"
@@ -528,6 +547,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>
