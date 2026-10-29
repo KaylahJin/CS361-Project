@@ -84,7 +84,7 @@ export async function reviewCoopPlan(event) {
     const plan = selectRes.rows[0];
 
     try {
-      await assertCanReviewPlan(user, plan, client);
+      await assertCanReviewPlan(user);
     } catch (err) {
       await client.query('ROLLBACK');
       if (err instanceof ForbiddenError) {
