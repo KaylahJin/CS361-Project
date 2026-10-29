@@ -46,6 +46,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
+import { canReviewPlans } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
@@ -187,20 +188,6 @@ function UnauthenticatedState({
             <span>เข้าสู่ระบบ (Sign In)</span>
           </button>
         )}
-      </div>
-
-      <div className="mt-8 rounded-xl bg-slate-50 border border-slate-200/70 p-3.5 text-xs text-slate-500 text-left w-full">
-        <span className="font-semibold text-slate-700 block mb-1">
-          💡 บัญชีทดสอบสำหรับผู้ตรวจ (Test Accounts):
-        </span>
-        <ul className="list-disc list-inside space-y-0.5 text-slate-600">
-          <li>
-            อาจารย์ที่ปรึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">advisor1@example.com</code>
-          </li>
-          <li>
-            เจ้าหน้าที่สหกิจศึกษา: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">staff1@example.com</code>
-          </li>
-        </ul>
       </div>
     </div>
   );
@@ -664,7 +651,10 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     description: '',
   });
 
-  const { getIdToken, status: authStatus, user } = useAuth();
+  const { getIdToken, status: authStatus, user, role } = useAuth();
+  // Only reviewer roles get the review button and form. A student sees their
+  // plans read-only. The API refuses a student's review call anyway (403).
+  const canReview = canReviewPlans(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -767,7 +757,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
           setSelectedPlan(submitted);
           void loadPlans();
         }}
-        onReview={(plan) => handleReviewPlan(plan)}
+        onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
       />
     );
   }
@@ -1004,13 +994,13 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               <PlanListTable
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
-                onReview={handleReviewPlan}
+                onReview={canReview ? handleReviewPlan : undefined}
               />
             ) : (
               <PlanListCards
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
-                onReview={handleReviewPlan}
+                onReview={canReview ? handleReviewPlan : undefined}
               />
             )}
 
@@ -1035,20 +1025,22 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       </main>
 
       {/* Plan Detail & Consideration Modal (V3-05.2) */}
-      <PlanDetailModal
-        plan={reviewPlan}
-        open={Boolean(reviewPlan)}
-        onOpenChange={(open) => {
-          if (!open) setReviewPlan(null);
-        }}
-        reviewerName={user?.email || 'ผู้ตรวจสอบ'}
-        onSubmitReview={async ({ planId, decision, comment }) => {
-          const token = await getIdToken();
-          await reviewCoopPlan(planId, decision, comment, token);
-          await loadPlans();
-        }}
-        onSaved={handleSavedReview}
-      />
+      {canReview && (
+        <PlanDetailModal
+          plan={reviewPlan}
+          open={Boolean(reviewPlan)}
+          onOpenChange={(open) => {
+            if (!open) setReviewPlan(null);
+          }}
+          reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+          onSubmitReview={async ({ planId, decision, comment }) => {
+            const token = await getIdToken();
+            await reviewCoopPlan(planId, decision, comment, token);
+            await loadPlans();
+          }}
+          onSaved={handleSavedReview}
+        />
+      )}
     </div>
   );
 }

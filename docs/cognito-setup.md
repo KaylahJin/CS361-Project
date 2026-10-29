@@ -50,38 +50,51 @@ fails with `ExpiredToken` once they do.
    both are compiled into the shipped JavaScript bundle. They live in `.env`
    because they differ per stack, not because they need protecting.
 
-2. Create one test user per role for manual QA:
+2. Create the allowlisted test users for manual QA. Public self-sign-up is
+   disabled; an administrator must create accounts through Cognito admin
+   operations. The test accounts are `student1@example.com`,
+   `advisor1@example.com`, `staff1@example.com`, and
+   `admin1@example.com`.
+
+   Create each account with `aws cognito-idp admin-create-user`, using
+   `--message-action SUPPRESS` and setting `email_verified=true`. Then set
+   a permanent password with `aws cognito-idp admin-set-user-password`
+   so the SPA does not encounter the unsupported `NEW_PASSWORD_REQUIRED`
+   challenge.
+
+   Choose a **different password for each account** that satisfies the
+   password policy in `infra/terraform/cognito.tf` (at least 12 characters,
+   including lowercase, uppercase, numbers, and symbols). Do not commit
+   passwords to the repository or share them in source files. Share
+   credentials only through an appropriate private channel.
+
+   Repeat for all four role accounts to exercise the permission matrix in
+   `docs/permission-matrix.md`.
+
+   After creating the four accounts, retrieve each account's Cognito `sub`
+   from the Users page in the Cognito console. Confirm each account's identity
+   and intended role with the project administrator, then set these variables
+   in the same shell used to run `npm run db:seed-users`:
 
    ```bash
-   POOL=$(terraform -chdir=infra/terraform output -raw cognito_user_pool_id)
-
-   aws cognito-idp admin-create-user \
-     --user-pool-id "$POOL" \
-     --username student1@example.com \
-     --user-attributes Name=email,Value=student1@example.com Name=email_verified,Value=true \
-     --message-action SUPPRESS
-
-   # Pick the password here rather than reading one out of the repository:
-   # no credential is committed (#99). Use the same value for all four
-   # accounts, and share it with the team out of band.
-   read -rs TEST_PASSWORD
-
-   # Make the password permanent so the login form does not hit the
-   # NEW_PASSWORD_REQUIRED challenge (which the SPA does not implement).
-   aws cognito-idp admin-set-user-password \
-     --user-pool-id "$POOL" \
-     --username student1@example.com \
-     --password "$TEST_PASSWORD" \
-     --permanent
+   export COOP_APPROVED_STUDENT_SUB='<student-cognito-sub>'
+   export COOP_APPROVED_ADVISOR_SUB='<advisor-cognito-sub>'
+   export COOP_APPROVED_STAFF_SUB='<staff-cognito-sub>'
+   export COOP_APPROVED_ADMIN_SUB='<admin-cognito-sub>'
+   npm run db:seed-users
    ```
 
-   Repeat for `advisor1@`, `staff1@`, `admin1@` to exercise the full
-   permission matrix in `docs/permission-matrix.md`.
+   Replace each placeholder with the actual `sub` value from the configured
+   pool. These values are an administrator-controlled role allowlist: never
+   infer or assign a role from an email address. After a pool rebuild or
+   account recreation, verify the identities and update the approved `sub`
+   values before seeding again.
 
-   The pool's password policy is relaxed on purpose (8 characters, no
-   character-class rules) so these demo passwords are quick to type during
-   marking. **Tighten `password_policy` in `infra/terraform/cognito.tf`
-   before any non-lab use** — the pool's sign-in endpoint is public.
+   Also create `nobody1@example.com` as a fifth Cognito account with its own
+   distinct password satisfying the same policy. Do **not** insert this
+   account into `app_users`; `npm run verify:auth` uses it to check that a
+   valid Cognito identity without an application mapping receives `403`.
+   Set its password in `COOP_UNMAPPED_PASSWORD`.
 
 3. Role assignment means inserting the matching `app_users` row. The tables
    arrived with issue #98 (V3-03.1), and `npm run db:seed-users` writes a row
@@ -94,11 +107,12 @@ fails with `ExpiredToken` once they do.
 
 ## AWS Academy Lab limitations
 
-If `admin-create-user` or any `cognito-idp` admin call is denied by
-`LabRole`, record the exact error here and fall back to self-service
-sign-up (`CognitoUser.signUp` from the frontend) plus
-`admin-confirm-sign-up`. That is the fallback plan ("แผนสำรอง") issue #99
-asks to be documented before V3-02.2 starts.
+If `admin-create-user` or another Cognito admin operation is denied by
+`LabRole`, record the exact error and investigate the permissions available
+in the current lab. Do not enable public self-sign-up as a workaround:
+account creation must remain administrator-controlled. If the required
+admin operations are unavailable, document the limitation and coordinate
+with the team before changing the authentication design.
 
 Known Lab constraint already hit by this stack: no CloudFront permissions
 at all, which is why the site is an HTTP-only S3 website endpoint
