@@ -47,10 +47,28 @@ describe('reviewCoopPlan', () => {
     const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
-      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+        return {};
+      }
+
+      // Mock capacity ของ period
+      if (typeof sql === 'string' && sql.includes('FROM periods')) {
+        return { rows: [{ capacity: 2 }] };
+      }
+
+      // Mock จำนวนแผนที่อนุมัติแล้ว
+      if (
+        typeof sql === 'string' &&
+        sql.includes('COUNT(*)::int AS approved_count')
+      ) {
+        return { rows: [{ approved_count: 0 }] };
+      }
+
+      // Mock การ lock แผนที่ต้องการตรวจสอบ
       if (typeof sql === 'string' && sql.includes('FOR UPDATE')) {
         return { rows: [plan] };
       }
+
       return { rowCount: 1, rows: [] };
     });
 
@@ -129,16 +147,37 @@ describe('reviewCoopPlan', () => {
     signedInAs(ADVISOR);
     const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
 
+    
     clientQueryMock.mockImplementation(async (sql, params) => {
-      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+        return {};
+      }
+
+      if (typeof sql === 'string' && sql.includes('FROM periods')) {
+        return { rows: [{ capacity: 2 }] };
+      }
+
+      if (
+        typeof sql === 'string' &&
+        sql.includes('COUNT(*)::int AS approved_count')
+      ) {
+        return { rows: [{ approved_count: 0 }] };
+      }
+
+      if (
+        typeof sql === 'string' &&
+        sql.includes('advisor_student_assignments')
+      ) {
+        return { rows: [{ student_id: '6600000001' }] };
+      }
+
       if (typeof sql === 'string' && sql.includes('FOR UPDATE')) {
         return { rows: [plan] };
       }
-      if (typeof sql === 'string' && sql.includes('advisor_student_assignments')) {
-        return { rows: [{ student_id: '6600000001' }] };
-      }
+
       return { rowCount: 1, rows: [] };
     });
+
 
     const event = {
       pathParameters: { planId: '10' },

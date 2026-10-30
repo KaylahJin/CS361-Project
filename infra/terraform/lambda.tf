@@ -37,9 +37,10 @@ resource "aws_lambda_function" "companies" {
       DB_NAME     = var.db_name
       DB_USER     = "coop_app"
       DB_PASSWORD = var.app_db_password
+
+      ATTACHMENTS_BUCKET = local.attachments_bucket
     }
   }
-}
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -16,11 +16,12 @@
     "env:sync": "bash infra/sync-env.sh",
     "web:deploy": "bash infra/deploy-web.sh",
     "test": "vitest run",
-    "db:migrate-v3": "bash -c \"psql -h $(terraform -chdir=infra/terraform output -raw rds_endpoint) -U $(terraform -chdir=infra/terraform output -raw db_username) -d $(terraform -chdir=infra/terraform output -raw db_name) -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_upgrade.sql\"",
+    "db:migrate-v3": "bash -c \"psql -h $(terraform -chdir=infra/terraform output -raw rds_endpoint) -U $(terraform -chdir=infra/terraform output -raw db_username) -d $(terraform -chdir=infra/terraform output -raw db_name) -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_01_upgrade.sql && psql -h $(terraform -chdir=infra/terraform output -raw rds_endpoint) -U $(terraform -chdir=infra/terraform output -raw db_username) -d $(terraform -chdir=infra/terraform output -raw db_name) -v ON_ERROR_STOP=1 -f infra/migrate/migrations/v3_02_cognito_sub_cascade.sql\"",
     "db:seed-users": "bash infra/seed-app-users.sh",
     "db:test-migration": "bash infra/migrate/test-migration-roundtrip.sh",
     "verify:roles": "node infra/verify-roles.mjs",
-    "verify:scope": "node infra/verify-scope.mjs"
+    "verify:scope": "node infra/verify-scope.mjs",
+    "attachments:deploy": "bash infra/deploy-attachments-bucket.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

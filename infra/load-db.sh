@@ -32,6 +32,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="$REPO_ROOT/infra/terraform"
 V3_MIGRATION="$REPO_ROOT/infra/migrate/migrations/v3_01_upgrade.sql"
+V3_ATTACHMENTS_MIGRATION="$REPO_ROOT/infra/migrate/migrations/v3_02_attachments_upgrade.sql"
 
 RESET=0
 SEED_USERS=1
@@ -121,13 +122,14 @@ SQL
 # Every statement in the V3 migration is guarded (CREATE TABLE IF NOT EXISTS,
 # DROP CONSTRAINT IF EXISTS), so this runs on a fresh load and on an existing
 # database alike.
+
 apply_v3_migration() {
   local migration
 
   for migration in \
-    "$REPO_ROOT/infra/migrate/migrations/v3_01_upgrade.sql" \
+    "$V3_MIGRATION" \
     "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" \
-    "$REPO_ROOT/infra/migrate/migrations/v3_02_attachments_upgrade.sql" \
+    "$V3_ATTACHMENTS_MIGRATION" \
     "$REPO_ROOT/infra/migrate/migrations/v3_02_least_privilege.sql"
   do
     if [ ! -f "$migration" ]; then
@@ -250,3 +252,9 @@ fi
 
 echo "Done. Next: npm run env:sync   (points the frontend at this stack's API)"
 echo "Then:       npm run verify:auth -- <password>   (confirms the routes refuse an anonymous caller)"
+
+if [ "$(psql_q "SELECT to_regclass('public.plan_attachments') IS NOT NULL;")" = "t" ]; then
+  echo "attachments:      present"
+else
+  echo "attachments:      MISSING — uploads will fail"
+fi

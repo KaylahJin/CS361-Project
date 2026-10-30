@@ -16,6 +16,7 @@ import type { ReviewDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { CircleCheckFill } from './CircleCheckFill';
 import { CoopPlanApiError } from '../../data/coopPlanApi';
+import PlanAttachmentSummary from './PlanAttachmentSummary';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -23,6 +24,7 @@ export interface PlanDetailModalProps {
   onOpenChange: (open: boolean) => void;
   reviewerName?: string;
   onSaved?: (updatedPlan: CoopPlan) => void;
+  getIdToken: () => Promise<string | null>;
   onSubmitReview?: (payload: {
     planId: number;
     decision: ReviewDecision;
@@ -52,6 +54,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   onOpenChange,
   reviewerName = 'ผู้ตรวจสอบ',
   onSaved,
+  getIdToken,
   onSubmitReview,
 }) => {
   const [decision, setDecision] = useState<ReviewDecision>('APPROVED');
@@ -308,7 +311,12 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               </div>
             )}
           </div>
-
+          {/* Plan Attachments — Read Only for Reviewers */}
+          <PlanAttachmentSummary
+            planId={plan.plan_id}
+            getIdToken={getIdToken}
+            showEditHint={false}
+          />
           {/* Review History / Current Review */}
           {plan.reviewed_at && (
             <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-2">

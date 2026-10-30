@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 const loginMock = vi.fn();
 const logoutMock = vi.fn();
 const getCurrentSessionMock = vi.fn();
+const getMeMock = vi.fn();
 
 vi.mock('./cognitoClient', () => ({
   login: loginMock,
@@ -13,16 +14,19 @@ vi.mock('./cognitoClient', () => ({
   getCurrentSession: getCurrentSessionMock,
 }));
 
+vi.mock('../data/meApi', () => ({ getMe: getMeMock }));
+
 const { AuthProvider, useAuth } = await import('./AuthContext');
 
 function Probe() {
-  const { status, user, getIdToken, login, logout } = useAuth();
+  const { status, user, role, getIdToken, login, logout } = useAuth();
   const [token, setToken] = useState('');
 
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="email">{user?.email ?? ''}</span>
+      <span data-testid="role">{role ?? 'none'}</span>
       <span data-testid="token">{token}</span>
       <button onClick={() => void getIdToken().then((t) => setToken(t ?? 'null'))}>
         read token
@@ -54,6 +58,8 @@ describe('AuthProvider', () => {
     logoutMock.mockReset();
     getCurrentSessionMock.mockReset();
     getCurrentSessionMock.mockResolvedValue(null);
+    getMeMock.mockReset();
+    getMeMock.mockResolvedValue({ role: 'STAFF', studentId: null });
   });
 
   it('settles on anonymous when there is no stored session', async () => {
@@ -106,6 +112,123 @@ describe('AuthProvider', () => {
     await expectStatus('anonymous');
     expect(screen.getByTestId('email')).toHaveTextContent('');
     expect(logoutMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('role from GET /me', () => {
+  beforeEach(() => {
+    loginMock.mockReset();
+    logoutMock.mockReset();
+    getCurrentSessionMock.mockReset();
+    getCurrentSessionMock.mockResolvedValue(null);
+    getMeMock.mockReset();
+  });
+
+  const expectRole = (value: string) =>
+    waitFor(() => expect(screen.getByTestId('role')).toHaveTextContent(value));
+
+  it('loads the role of a restored session using its token', async () => {
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'restored', email: 'a@b.com' });
+    getMeMock.mockResolvedValue({ role: 'ADVISOR', studentId: null });
+
+    renderProbe();
+
+    await expectRole('ADVISOR');
+    expect(getMeMock).toHaveBeenCalledWith('restored');
+  });
+
+  it('loads the role after a login', async () => {
+    loginMock.mockResolvedValue({ idToken: 'fresh', email: 'a@b.com' });
+    getMeMock.mockResolvedValue({ role: 'STUDENT', studentId: '6600000001' });
+
+    renderProbe();
+    await expectStatus('anonymous');
+    await userEvent.click(screen.getByText('sign in'));
+
+    await expectRole('STUDENT');
+    expect(getMeMock).toHaveBeenCalledWith('fresh');
+  });
+
+  it('keeps the role null when the lookup fails, so role-only screens stay hidden', async () => {
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'restored', email: 'a@b.com' });
+    getMeMock.mockRejectedValue(new Error('403'));
+
+    renderProbe();
+
+    await expectStatus('authenticated');
+    await waitFor(() => expect(getMeMock).toHaveBeenCalled());
+    expect(screen.getByTestId('role')).toHaveTextContent('none');
+  });
+
+  it('clears the role on logout', async () => {
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'restored', email: 'a@b.com' });
+    getMeMock.mockResolvedValue({ role: 'STAFF', studentId: null });
+
+    renderProbe();
+    await expectRole('STAFF');
+    await userEvent.click(screen.getByText('sign out'));
+
+    await expectRole('none');
+  });
+});
+
+// A page that mounts because the status just changed asks for a token in its
+// first effect. That effect runs before the provider's own, so the token has to
+// be available the moment the status flips, not one render later.
+function PageThatLoadsOnMount() {
+  const { getIdToken } = useAuth();
+  const [token, setToken] = useState('pending');
+
+  useEffect(() => {
+    void getIdToken().then((t) => setToken(t ?? 'null'));
+  }, [getIdToken]);
+
+  return <span data-testid="first-token">{token}</span>;
+}
+
+function Gate() {
+  const { status, login } = useAuth();
+  return status === 'authenticated' ? (
+    <PageThatLoadsOnMount />
+  ) : (
+    <button onClick={() => login('a@b.com', 'test-password').catch(() => {})}>sign in</button>
+  );
+}
+
+describe('first request of a page that mounts on login', () => {
+  beforeEach(() => {
+    loginMock.mockReset();
+    logoutMock.mockReset();
+    getCurrentSessionMock.mockReset();
+    getMeMock.mockReset();
+    getMeMock.mockResolvedValue({ role: 'STUDENT', studentId: null });
+  });
+
+  it('gets the token right after a login', async () => {
+    // Signed out when the page loads; once login succeeds Cognito holds the session.
+    getCurrentSessionMock.mockResolvedValueOnce(null);
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'fresh', email: 'a@b.com' });
+    loginMock.mockResolvedValue({ idToken: 'fresh', email: 'a@b.com' });
+    render(
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>,
+    );
+
+    await userEvent.click(await screen.findByText('sign in'));
+
+    await waitFor(() => expect(screen.getByTestId('first-token')).toHaveTextContent('fresh'));
+  });
+
+  it('gets the token right after restoring a stored session', async () => {
+    getCurrentSessionMock.mockResolvedValue({ idToken: 'restored', email: 'a@b.com' });
+    render(
+      <AuthProvider>
+        <Gate />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('first-token')).toHaveTextContent('restored'));
   });
 });
 

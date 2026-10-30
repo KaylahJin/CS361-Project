@@ -72,7 +72,7 @@ export async function reviewCoopPlan(event) {
 
     // Lock plan row to check permission and concurrency state
     const selectRes = await client.query(
-      `SELECT plan_id, student_id, status FROM coop_plans WHERE plan_id = $1 FOR UPDATE`,
+      `SELECT plan_id, student_id, period_id, status FROM coop_plans WHERE plan_id = $1 FOR UPDATE`,
       [planIdNum],
     );
 
@@ -100,6 +100,55 @@ export async function reviewCoopPlan(event) {
         error: 'Conflict: plan is not in SUBMITTED status',
         currentStatus: plan.status,
       });
+    }
+
+    // Enforce capacity only when approving a plan.
+    if (decision === 'APPROVED') {
+      // Serialize approvals for the same period.
+      const periodRes = await client.query(
+        `SELECT capacity
+        FROM periods
+        WHERE period_id = $1
+        FOR UPDATE`,
+        [plan.period_id],
+      );
+
+      const period = periodRes.rows[0];
+
+      if (
+        !period ||
+        period.capacity === null ||
+        period.capacity === undefined ||
+        !Number.isInteger(Number(period.capacity)) ||
+        Number(period.capacity) < 1
+      ) {
+        await client.query('ROLLBACK');
+        return jsonResponse(409, {
+          error: 'Cannot approve: period capacity is missing or invalid',
+        });
+      }
+
+      // Count plans already approved in this period.
+      const countRes = await client.query(
+        `SELECT COUNT(*)::int AS approved_count
+        FROM coop_plans
+        WHERE period_id = $1
+          AND status = 'APPROVED'`,
+        [plan.period_id],
+      );
+
+      const approvedCount = countRes.rows[0].approved_count;
+      const capacity = Number(period.capacity);
+
+      if (approvedCount >= capacity) {
+        await client.query('ROLLBACK');
+        return jsonResponse(409, {
+          error: 'Period capacity has been reached',
+          period_id: plan.period_id,
+          capacity,
+          approved_count: approvedCount,
+        });
+      }
     }
 
     const claims = event?.requestContext?.authorizer?.jwt?.claims;
@@ -131,7 +180,11 @@ export async function reviewCoopPlan(event) {
       review_comment: trimmedComment || null,
     });
   } catch (err) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Preserve the original error.
+    }
     console.error('reviewCoopPlan database transaction failed', err);
     return jsonResponse(500, { error: 'Internal server error' });
   } finally {

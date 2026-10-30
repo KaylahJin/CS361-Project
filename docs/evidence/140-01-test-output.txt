@@ -1,0 +1,23 @@
+# #140: npx vitest run src/pages/submissionMessages.test.ts + full run (2026-10-25)
+# branch feat/140-submission-error-messages @ 15758ad
+ ✓  frontend  src/pages/submissionMessages.test.ts (18 tests) 10ms
+ Test Files  32 passed (32)
+      Tests  599 passed (599)
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > finds the 13 codes the backend can send 3ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > GPA_MISSING has Thai text 1ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > GPA_BELOW_MINIMUM has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > UNSUPPORTED_CURRICULUM has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > REQUIRED_COURSES_MISSING has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > COURSE_GROUP_GPA_BELOW_MINIMUM has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > ONGOING_OR_STUDIED_COURSE_MISSING has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > STUDENT_RECORD_MISSING has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > PERIOD_REQUIRED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > POSITION_REQUIRED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > PRE_COURSE_NOT_ACKNOWLEDGED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > TERMS_NOT_ACCEPTED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > SUBMISSION_WINDOW_NOT_DEFINED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > SUBMISSION_WINDOW_CLOSED has Thai text 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > has no text for a code the backend never sends 1ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > never shows a code name on screen 1ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > a new code without text shows the API message instead of going blank 0ms
+ ✓  frontend  src/pages/submissionMessages.test.ts > submission failure messages > no code and no message shows the generic Thai sentence 0ms

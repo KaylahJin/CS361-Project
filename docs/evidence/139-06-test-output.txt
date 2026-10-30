@@ -1,0 +1,9 @@
+# #139 test output (2026-10-25), branch fix/139-login-from-plans-page @ 1c6ca19
+# without the fix (AuthContext.tsx reverted):
+  × first request of a page that mounts on login > gets the token right after a login
+  × first request of a page that mounts on login > gets the token right after restoring a stored session
+  Tests  2 failed | 13 passed (15)
+# with the fix:
+ ✓  frontend  src/auth/AuthContext.test.tsx (15 tests) 1165ms
+ Test Files  31 passed (31)
+      Tests  595 passed (595)
