@@ -75,6 +75,14 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
       label: 'อาจารย์รับรองแล้ว',
       className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     },
+    ELIGIBLE: {
+      label: 'ผ่านการตรวจ รอคัดเลือก',
+      className: 'bg-teal-50 text-teal-700 border-teal-200',
+    },
+    NOT_ELIGIBLE: {
+      label: 'ไม่ผ่านการตรวจคุณสมบัติ',
+      className: 'bg-red-50 text-red-700 border-red-200',
+    },
     APPROVED: {
       label: 'อนุมัติแล้ว',
       className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -253,6 +261,10 @@ function lockedReason(status: CoopPlanStatus): string | null {
       return 'แผนนี้ได้รับอนุมัติแล้ว แก้ไขไม่ได้';
     case 'REJECTED':
       return 'แผนนี้ไม่ได้รับอนุมัติ แก้ไขไม่ได้';
+    case 'ELIGIBLE':
+      return 'แผนนี้ผ่านการตรวจแล้ว รอคัดเลือก แก้ไขไม่ได้';
+    case 'NOT_ELIGIBLE':
+      return 'แผนนี้ไม่ผ่านการตรวจคุณสมบัติ แก้ไขไม่ได้';
     default:
       return null;
   }
