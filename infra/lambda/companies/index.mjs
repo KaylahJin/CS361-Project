@@ -38,6 +38,7 @@ import { submitCoopPlan } from './submitCoopPlan.mjs';
 import { reviewCoopPlan } from './reviewCoopPlan.mjs';
 import { endorseCoopPlan } from './endorseCoopPlan.mjs';
 import { screenCoopPlan } from './screenCoopPlan.mjs';
+import { getPlanEligibility } from './getPlanEligibility.mjs';
 import { getMe } from './getMe.mjs';
 import { requestAttachmentUpload } from './requestAttachmentUpload.mjs';
 import { confirmAttachment } from './confirmAttachment.mjs';
@@ -63,6 +64,7 @@ const ROUTES = Object.assign(Object.create(null), {
   'POST /coop-plans/{planId}/review': reviewCoopPlan,
   'POST /coop-plans/{planId}/endorse': endorseCoopPlan,
   'POST /coop-plans/{planId}/screen': screenCoopPlan,
+  'GET /coop-plans/{planId}/eligibility': getPlanEligibility,
   'POST /coop-plans/{planId}/attachments/upload-url': requestAttachmentUpload,
   'POST /coop-plans/{planId}/attachments': confirmAttachment,
   'GET /coop-plans/{planId}/attachments': listAttachments,

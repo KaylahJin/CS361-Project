@@ -19,6 +19,7 @@ API ทั้งสองรายการมีอยู่ใน Repository �
 | POST | `/coop-plans/{planId}/review` | Staff | อนุมัติ ไม่อนุมัติ หรือส่งแผนกลับแก้ไข เฉพาะแผนที่อาจารย์รับรองแล้ว (`ENDORSED`) |
 | POST | `/coop-plans/{planId}/endorse` | Advisor ที่รับผิดชอบ | รับรอง (`ENDORSED`) หรือไม่รับรองพร้อมเหตุผล (`NOT_ENDORSED` → แผนเป็น `RETURNED`) จาก `SUBMITTED` เท่านั้น (#147) |
 | POST | `/coop-plans/{planId}/screen` | Staff | ตรวจเอกสารและคุณสมบัติแผนที่รับรองแล้ว (`ENDORSED`): `ELIGIBLE`, `INCOMPLETE` (แผนเป็น `RETURNED`) หรือ `NOT_ELIGIBLE` สองอย่างหลังต้องมีเหตุผล (#148) |
+| GET | `/coop-plans/{planId}/eligibility` | Staff | ผลตรวจคุณสมบัติตามเกณฑ์ของรอบของแผน (`criteria`, `eligible`, `failures`) ไม่บันทึกอะไร (#148) |
 
 ไม่มี API `start-review` ผู้ตรวจสามารถพิจารณาแผนที่อยู่ในสถานะ `SUBMITTED` ได้โดยตรง
 

@@ -71,6 +71,11 @@ vi.mock('./screenCoopPlan.mjs', () => ({
   screenCoopPlan: screenCoopPlanMock,
 }));
 
+const getPlanEligibilityMock = vi.fn();
+vi.mock('./getPlanEligibility.mjs', () => ({
+  getPlanEligibility: getPlanEligibilityMock,
+}));
+
 vi.mock('./requestAttachmentUpload.mjs', () => ({
   requestAttachmentUpload: requestAttachmentUploadMock,
 }));
@@ -273,6 +278,7 @@ describe('router (index.mjs handler)', () => {
 
   it.each([
     ['POST /coop-plans/{planId}/screen', screenCoopPlanMock],
+    ['GET /coop-plans/{planId}/eligibility', getPlanEligibilityMock],
   ])('dispatches %s', async (routeKey, mock) => {
     const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
     mock.mockResolvedValue(handlerResponse);

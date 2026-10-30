@@ -162,6 +162,14 @@ resource "aws_apigatewayv2_route" "screen_coop_plan" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
+resource "aws_apigatewayv2_route" "get_plan_eligibility" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/{planId}/eligibility"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.companies.id
   name        = "$default"
