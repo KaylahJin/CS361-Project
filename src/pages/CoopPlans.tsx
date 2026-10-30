@@ -683,14 +683,23 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
-  const counts: PlanCounts = {
-    ALL: plans.length,
-    SUBMITTED: plans.filter((p) => p.status === 'SUBMITTED').length,
-    RETURNED: plans.filter((p) => p.status === 'RETURNED').length,
-    APPROVED: plans.filter((p) => p.status === 'APPROVED').length,
-    REJECTED: plans.filter((p) => p.status === 'REJECTED').length,
-    PREPARING: plans.filter((p) => p.status === 'PREPARING').length,
-  };
+  // Counted from the rows themselves, not from a fixed list of statuses: a
+  // status this page has never heard of still lands in `counts` and gets its
+  // own tab, so the numbers on the tabs always add up to the total (#142).
+  const counts: PlanCounts = plans.reduce(
+    (acc, plan) => {
+      acc[plan.status] = (acc[plan.status] ?? 0) + 1;
+      return acc;
+    },
+    {
+      ALL: plans.length,
+      SUBMITTED: 0,
+      RETURNED: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      PREPARING: 0,
+    } as PlanCounts,
+  );
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
