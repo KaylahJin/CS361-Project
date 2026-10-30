@@ -15,7 +15,7 @@ import type {
   CreateCoopPlanInput,
   UpdateCoopPlanInput,
 } from '../types/coopPlan';
-import type { EndorseDecision } from '../types/planReview';
+import type { EndorseDecision, PlanEligibility, ScreenDecision } from '../types/planReview';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -405,6 +405,44 @@ export async function endorseCoopPlan(
 
   if (!res.ok) {
     throw await writeError(res, `endorse coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Staff screening (POST /coop-plans/{planId}/screen, #148). Resolves with the
+ * plan as saved: ELIGIBLE, NOT_ELIGIBLE, or RETURNED when INCOMPLETE. 409
+ * means the plan was no longer ENDORSED.
+ */
+export async function screenCoopPlan(
+  planId: number,
+  decision: ScreenDecision,
+  comment: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/screen`;
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: jsonWriteHeaders(idToken),
+    body: JSON.stringify(comment ? { decision, comment } : { decision }),
+  });
+
+  if (!res.ok) {
+    throw await writeError(res, `screen coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/** The plan's student against its period's criteria (GET /coop-plans/{planId}/eligibility, #148). */
+export async function getPlanEligibility(
+  planId: number,
+  idToken?: string | null
+): Promise<PlanEligibility> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/eligibility`;
+  const res = await fetchWithTimeout(url, authHeaders(idToken));
+
+  if (!res.ok) {
+    throw new CoopPlanApiError(`Failed to fetch eligibility for plan ${planId}: ${res.statusText}`, res.status);
   }
   return await res.json();
 }

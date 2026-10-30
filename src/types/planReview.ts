@@ -22,6 +22,18 @@ export type ReviewDecision = 'APPROVED' | 'RETURNED' | 'REJECTED';
 /** The advisor's step (#147). NOT_ENDORSED returns the plan to the student. */
 export type EndorseDecision = 'ENDORSED' | 'NOT_ENDORSED';
 
+/** Staff's step (#148). INCOMPLETE returns the plan to the student. */
+export type ScreenDecision = 'ELIGIBLE' | 'INCOMPLETE' | 'NOT_ELIGIBLE';
+
+/** GET /coop-plans/{planId}/eligibility: the plan's student against its period's criteria. */
+export interface PlanEligibility {
+  plan_id: number;
+  period_id: string;
+  criteria: { min_gpa: number | null; min_group_gpa: number | null };
+  eligible: boolean;
+  failures: Array<{ code?: string; message?: string }>;
+}
+
 export type PlanReviewItem = CoopPlan;
 
 export interface ReviewSubmitPayload {
