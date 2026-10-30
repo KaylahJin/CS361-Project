@@ -349,43 +349,6 @@ export async function submitCoopPlan(
 }
 
 /**
- * Reviews a coop plan (POST /coop-plans/{planId}/review).
- *
- * Only permitted for committee / advisor roles.
- * Resolves with the reviewed plan or throws 409 Conflict if already reviewed.
- */
-export async function reviewCoopPlan(
-  planId: number,
-  decision: 'APPROVED' | 'RETURNED' | 'REJECTED',
-  comment?: string,
-  idToken?: string | null
-): Promise<CoopPlan> {
-  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/review`;
-
-  try {
-    const res = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: jsonWriteHeaders(idToken),
-      body: JSON.stringify({ decision, comment: comment || '' }),
-    });
-
-    if (!res.ok) {
-      throw await writeError(res, `review coop plan ${planId}`);
-    }
-
-    return await res.json();
-  } catch (error) {
-    if (error instanceof CoopPlanApiError) {
-      throw error;
-    }
-
-    console.warn(`Coop Plan review API unreachable for plan ${planId}.`, error);
-
-    throw error;
-  }
-}
-
-/**
  * Advisor endorsement (POST /coop-plans/{planId}/endorse, #147). Resolves with
  * the plan as saved: ENDORSED, or RETURNED when not endorsed. 409 means the
  * plan was no longer SUBMITTED.
