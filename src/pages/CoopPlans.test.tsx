@@ -12,6 +12,7 @@ const getCoopPlanMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
+const reviewCoopPlanMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
   const actual = await vi.importActual<typeof import('../data/coopPlanApi')>(
@@ -24,6 +25,7 @@ vi.mock('../data/coopPlanApi', async () => {
     createCoopPlan: createCoopPlanMock,
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
+    reviewCoopPlan: reviewCoopPlanMock,
   };
 });
 
@@ -293,6 +295,52 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
 
     expect(screen.queryByText('6609600001')).not.toBeInTheDocument();
     expect(screen.getByText('6109600002')).toBeInTheDocument();
+  });
+
+  it('opens the review dialog from the button on the plan page, not only from the list (F11)', async () => {
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+
+    render(<CoopPlans />);
+
+    // A click on the row opens the plan page; its review button must open the form.
+    fireEvent.click(await screen.findByText('6609600001'));
+    fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
+
+    const modal = await screen.findByRole('dialog');
+    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+  });
+
+  it('after a review from the plan page, shows the new result and the new history entry', async () => {
+    const reviewed = {
+      ...SUBMITTED_PLAN,
+      status: 'APPROVED',
+      reviewer_name: 'staff1@example.com',
+      reviewed_at: '2026-10-25T10:00:00Z',
+      reviews: [
+        {
+          review_id: 9,
+          decision: 'APPROVED',
+          comment: null,
+          reviewed_at: '2026-10-25T10:00:00Z',
+          reviewer_name: 'staff1@example.com',
+        },
+      ],
+    };
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+    getCoopPlanMock.mockResolvedValueOnce(SUBMITTED_PLAN).mockResolvedValue(reviewed);
+    reviewCoopPlanMock.mockResolvedValue(undefined);
+
+    render(<CoopPlans />);
+    fireEvent.click(await screen.findByText('6609600001'));
+    fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
+    const modal = await screen.findByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: 'บันทึกผลการพิจารณา' }));
+
+    await waitFor(() => expect(reviewCoopPlanMock).toHaveBeenCalledWith(SUBMITTED_PLAN.plan_id, 'APPROVED', '', 'a-token'));
+    const history = await screen.findByRole('list', { name: 'ประวัติการพิจารณา' });
+    expect(within(history).getByText('staff1@example.com')).toBeInTheDocument();
+    expect(within(history).getByText('อนุมัติ')).toBeInTheDocument();
   });
 
   it('opens and closes plan detail modal when clicking a plan row', async () => {

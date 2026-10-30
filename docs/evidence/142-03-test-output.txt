@@ -1,0 +1,16 @@
+# #142 test output (2026-10-25), branch feat/142-review-history @ ca358dd
+# without the fix to CoopPlans.tsx (review dialog only in the list):
+  × opens the review dialog from the button on the plan page, not only from the list (F11)
+  × after a review from the plan page, shows the new result and the new history entry
+  Tests  2 failed | 38 passed (40)
+# with the fix:
+ ✓  frontend  src/components/plans/ReviewHistory.test.tsx (4 tests) 450ms
+   ✓ ReviewHistory > lists every decision, in the order given, with who made it and why  418ms
+ ✓  frontend  src/components/plans/PlanDetailModal.test.tsx (2 tests) 718ms
+   ✓ PlanDetailModal review form > starts the comment box empty even though the last round left a comment (F12)  596ms
+ ✓  backend  infra/lambda/companies/listCoopPlans.test.mjs (21 tests) 29ms
+ ✓  backend  infra/lambda/companies/getCoopPlanById.test.mjs (19 tests) 21ms
+ ✓  frontend  src/pages/CoopPlans.test.tsx (40 tests) 9216ms
+ Test Files  34 passed (34)
+      Tests  616 passed (616)
+tsc -b: ok
