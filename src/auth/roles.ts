@@ -8,7 +8,7 @@
 
 export type Role = 'STUDENT' | 'ADVISOR' | 'STAFF' | 'COMMITTEE' | 'ADMIN';
 
-/** Roles that open the plan form on a submitted plan: ADVISOR gets the endorse form, STAFF the review form. */
+/** Roles that open the plan form on a submitted plan: ADVISOR gets the endorse form, STAFF the screening form. */
 export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF'];
 
 /** Roles that get the student list page (D9 in #125). */
@@ -26,6 +26,11 @@ export function reviewableStatusFor(
   role: string | null | undefined
 ): 'SUBMITTED' | 'ENDORSED' {
   return role === 'STAFF' ? 'ENDORSED' : 'SUBMITTED';
+}
+
+/** Staff screens documents and criteria instead of approving (#148). */
+export function canScreenPlans(role: string | null | undefined): boolean {
+  return role === 'STAFF';
 }
 
 /** Advisors endorse instead of approving (#147). */

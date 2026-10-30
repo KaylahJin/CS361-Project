@@ -30,6 +30,7 @@ import {
   submitCoopPlan,
   reviewCoopPlan,
   endorseCoopPlan,
+  screenCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -47,7 +48,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canReviewPlans, reviewableStatusFor } from '../auth/roles';
+import { canEndorsePlans, canReviewPlans, canScreenPlans, reviewableStatusFor } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
@@ -1072,6 +1073,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             canEndorsePlans(role)
               ? async ({ planId, decision, comment }) =>
                   endorseCoopPlan(planId, decision, comment, await getIdToken())
+              : undefined
+          }
+          onScreen={
+            canScreenPlans(role)
+              ? async ({ planId, decision, comment }) =>
+                  screenCoopPlan(planId, decision, comment, await getIdToken())
               : undefined
           }
           onSaved={handleSavedReview}

@@ -24,6 +24,13 @@ vi.mock('../data/coopPlanApi', async () => {
     createCoopPlan: createCoopPlanMock,
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
+    getPlanEligibility: vi.fn().mockResolvedValue({
+      plan_id: 1,
+      period_id: 'P2568-1',
+      criteria: { min_gpa: 2, min_group_gpa: 2 },
+      eligible: true,
+      failures: [],
+    }),
   };
 });
 
@@ -296,7 +303,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('opens and closes plan detail modal when clicking a plan row', async () => {
-    // Signed in as STAFF, who reviews once the advisor has endorsed (#147).
+    // Signed in as STAFF, who screens once the advisor has endorsed (#147, #148).
     const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
     getCoopPlansMock.mockResolvedValue([endorsed]);
     getCoopPlanMock.mockResolvedValue(endorsed);
@@ -315,7 +322,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     expect(within(modal).getByText(/ตรวจและพิจารณาแผนสหกิจศึกษา/i)).toBeInTheDocument();
     expect(within(modal).getByText('Software Engineer Intern')).toBeInTheDocument();
     expect(within(modal).getByText(/สนใจด้าน Backend และ Distributed Systems/)).toBeInTheDocument();
-    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+    expect(within(modal).getByText(/ตรวจเอกสารและคุณสมบัติ \(สำหรับเจ้าหน้าที่สหกิจ\)/)).toBeInTheDocument();
 
     // Close modal via Cancel button
     const cancelBtn = within(modal).getByRole('button', { name: /ยกเลิก/i });
