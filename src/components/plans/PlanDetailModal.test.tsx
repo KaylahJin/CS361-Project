@@ -37,7 +37,13 @@ const plan = {
 
 function renderModal(p: CoopPlan) {
   return render(
-    <PlanDetailModal plan={p} open onOpenChange={vi.fn()} reviewerName="staff1@example.com" />,
+    <PlanDetailModal
+      plan={p}
+      open
+      onOpenChange={vi.fn()}
+      reviewerName="staff1@example.com"
+      getIdToken={async () => 'test-token'}
+    />,
   );
 }
 
