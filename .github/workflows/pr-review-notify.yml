@@ -1,18 +1,25 @@
-﻿name: PR Review Notifications
+﻿
+name: PR Review Notifications
 
 on:
   pull_request:
-    types: [opened, ready_for_review, review_requested]
+    types: [ready_for_review, review_requested]
   pull_request_review:
     types: [submitted]
 
+permissions:
+  issues: write
+  pull-requests: write
+
 jobs:
   notify-reviewer:
-    name: 📢 Notify Reviewer on PR Open / Ready
+    name: Notify Reviewer on PR Open / Ready
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'pull_request' &&
-      (github.event.action == 'opened' || github.event.action == 'ready_for_review' || github.event.action == 'review_requested')
+      github.event.pull_request.draft == false &&
+      (github.event.action == 'ready_for_review' ||
+       github.event.action == 'review_requested')
 
     steps:
       - name: Post comment to PR asking reviewer
@@ -21,22 +28,26 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            const reviewers = pr.requested_reviewers.map(r => @${{ '' }}${{ '' }}).join(', ');
-            const assignees = pr.assignees.map(a => @).join(', ');
+            const reviewers = pr.requested_reviewers
+              .map(r => `@${r.login}`).join(', ') || 'None';
+            const assignees = pr.assignees
+              .map(a => `@${a.login}`).join(', ') || 'None';
+
             const body = [
-              ## 🔔 PR Review Request,
-              `,
-              **Assignee(s):** ,
-              **Requested Reviewer(s):** ,
-              `,
-              > This PR is **ready for review**. Please check the changes and leave feedback. 🙏,
-              `,
-              | Check | Status |,
-              |-------|--------|,
-              | CI Lint & Type-check | ⏳ Running... |,
-              | Unit Tests | ⏳ Running... |,
-              | Build | ⏳ Running... |,
+              '## 🔔 PR Review Request',
+              '',
+              `**Assignee(s):** ${assignees}`,
+              `**Requested Reviewer(s):** ${reviewers}`,
+              '',
+              '> This PR is **ready for review**. Please check the changes and leave feedback. 🙏',
+              '',
+              '| Check | Status |',
+              '|-------|--------|',
+              '| CI Lint & Type-check | ⏳ Running... |',
+              '| Unit Tests | ⏳ Running... |',
+              '| Build | ⏳ Running... |',
             ].join('\n');
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -45,7 +56,7 @@ jobs:
             });
 
   notify-review-done:
-    name: 📣 Notify Assignee When Review Submitted
+    name: Notify Assignee When Review Submitted
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request_review' && github.event.action == 'submitted'
 
@@ -58,8 +69,9 @@ jobs:
             const review = context.payload.review;
             const pr = context.payload.pull_request;
             const reviewer = review.user.login;
-            const state = review.state;
-            const assignees = pr.assignees.map(a => @).join(', ');
+            const state = review.state.toUpperCase();
+            const assignees = pr.assignees
+              .map(a => `@${a.login}`).join(', ');
 
             const stateEmoji = {
               APPROVED: '✅',
@@ -74,12 +86,15 @@ jobs:
             }[state] || 'reviewed this PR';
 
             const body = [
-              ##  Review Update,
-              `,
-              **Reviewer @** has ****.,
-              assignees ? \n**Assignee(s) ** — please check the review and respond accordingly. : '',
-              `,
-              review.body ? > _""_ : '',
+              `## ${stateEmoji} Review Update`,
+              '',
+              `**Reviewer @${reviewer}** has ${stateText}.`,
+              assignees
+                ? `**Assignee(s):** ${assignees} — please check the review and respond accordingly.`
+                : '',
+              review.body
+                ? `> _"${review.body.replace(/\r?\n/g, '\n> ')}"_`
+                : '',
             ].filter(Boolean).join('\n');
 
             await github.rest.issues.createComment({
