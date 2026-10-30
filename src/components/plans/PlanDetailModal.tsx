@@ -12,12 +12,13 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { CoopPlan } from '../../types/coopPlan';
-import type { EndorseDecision, ReviewDecision } from '../../types/planReview';
+import type { EndorseDecision, ReviewDecision, ScreenDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { CircleCheckFill } from './CircleCheckFill';
 import { CoopPlanApiError } from '../../data/coopPlanApi';
 import PlanAttachmentSummary from './PlanAttachmentSummary';
 import EndorseForm from './EndorseForm';
+import ScreenForm from './ScreenForm';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -35,6 +36,12 @@ export interface PlanDetailModalProps {
   onEndorse?: (payload: {
     planId: number;
     decision: EndorseDecision;
+    comment: string;
+  }) => Promise<CoopPlan>;
+  /** Given for staff: shows the screening form instead of the review form (#148). */
+  onScreen?: (payload: {
+    planId: number;
+    decision: ScreenDecision;
     comment: string;
   }) => Promise<CoopPlan>;
 }
@@ -64,6 +71,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   getIdToken,
   onSubmitReview,
   onEndorse,
+  onScreen,
 }) => {
   const [decision, setDecision] = useState<ReviewDecision>('APPROVED');
   const [comment, setComment] = useState('');
@@ -355,13 +363,26 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </div>
           )}
 
-          {/* Section 2: Form ผลการพิจารณา (V3-05.2 Readiness), or the advisor's endorse form (#147) */}
+          {/* Section 2: the advisor's endorse form (#147), staff's screening form (#148), or the old review form */}
           {onEndorse ? (
             <EndorseForm
               advisorName={reviewerName}
               onCancel={() => onOpenChange(false)}
               onEndorse={async (decision, endorseComment) => {
                 const saved = await onEndorse({ planId: plan.plan_id, decision, comment: endorseComment });
+                onSaved?.(saved);
+                onOpenChange(false);
+              }}
+            />
+          ) : onScreen ? (
+            <ScreenForm
+              key={plan.plan_id}
+              planId={plan.plan_id}
+              staffName={reviewerName}
+              getIdToken={getIdToken}
+              onCancel={() => onOpenChange(false)}
+              onScreen={async (decision, screenComment) => {
+                const saved = await onScreen({ planId: plan.plan_id, decision, comment: screenComment });
                 onSaved?.(saved);
                 onOpenChange(false);
               }}
