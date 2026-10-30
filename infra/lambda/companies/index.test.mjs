@@ -66,6 +66,11 @@ vi.mock('./endorseCoopPlan.mjs', () => ({
   endorseCoopPlan: endorseCoopPlanMock,
 }));
 
+const screenCoopPlanMock = vi.fn();
+vi.mock('./screenCoopPlan.mjs', () => ({
+  screenCoopPlan: screenCoopPlanMock,
+}));
+
 vi.mock('./requestAttachmentUpload.mjs', () => ({
   requestAttachmentUpload: requestAttachmentUploadMock,
 }));
@@ -264,6 +269,18 @@ describe('router (index.mjs handler)', () => {
 
     expect(await handler(event)).toBe(handlerResponse);
     expect(endorseCoopPlanMock).toHaveBeenCalledWith(event);
+  });
+
+  it.each([
+    ['POST /coop-plans/{planId}/screen', screenCoopPlanMock],
+  ])('dispatches %s', async (routeKey, mock) => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    mock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey, pathParameters: { planId: '101' } };
+
+    expect(await handler(event)).toBe(handlerResponse);
+    expect(mock).toHaveBeenCalledWith(event);
   });
 
   it('dispatches POST /coop-plans/{planId}/submit to submitCoopPlan', async () => {
