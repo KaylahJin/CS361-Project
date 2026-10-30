@@ -15,6 +15,8 @@ interface PlanListTableProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff (#147). */
+  reviewableStatus?: PlanReviewItem['status'];
 }
 
 export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = ({
@@ -88,6 +90,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
   plans,
   onOpen,
   onReview,
+  reviewableStatus = 'SUBMITTED',
 }) => {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
@@ -106,7 +109,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {plans.map((plan) => {
-              const isPending = plan.status === 'SUBMITTED';
+              const isPending = plan.status === reviewableStatus;
               // Only a viewer who was given onReview can review. Without it the plan
               // is read-only, so the button must not offer "ตรวจแผน".
               const canReview = isPending && Boolean(onReview);

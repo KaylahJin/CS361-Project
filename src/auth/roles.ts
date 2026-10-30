@@ -18,6 +18,16 @@ export function canReviewPlans(role: string | null | undefined): boolean {
   return role != null && REVIEWER_ROLES.includes(role);
 }
 
+/**
+ * The plan status each reviewer role acts on (D2 in #125): the advisor
+ * endorses SUBMITTED plans, staff reviews only once the advisor has endorsed.
+ */
+export function reviewableStatusFor(
+  role: string | null | undefined
+): 'SUBMITTED' | 'ENDORSED' {
+  return role === 'STAFF' ? 'ENDORSED' : 'SUBMITTED';
+}
+
 /** Advisors endorse instead of approving (#147). */
 export function canEndorsePlans(role: string | null | undefined): boolean {
   return role === 'ADVISOR';
