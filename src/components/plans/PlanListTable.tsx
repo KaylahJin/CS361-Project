@@ -3,6 +3,7 @@ import {
   Building2,
   Calendar,
   ChevronRight,
+  Award,
   ClipboardCheck,
   FileText,
   RotateCcw,
@@ -16,7 +17,7 @@ interface PlanListTableProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
-  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff (#147). */
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff, ELIGIBLE for the committee. */
   reviewableStatus?: PlanReviewItem['status'];
 }
 
@@ -60,6 +61,20 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
           <XCircle className="h-3.5 w-3.5 text-zinc-600" />
           <span>ไม่ผ่านการตรวจคุณสมบัติ</span>
+        </span>
+      );
+    case 'SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600">
+          <Award className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+          <span>ได้รับการคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ได้รับการคัดเลือก</span>
         </span>
       );
     case 'APPROVED':

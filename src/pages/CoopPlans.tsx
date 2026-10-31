@@ -30,6 +30,7 @@ import {
   submitCoopPlan,
   endorseCoopPlan,
   screenCoopPlan,
+  selectCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -47,7 +48,13 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canReviewPlans, canScreenPlans, reviewableStatusFor } from '../auth/roles';
+import {
+  canEndorsePlans,
+  canReviewPlans,
+  canScreenPlans,
+  canSelectPlans,
+  reviewableStatusFor,
+} from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
@@ -82,6 +89,14 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
     NOT_ELIGIBLE: {
       label: 'ไม่ผ่านการตรวจคุณสมบัติ',
       className: 'bg-red-50 text-red-700 border-red-200',
+    },
+    SELECTED: {
+      label: 'ได้รับการคัดเลือก',
+      className: 'bg-violet-50 text-violet-700 border-violet-200',
+    },
+    NOT_SELECTED: {
+      label: 'ไม่ได้รับการคัดเลือก',
+      className: 'bg-slate-100 text-slate-700 border-slate-300',
     },
     APPROVED: {
       label: 'อนุมัติแล้ว',
@@ -265,6 +280,10 @@ function lockedReason(status: CoopPlanStatus): string | null {
       return 'แผนนี้ผ่านการตรวจแล้ว รอคัดเลือก แก้ไขไม่ได้';
     case 'NOT_ELIGIBLE':
       return 'แผนนี้ไม่ผ่านการตรวจคุณสมบัติ แก้ไขไม่ได้';
+    case 'SELECTED':
+      return 'แผนนี้ได้รับการคัดเลือกแล้ว แก้ไขไม่ได้';
+    case 'NOT_SELECTED':
+      return 'แผนนี้ไม่ได้รับการคัดเลือก แก้ไขไม่ได้ และยื่นแผนใหม่ในรอบนี้ไม่ได้';
     default:
       return null;
   }
@@ -1073,6 +1092,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             canScreenPlans(role)
               ? async ({ planId, decision, comment }) =>
                   screenCoopPlan(planId, decision, comment, await getIdToken())
+              : undefined
+          }
+          onSelect={
+            canSelectPlans(role)
+              ? async ({ planId, decision, comment }) =>
+                  selectCoopPlan(planId, decision, comment, await getIdToken())
               : undefined
           }
           onSaved={handleSavedReview}

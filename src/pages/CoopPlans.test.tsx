@@ -353,6 +353,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   it.each([
     ['ADVISOR', 'SUBMITTED'],
     ['STAFF', 'ENDORSED'],
+    ['COMMITTEE', 'ELIGIBLE'],
   ])('role %s: sees the review button on a %s plan', async (role, status) => {
     signedIn(role);
     getCoopPlansMock.mockResolvedValue([{ ...SUBMITTED_PLAN, status }]);

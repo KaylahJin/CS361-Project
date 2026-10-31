@@ -8,8 +8,11 @@
 
 export type Role = 'STUDENT' | 'ADVISOR' | 'STAFF' | 'COMMITTEE' | 'ADMIN';
 
-/** Roles that open the plan form on a submitted plan: ADVISOR gets the endorse form, STAFF the screening form. */
-export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF'];
+/**
+ * Roles that open the decision form on a plan at their step: ADVISOR gets the
+ * endorse form, STAFF the screening form, COMMITTEE the selection form.
+ */
+export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF', 'COMMITTEE'];
 
 /** Roles that get the student list page (D9 in #125). */
 export const STUDENT_LIST_ROLES: readonly string[] = ['ADVISOR', 'STAFF', 'ADMIN'];
@@ -20,12 +23,20 @@ export function canReviewPlans(role: string | null | undefined): boolean {
 
 /**
  * The plan status each reviewer role acts on (D2 in #125): the advisor
- * endorses SUBMITTED plans, staff reviews only once the advisor has endorsed.
+ * endorses SUBMITTED plans, staff screens once the advisor has endorsed, and
+ * the committee selects among the plans that passed screening.
  */
 export function reviewableStatusFor(
   role: string | null | undefined
-): 'SUBMITTED' | 'ENDORSED' {
-  return role === 'STAFF' ? 'ENDORSED' : 'SUBMITTED';
+): 'SUBMITTED' | 'ENDORSED' | 'ELIGIBLE' {
+  if (role === 'STAFF') return 'ENDORSED';
+  if (role === 'COMMITTEE') return 'ELIGIBLE';
+  return 'SUBMITTED';
+}
+
+/** The committee selects within the period's capacity (#149). */
+export function canSelectPlans(role: string | null | undefined): boolean {
+  return role === 'COMMITTEE';
 }
 
 /** Staff screens documents and criteria instead of approving (#148). */

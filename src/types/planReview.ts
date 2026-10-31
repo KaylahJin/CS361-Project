@@ -25,6 +25,9 @@ export type EndorseDecision = 'ENDORSED' | 'NOT_ENDORSED';
 /** Staff's step (#148). INCOMPLETE returns the plan to the student. */
 export type ScreenDecision = 'ELIGIBLE' | 'INCOMPLETE' | 'NOT_ELIGIBLE';
 
+/** The committee's step (#149). SELECTED only within the period's capacity. */
+export type SelectDecision = 'SELECTED' | 'NOT_SELECTED';
+
 /** GET /coop-plans/{planId}/eligibility: the plan's student against its period's criteria. */
 export interface PlanEligibility {
   plan_id: number;

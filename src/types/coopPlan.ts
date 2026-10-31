@@ -9,6 +9,8 @@ export type CoopPlanStatus =
   | 'ENDORSED'
   | 'ELIGIBLE'
   | 'NOT_ELIGIBLE'
+  | 'SELECTED'
+  | 'NOT_SELECTED'
   | 'APPROVED'
   | 'REJECTED';
 
