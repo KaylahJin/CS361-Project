@@ -15,6 +15,70 @@ interface PlanFiltersProps {
   onPeriodChange?: (periodId: string) => void;
 }
 
+// Every status the plan list can show, in the order the tabs appear. Counting
+// and labelling live in one place so a status added to the workflow later is
+// never silently dropped from the tabs (#142).
+const STATUS_TABS: { id: string; label: string; badgeColor: string }[] = [
+  { id: 'SUBMITTED', label: 'รอตรวจ', badgeColor: 'text-blue-600 font-bold' },
+  { id: 'ENDORSED', label: 'อาจารย์รับรองแล้ว', badgeColor: 'text-indigo-600 font-semibold' },
+  { id: 'ELIGIBLE', label: 'ผ่านคุณสมบัติ', badgeColor: 'text-teal-600 font-semibold' },
+  { id: 'INCOMPLETE', label: 'เอกสารไม่ครบ', badgeColor: 'text-amber-600 font-semibold' },
+  { id: 'NOT_ELIGIBLE', label: 'ไม่ผ่านคุณสมบัติ', badgeColor: 'text-rose-600 font-semibold' },
+  { id: 'SELECTED', label: 'ได้รับคัดเลือก', badgeColor: 'text-violet-600 font-semibold' },
+  { id: 'RETURNED', label: 'ส่งกลับแก้ไข', badgeColor: 'text-zinc-500 font-medium' },
+  { id: 'APPROVED', label: 'อนุมัติแล้ว', badgeColor: 'text-emerald-600 font-semibold' },
+  { id: 'REJECTED', label: 'ไม่อนุมัติ', badgeColor: 'text-zinc-700 font-semibold' },
+];
+
+// Shown as one tab: DRAFT is the old name for the same state.
+const PREPARING_IDS = ['PREPARING', 'DRAFT'];
+
+// Statuses that always get a tab, even at zero, so the row does not jump
+// around while the list is being filtered.
+const ALWAYS_SHOWN = new Set(['SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED']);
+
+const countOf = (counts: PlanCounts, id: string) => counts[id] ?? 0;
+
+/**
+ * Tabs for the statuses in `counts`, in STATUS_TABS order. A status that is
+ * not in the list yet still gets a tab labelled with its own code, so the
+ * numbers on the tabs always add up to the total.
+ */
+export function buildStatusTabs(counts: PlanCounts, total: number) {
+  const tabs = [
+    { id: 'ALL', label: 'ทั้งหมด', count: total, badgeColor: 'text-slate-600' },
+  ];
+
+  for (const tab of STATUS_TABS) {
+    const count = countOf(counts, tab.id);
+    if (count > 0 || ALWAYS_SHOWN.has(tab.id)) {
+      tabs.push({ ...tab, count });
+    }
+  }
+
+  const preparing = PREPARING_IDS.reduce((sum, id) => sum + countOf(counts, id), 0);
+  if (preparing > 0) {
+    tabs.push({
+      id: 'PREPARING',
+      label: 'ฉบับร่าง',
+      count: preparing,
+      badgeColor: 'text-slate-400 font-normal',
+    });
+  }
+
+  const known = new Set<string>([
+    'ALL',
+    ...PREPARING_IDS,
+    ...STATUS_TABS.map((tab) => tab.id),
+  ]);
+  for (const [id, count] of Object.entries(counts)) {
+    if (known.has(id) || !count) continue;
+    tabs.push({ id, label: id, count, badgeColor: 'text-slate-600 font-semibold' });
+  }
+
+  return tabs;
+}
+
 export const PlanFilters: React.FC<PlanFiltersProps> = ({
   value,
   onChange,
@@ -27,47 +91,7 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
   periodId = '',
   onPeriodChange,
 }) => {
-  const tabs = [
-    {
-      id: 'ALL',
-      label: 'ทั้งหมด',
-      count: total,
-      badgeColor: 'text-slate-600',
-    },
-    {
-      id: 'SUBMITTED',
-      label: 'รอตรวจ',
-      count: counts.SUBMITTED || 0,
-      badgeColor: 'text-blue-600 font-bold',
-    },
-    {
-      id: 'RETURNED',
-      label: 'ส่งกลับแก้ไข',
-      count: counts.RETURNED || 0,
-      badgeColor: 'text-zinc-500 font-medium',
-    },
-    {
-      id: 'APPROVED',
-      label: 'อนุมัติแล้ว',
-      count: counts.APPROVED || 0,
-      badgeColor: 'text-emerald-600 font-semibold',
-    },
-    {
-      id: 'REJECTED',
-      label: 'ไม่อนุมัติ',
-      count: counts.REJECTED || 0,
-      badgeColor: 'text-zinc-700 font-semibold',
-    },
-  ];
-
-  if ((counts.PREPARING || 0) > 0 || (counts.DRAFT || 0) > 0) {
-    tabs.push({
-      id: 'PREPARING',
-      label: 'ฉบับร่าง',
-      count: (counts.PREPARING || 0) + (counts.DRAFT || 0),
-      badgeColor: 'text-slate-400 font-normal',
-    });
-  }
+  const tabs = buildStatusTabs(counts, total);
 
   return (
     <div className="space-y-4">

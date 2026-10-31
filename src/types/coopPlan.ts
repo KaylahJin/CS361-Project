@@ -2,6 +2,8 @@
 // CS361 V2 — Coop Plan Types
 // ============================================================
 
+import type { PlanReviewHistoryItem } from './planReview';
+
 export type CoopPlanStatus =
   | 'PREPARING'
   | 'SUBMITTED'
@@ -26,6 +28,8 @@ export interface CoopPlan {
   reviewer_name: string | null;
   reviewed_at: string | null;
   review_comment: string | null;
+  /** Every decision, newest first. Only the detail route returns it. */
+  reviews?: PlanReviewHistoryItem[];
 
   created_at: string;
   updated_at: string;

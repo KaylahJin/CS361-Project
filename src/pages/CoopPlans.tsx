@@ -49,6 +49,7 @@ import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
 import { canEndorsePlans, canReviewPlans } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
+import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
@@ -559,6 +560,11 @@ function PlanDetail({
           <InfoRow label="ผู้ตรวจสอบ" value={plan.reviewer_name} />
           <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
           <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
+
+          <div className="pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
+            <ReviewHistory reviews={plan.reviews} />
+          </div>
         </section>
 
         <PlanAttachmentSummary
@@ -688,14 +694,23 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
-  const counts: PlanCounts = {
-    ALL: plans.length,
-    SUBMITTED: plans.filter((p) => p.status === 'SUBMITTED').length,
-    RETURNED: plans.filter((p) => p.status === 'RETURNED').length,
-    APPROVED: plans.filter((p) => p.status === 'APPROVED').length,
-    REJECTED: plans.filter((p) => p.status === 'REJECTED').length,
-    PREPARING: plans.filter((p) => p.status === 'PREPARING').length,
-  };
+  // Counted from the rows themselves, not from a fixed list of statuses: a
+  // status this page has never heard of still lands in `counts` and gets its
+  // own tab, so the numbers on the tabs always add up to the total (#142).
+  const counts: PlanCounts = plans.reduce(
+    (acc, plan) => {
+      acc[plan.status] = (acc[plan.status] ?? 0) + 1;
+      return acc;
+    },
+    {
+      ALL: plans.length,
+      SUBMITTED: 0,
+      RETURNED: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      PREPARING: 0,
+    } as PlanCounts,
+  );
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
@@ -758,18 +773,49 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     );
   }
 
+  // One dialog for both screens. It used to exist only below the list, so on the
+  // plan page "ตรวจพิจารณาแผน" set the plan to review and nothing opened (F11).
+  const reviewDialog = canReview && (
+    <PlanDetailModal
+      plan={reviewPlan}
+      open={Boolean(reviewPlan)}
+      onOpenChange={(open) => {
+        if (!open) setReviewPlan(null);
+      }}
+      reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+      getIdToken={getIdToken}
+      onSubmitReview={async ({ planId, decision, comment }) => {
+        const token = await getIdToken();
+        await reviewCoopPlan(planId, decision, comment, token);
+        await loadPlans();
+        // On the plan page, show the new result and the new history entry.
+        if (selectedPlan?.plan_id === planId) {
+          try {
+            setSelectedPlan(await getCoopPlan(planId, await getIdToken()));
+          } catch {
+            // keep what is on screen
+          }
+        }
+      }}
+      onSaved={handleSavedReview}
+    />
+  );
+
   if (selectedPlan) {
     return (
-      <PlanDetail
-        plan={selectedPlan}
-        onBack={() => setSelectedPlan(null)}
-        onEdit={() => openEditor(selectedPlan)}
-        onSubmitted={(submitted) => {
-          setSelectedPlan(submitted);
-          void loadPlans();
-        }}
-        onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
-      />
+      <>
+        <PlanDetail
+          plan={selectedPlan}
+          onBack={() => setSelectedPlan(null)}
+          onEdit={() => openEditor(selectedPlan)}
+          onSubmitted={(submitted) => {
+            setSelectedPlan(submitted);
+            void loadPlans();
+          }}
+          onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
+        />
+        {reviewDialog}
+      </>
     );
   }
 
@@ -1059,6 +1105,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
           onSaved={handleSavedReview}
         />
       )}
+      {reviewDialog}
     </div>
   );
 }
