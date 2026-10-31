@@ -29,6 +29,7 @@ import {
   getCoopPlans,
   submitCoopPlan,
   reviewCoopPlan,
+  endorseCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -46,7 +47,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canReviewPlans } from '../auth/roles';
+import { canEndorsePlans, canReviewPlans } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
@@ -70,6 +71,10 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
     RETURNED: {
       label: 'ส่งกลับแก้ไข',
       className: 'bg-amber-50 text-amber-700 border-amber-200',
+    },
+    ENDORSED: {
+      label: 'อาจารย์รับรองแล้ว',
+      className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     },
     APPROVED: {
       label: 'อนุมัติแล้ว',
@@ -792,6 +797,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
           }
         }
       }}
+      onEndorse={
+        canEndorsePlans(role)
+          ? async ({ planId, decision, comment }) =>
+              endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
       onSaved={handleSavedReview}
     />
   );
@@ -1076,7 +1087,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         )}
       </main>
 
-      {/* Plan Detail & Consideration Modal (V3-05.2) */}
       {reviewDialog}
     </div>
   );

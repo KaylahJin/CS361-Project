@@ -15,6 +15,7 @@ import type {
   CreateCoopPlanInput,
   UpdateCoopPlanInput,
 } from '../types/coopPlan';
+import type { EndorseDecision } from '../types/planReview';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -382,4 +383,28 @@ export async function reviewCoopPlan(
 
     throw error;
   }
+}
+
+/**
+ * Advisor endorsement (POST /coop-plans/{planId}/endorse, #147). Resolves with
+ * the plan as saved: ENDORSED, or RETURNED when not endorsed. 409 means the
+ * plan was no longer SUBMITTED.
+ */
+export async function endorseCoopPlan(
+  planId: number,
+  decision: EndorseDecision,
+  comment: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/endorse`;
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: jsonWriteHeaders(idToken),
+    body: JSON.stringify(comment ? { decision, comment } : { decision }),
+  });
+
+  if (!res.ok) {
+    throw await writeError(res, `endorse coop plan ${planId}`);
+  }
+  return await res.json();
 }

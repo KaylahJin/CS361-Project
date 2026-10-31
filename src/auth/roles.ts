@@ -8,7 +8,7 @@
 
 export type Role = 'STUDENT' | 'ADVISOR' | 'STAFF' | 'COMMITTEE' | 'ADMIN';
 
-/** Roles that open the review form on a submitted plan. */
+/** Roles that open the plan form on a submitted plan: ADVISOR gets the endorse form, STAFF the review form. */
 export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF'];
 
 /** Roles that get the student list page (D9 in #125). */
@@ -16,6 +16,11 @@ export const STUDENT_LIST_ROLES: readonly string[] = ['ADVISOR', 'STAFF', 'ADMIN
 
 export function canReviewPlans(role: string | null | undefined): boolean {
   return role != null && REVIEWER_ROLES.includes(role);
+}
+
+/** Advisors endorse instead of approving (#147). */
+export function canEndorsePlans(role: string | null | undefined): boolean {
+  return role === 'ADVISOR';
 }
 
 export function canViewStudentList(role: string | null | undefined): boolean {

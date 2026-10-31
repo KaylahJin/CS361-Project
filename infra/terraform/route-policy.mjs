@@ -19,6 +19,7 @@ export const PRIVATE_ROUTES = [
   'GET /coop-plans',
   'GET /coop-plans/{planId}',
   'POST /coop-plans/{planId}/review',
+  'POST /coop-plans/{planId}/endorse',
   'GET /students',
   'GET /students/{studentId}',
   'POST /coop-plans',

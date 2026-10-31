@@ -5,6 +5,7 @@ import {
   ChevronRight,
   FileText,
   RotateCcw,
+  UserCheck,
   XCircle,
 } from 'lucide-react';
 import type { PlanReviewItem } from '../../types/planReview';
@@ -35,6 +36,13 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
           <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
           <span>ส่งกลับแก้ไข</span>
+        </span>
+      );
+    case 'ENDORSED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
+          <UserCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+          <span>อาจารย์รับรองแล้ว</span>
         </span>
       );
     case 'APPROVED':

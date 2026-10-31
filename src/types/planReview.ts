@@ -19,6 +19,9 @@ export interface Reviewer {
 
 export type ReviewDecision = 'APPROVED' | 'RETURNED' | 'REJECTED';
 
+/** The advisor's step (#147). NOT_ENDORSED returns the plan to the student. */
+export type EndorseDecision = 'ENDORSED' | 'NOT_ENDORSED';
+
 export type PlanReviewItem = CoopPlan;
 
 /** One decision from plan_reviews, as GET /coop-plans/{id} returns it. */

@@ -89,19 +89,27 @@ export async function assertCanViewPlan(user, plan) {
 
 /**
  * Throws ForbiddenError when this caller may not review this plan.
- * Staff may review any plan. Advisors may only review plans belonging
- * to their assigned students. Students and Admins may not review plans.
+ * Staff may review any plan. Since #147 an advisor endorses instead
+ * (assertCanEndorsePlan) and may no longer approve; everyone else is refused.
  */
-export async function assertCanReviewPlan(user, plan, queryable = getPool()) {
+export async function assertCanReviewPlan(user) {
   if (user.role === 'STAFF') return;
+  throw new ForbiddenError(`role ${user.role} may not review coop plans`);
+}
 
+/**
+ * Endorsement is the advisor's step alone (D1/D2 in #125): an advisor endorses
+ * only the plans of students assigned to them. Staff screens and the committee
+ * selects; neither endorses, and nor does anyone else.
+ */
+export async function assertCanEndorsePlan(user, plan, queryable = getPool()) {
   if (user.role === 'ADVISOR') {
     const result = await queryable.query(IS_ASSIGNED, [user.sub, plan.student_id]);
     if (result.rows.length > 0) return;
     throw new ForbiddenError('advisor is not assigned to this student');
   }
 
-  throw new ForbiddenError(`role ${user.role} may not review coop plans`);
+  throw new ForbiddenError(`role ${user.role} may not endorse coop plans`);
 }
 
 /**
