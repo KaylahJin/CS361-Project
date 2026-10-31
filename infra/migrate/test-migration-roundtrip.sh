@@ -145,6 +145,31 @@ if q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step)
   exit 1
 fi
 echo "rejected as expected: NOT_ENDORSED without a reason, decision under the wrong step"
+
+echo "### 7a-2. one plan per period counts selection results (v3_05)"
+runfile infra/migrate/migrations/v3_05_one_plan_per_period_upgrade.sql
+runfile infra/migrate/migrations/v3_05_one_plan_per_period_upgrade.sql   # idempotent
+runfile infra/migrate/migrations/v3_05_one_plan_per_period_verify.sql
+q "UPDATE coop_plans SET status='NOT_SELECTED' WHERE plan_id=$END_PLAN;" >/dev/null
+SEL_STUDENT="$(q "SELECT student_id || ',' || period_id FROM coop_plans WHERE plan_id=$END_PLAN;")"
+SECOND_PLAN="INSERT INTO coop_plans (student_id, period_id, status)
+  VALUES ('${SEL_STUDENT%%,*}', '${SEL_STUDENT#*,}', 'PREPARING');"
+if OUT="$(q "$SECOND_PLAN" 2>&1)"; then
+  echo "UNEXPECTED: a second plan beside NOT_SELECTED was accepted" >&2
+  exit 1
+fi
+case "$OUT" in
+  *uq_coop_plans_active_period*) echo "rejected as expected: a new plan in the period of a NOT_SELECTED plan" ;;
+  *) echo "UNEXPECTED: refused for another reason: $OUT" >&2; exit 1 ;;
+esac
+runfile infra/migrate/migrations/v3_05_one_plan_per_period_rollback.sql
+runfile infra/migrate/migrations/v3_05_one_plan_per_period_rollback.sql  # re-runnable
+if runfile infra/migrate/migrations/v3_05_one_plan_per_period_verify.sql >/dev/null 2>&1; then
+  echo "UNEXPECTED: v3_05 verify passed after its rollback" >&2
+  exit 1
+fi
+echo "v3_05 verify fails after rollback, as it should"
+q "UPDATE coop_plans SET status='ENDORSED' WHERE plan_id=$END_PLAN;" >/dev/null
 runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql
 runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql  # re-runnable
 echo "plan $END_PLAN after rollback: $(q "SELECT status FROM coop_plans WHERE plan_id=$END_PLAN;") (expected SUBMITTED)"

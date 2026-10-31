@@ -395,7 +395,7 @@ describe('CoopPlanForm: create refusals', () => {
   it('409 ACTIVE_PLAN_EXISTS: tells the student to open the plan they already have', async () => {
     createCoopPlanMock.mockRejectedValue(new CoopPlanApiError('conflict', 409, 'ACTIVE_PLAN_EXISTS'));
 
-    expect(await submitCreate()).toHaveTextContent(/มีแผนที่ยังดำเนินการอยู่ในรอบนี้แล้ว/);
+    expect(await submitCreate()).toHaveTextContent(/มีแผนในรอบนี้แล้ว/);
     // Still a create form: nothing was made.
     expect(screen.getByRole('heading', { name: 'สร้างแผนสหกิจศึกษาใหม่' })).toBeInTheDocument();
   });

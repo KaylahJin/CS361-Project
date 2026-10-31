@@ -132,6 +132,9 @@ apply_v3_migration() {
   # Before the account seeding: the COMMITTEE role only exists from here on.
   echo "--- migrate/migrations/v3_04_review_steps_upgrade.sql"
   run_sql "$REPO_ROOT/infra/migrate/migrations/v3_04_review_steps_upgrade.sql" || return 1
+  # One plan per period counts SELECTED / NOT_SELECTED too (#149).
+  echo "--- migrate/migrations/v3_05_one_plan_per_period_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_05_one_plan_per_period_upgrade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no

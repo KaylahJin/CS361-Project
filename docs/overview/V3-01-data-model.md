@@ -66,7 +66,7 @@ V3 กำหนดสถานะสำหรับ Workflow ใหม่เป�
 - `STAFF` สามารถดูและพิจารณาแผนของนักศึกษาทุกคน ส่วน `ADVISOR` พิจารณาได้เฉพาะนักศึกษาที่ได้รับมอบหมาย
 - สถานะที่อนุญาตใน Workflow ใหม่ ได้แก่ `PREPARING`, `SUBMITTED`, `RETURNED`, `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED`, `NOT_SELECTED` (D2 ใน #125, migration `v3_04`) และ `APPROVED`, `REJECTED` ที่คงไว้จนกว่า #148 / #149 จะเลิกใช้
 - นักศึกษาแก้ไขแผนได้เฉพาะสถานะ `PREPARING` หรือ `RETURNED`
-- อนุญาตให้มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อนักศึกษาต่อรอบ โดยสถานะที่นับรวมคือ `PREPARING`, `SUBMITTED`, `RETURNED`, `ENDORSED` และ `ELIGIBLE`
+- อนุญาตให้มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อนักศึกษาต่อรอบ โดยสถานะที่นับรวมคือ `PREPARING`, `SUBMITTED`, `RETURNED`, `ENDORSED`, `ELIGIBLE` และผลคัดเลือก `SELECTED`, `NOT_SELECTED` (migration `v3_05`, #149) ส่วน `NOT_ELIGIBLE` ไม่นับ นักศึกษาแก้แล้วยื่นแผนใหม่ได้
 - การบันทึกผลพิจารณา การเพิ่มประวัติใน `plan_reviews` และการเปลี่ยนสถานะต้องทำใน Database Transaction เดียวกัน
 - การเปลี่ยนสถานะต้องตรวจสอบว่าสถานะปัจจุบันยังเป็น `SUBMITTED` หากมีผู้พิจารณาคนอื่นบันทึกผลไปก่อน ให้ยกเลิก Transaction และส่ง `409 Conflict` โดยไม่เขียนทับผลเดิม
 
