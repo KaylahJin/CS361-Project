@@ -102,29 +102,44 @@ run_sql_file() {
   run_sql "$REPO_ROOT/infra/$1"
 }
 
+create_app_role() {
+  # Create the fixed application role without putting its password in SQL
+  # arguments or environment variables.
+  psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
+    -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE ROLE coop_app LOGIN'
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_roles WHERE rolname = 'coop_app'
+)
+\gexec
+SQL
+
+  # psql prompts for the password twice and hashes it client-side.
+  psql -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
+    -v ON_ERROR_STOP=1 -c '\password coop_app'
+}
+
 # Every statement in the V3 migration is guarded (CREATE TABLE IF NOT EXISTS,
 # DROP CONSTRAINT IF EXISTS), so this runs on a fresh load and on an existing
 # database alike.
+
 apply_v3_migration() {
-  if [ ! -f "$V3_MIGRATION" ]; then
-    echo "--- V3 migration: NOT FOUND at infra/migrate/migrations/v3_01_upgrade.sql" >&2
-    echo "    app_users, advisor_student_assignments and plan_reviews will be absent," >&2
-    echo "    and every signed-in API request will answer 403. The file arrives with" >&2
-    echo "    the #98 migration work; check out that branch, or apply the SQL by hand." >&2
-    return 1
-  fi
+  local migration
 
-  echo "--- migrate/migrations/v3_01_upgrade.sql"
-  run_sql "$V3_MIGRATION" || return 1
-  echo "--- migrate/migrations/v3_02_cognito_sub_cascade.sql"
-  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" || return 1
+  for migration in \
+    "$V3_MIGRATION" \
+    "$REPO_ROOT/infra/migrate/migrations/v3_02_cognito_sub_cascade.sql" \
+    "$V3_ATTACHMENTS_MIGRATION" \
+    "$REPO_ROOT/infra/migrate/migrations/v3_02_least_privilege.sql"
+  do
+    if [ ! -f "$migration" ]; then
+      echo "error: migration not found: $migration" >&2
+      return 1
+    fi
 
-  if [ ! -f "$V3_ATTACHMENTS_MIGRATION" ]; then
-    echo "--- v3_02 attachments migration: NOT FOUND" >&2
-    return 1
-  fi
-  echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
-  run_sql "$V3_ATTACHMENTS_MIGRATION" || return 1
+    echo "--- ${migration#"$REPO_ROOT/infra/"}"
+    run_sql "$migration" || return 1
+  done
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no
@@ -189,7 +204,11 @@ fi
 # After the seed files: app_users.student_id and the assignment table reference
 # students, so the rows have to exist first.
 MIGRATION_OK=1
-apply_v3_migration || MIGRATION_OK=0
+create_app_role || MIGRATION_OK=0
+
+if [ "$MIGRATION_OK" -eq 1 ]; then
+  apply_v3_migration || MIGRATION_OK=0
+fi
 
 echo
 # Read from seed.sql, never hardcoded — a literal here went stale and failed a good load.

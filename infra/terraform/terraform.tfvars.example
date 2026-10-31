@@ -1,11 +1,11 @@
-# Copy this file to terraform.tfvars, then replace all three values.
+# Copy this file to terraform.tfvars, then replace all four required values.
 #
 #   cp terraform.tfvars.example terraform.tfvars
 #
 # terraform.tfvars is gitignored because it holds a real DB password.
 # Never commit it, and never paste it into chat, Slack, or a commit message.
-# All three values below are required — Terraform refuses to run until you
-# change them, so a forgotten placeholder fails fast instead of deploying.
+# All four values below are required — Terraform refuses to run until you
+# replace the placeholders, so a forgotten value fails fast.
 
 
 # Your own prefix for every resource name. Use your first name.
@@ -31,6 +31,10 @@ db_password = "change-me-8-chars-min-no-slash-at-or-quote-or-space"
 # the new value here, and `terraform apply` again.
 my_ip_cidr = "203.0.113.4/32"
 
+
+# Password for the least-privilege Lambda database account.
+# Use a unique password; never reuse the master password.
+app_db_password = "replace-with-a-unique-password"
 
 # ---- Optional: everything below has a working default, leave it alone ----
 #
