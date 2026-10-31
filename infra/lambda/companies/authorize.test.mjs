@@ -22,6 +22,7 @@ const STUDENT = { sub: 'sub-1', role: 'STUDENT', studentId: 'S001' };
 const ADVISOR = { sub: 'advisor-1', role: 'ADVISOR', studentId: null };
 const STAFF = { sub: 'staff-1', role: 'STAFF', studentId: null };
 const ADMIN = { sub: 'admin-1', role: 'ADMIN', studentId: null };
+const COMMITTEE = { sub: 'committee-1', role: 'COMMITTEE', studentId: null };
 
 describe('buildCoopPlanListFilter', () => {
   beforeEach(() => queryMock.mockReset());
@@ -44,6 +45,13 @@ describe('buildCoopPlanListFilter', () => {
     const filter = await buildCoopPlanListFilter(STAFF);
 
     expect(filter.sql).toBe('');
+    expect(filter.params).toEqual([]);
+  });
+
+  it('COMMITTEE: only plans that passed screening, with no params (D9, #149)', async () => {
+    const filter = await buildCoopPlanListFilter(COMMITTEE);
+
+    expect(filter.sql).toBe("p.status IN ('ELIGIBLE', 'SELECTED', 'NOT_SELECTED')");
     expect(filter.params).toEqual([]);
   });
 
@@ -127,6 +135,19 @@ describe('assertCanViewPlan', () => {
     await expect(assertCanViewPlan(STAFF, { student_id: 'anyone' })).resolves.toBeUndefined();
     expect(queryMock).not.toHaveBeenCalled();
   });
+
+  it.each(['ELIGIBLE', 'SELECTED', 'NOT_SELECTED'])('COMMITTEE: may view a %s plan', async (status) => {
+    await expect(assertCanViewPlan(COMMITTEE, { student_id: 'S001', status })).resolves.toBeUndefined();
+  });
+
+  it.each(['SUBMITTED', 'ENDORSED', 'RETURNED', 'NOT_ELIGIBLE', undefined])(
+    'COMMITTEE: may not view a plan in %s',
+    async (status) => {
+      await expect(assertCanViewPlan(COMMITTEE, { student_id: 'S001', status })).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+    },
+  );
 
   it('ADMIN without a reviewer role: throws ForbiddenError', async () => {
     await expect(assertCanViewPlan(ADMIN, { student_id: 'S001' })).rejects.toBeInstanceOf(

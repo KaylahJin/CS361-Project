@@ -14,7 +14,7 @@ import { parseJsonObject, findUnknownField } from './requestBody.mjs';
 
 const MAX_COMMENT = 2000;
 
-const LOCK_PLAN = `SELECT plan_id, student_id, status FROM coop_plans WHERE plan_id = $1 FOR UPDATE`;
+const LOCK_PLAN = `SELECT plan_id, student_id, period_id, status FROM coop_plans WHERE plan_id = $1 FOR UPDATE`;
 
 const UPDATE_PLAN = `UPDATE coop_plans
 SET status = $1, reviewer_name = $2, reviewed_at = NOW(), review_comment = $3, updated_at = NOW()
@@ -30,6 +30,9 @@ WHERE plan_id = $4`;
  * @property {string} reasonMessage   400 text when a reason is missing
  * @property {(user: object, plan: object, client: object) => Promise<void>} authorize  throws ForbiddenError
  * @property {{code: string, message: string}} notDecidable  409 when the plan is not in fromStatus
+ * @property {(client: object, plan: object, decision: string) => Promise<object|null>} [beforeWrite]
+ *   runs in the transaction with the plan locked, after every other check;
+ *   returns a response to refuse with (the transaction rolls back), or null
  */
 
 /** Returns `{ decision, comment }` or `{ response }` with the 400 to send. */
@@ -109,6 +112,12 @@ VALUES ($1, $2, '${step.step}', $3, $4)`;
         ...step.notDecidable,
         currentStatus: plan.status,
       });
+    }
+
+    const refused = step.beforeWrite && (await step.beforeWrite(client, plan, body.decision));
+    if (refused) {
+      await client.query('ROLLBACK');
+      return refused;
     }
 
     await client.query(UPDATE_PLAN, [step.statusFor[body.decision], reviewerName, body.comment, planId]);

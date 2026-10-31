@@ -24,7 +24,8 @@ import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_PLAN, toAttachment } from './
 const LABEL = 'listAttachments';
 
 // Only what authorization needs, not the four-table plan projection.
-const SELECT_PLAN_OWNER = `SELECT plan_id, student_id FROM coop_plans WHERE plan_id = $1`;
+// status: the committee may only see plans that passed screening (assertCanViewPlan).
+const SELECT_PLAN_OWNER = `SELECT plan_id, student_id, status FROM coop_plans WHERE plan_id = $1`;
 
 const SELECT_ATTACHMENTS = `SELECT attachment_id, plan_id, file_name, content_type, size_bytes, created_at
 FROM plan_attachments
