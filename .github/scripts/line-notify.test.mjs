@@ -87,4 +87,17 @@ describe('sending', () => {
     expect(results.map((r) => r.status)).toEqual(['sent', 'skipped']);
     expect(JSON.stringify(results)).not.toContain('U123');
   });
+
+  it('keeps sending to the others when one push throws', async () => {
+    const fetchFn = vi.fn()
+      .mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND'))
+      .mockResolvedValueOnce({ ok: true });
+    const messages = [{ to: 'a', text: 'hi' }, { to: 'b', text: 'hi' }];
+    const results = await pushAll(messages, { token: 't', userIds: { a: 'U1', b: 'U2' }, fetchFn });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(results).toEqual([
+      { status: 'failed', line: 'a: ส่งไม่สำเร็จ getaddrinfo ENOTFOUND' },
+      { status: 'sent', line: 'b: ส่งแล้ว' },
+    ]);
+  });
 });

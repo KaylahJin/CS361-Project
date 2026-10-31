@@ -125,12 +125,18 @@ export async function pushAll(messages, { token, userIds, fetchFn = fetch }) {
       results.push({ status: 'skipped', line: `${to}: ยังไม่มี userId ใน LINE_USER_IDS` });
       continue;
     }
-    const res = await fetchFn(`${LINE_API}/message/push`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: userIds[to], messages: [{ type: 'text', text }] }),
-    });
-    const failure = res.ok ? null : `${res.status} ${await res.text()}`;
+    // A network error for one person must not stop the rest or lose the summary.
+    let failure;
+    try {
+      const res = await fetchFn(`${LINE_API}/message/push`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: userIds[to], messages: [{ type: 'text', text }] }),
+      });
+      failure = res.ok ? null : `${res.status} ${await res.text()}`;
+    } catch (err) {
+      failure = err instanceof Error ? err.message : String(err);
+    }
     results.push(failure ? { status: 'failed', line: `${to}: ส่งไม่สำเร็จ ${failure}` } : { status: 'sent', line: `${to}: ส่งแล้ว` });
   }
   return results;
