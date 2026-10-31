@@ -125,6 +125,13 @@ apply_v3_migration() {
   fi
   echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
   run_sql "$V3_ATTACHMENTS_MIGRATION" || return 1
+  # Period criteria (#151). Without it a fresh load has no periods.min_gpa, and
+  # the eligibility query behind every submit answers 500.
+  echo "--- migrate/migrations/v3_03_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_03_upgrade.sql" || return 1
+  # Before the account seeding: the COMMITTEE role only exists from here on.
+  echo "--- migrate/migrations/v3_04_review_steps_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_04_review_steps_upgrade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no

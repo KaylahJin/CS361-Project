@@ -17,7 +17,7 @@ V3 กำหนดสถานะสำหรับ Workflow ใหม่เป�
 เชื่อมบัญชีที่ผ่านการยืนยันตัวตนกับบทบาทในระบบ
 
 - `cognito_sub`: รหัสบัญชีจาก Cognito ที่ผ่านการตรวจสอบแล้ว และต้องไม่ซ้ำกัน
-- `role`: บทบาท `STUDENT`, `ADVISOR`, `STAFF` หรือ `ADMIN`
+- `role`: บทบาท `STUDENT`, `ADVISOR`, `STAFF`, `COMMITTEE` หรือ `ADMIN` (`STAFF` คือ Coordinator ใน D1 ของ #125, `COMMITTEE` เพิ่มใน #147)
 - `student_id`: อ้างอิง `students.student_id` สำหรับบัญชีนักศึกษา โดยอนุญาตให้เป็นค่าว่างสำหรับบทบาทอื่น
 - `is_active`: ระบุว่าบัญชีเปิดใช้งานอยู่หรือไม่
 
@@ -42,8 +42,9 @@ V3 กำหนดสถานะสำหรับ Workflow ใหม่เป�
 - `review_id`: Primary Key
 - `plan_id`: Foreign Key ไปยัง `coop_plans.plan_id`
 - `reviewer_sub`: อ้างอิงบัญชีผู้พิจารณาใน `app_users`
-- `decision`: `APPROVED`, `REJECTED` หรือ `RETURNED`
-- `comment`: ความเห็นของผู้พิจารณา โดยต้องระบุเมื่อส่งกลับหรือไม่อนุมัติ
+- `step` (#147): ขั้นที่บันทึก `ENDORSEMENT`, `SCREENING` หรือ `SELECTION` ค่าว่างคือผลจาก route `/review` เดิม
+- `decision`: ขั้น `ENDORSEMENT` ใช้ `ENDORSED` / `NOT_ENDORSED`, ขั้น `SCREENING` ใช้ `ELIGIBLE` / `INCOMPLETE` / `NOT_ELIGIBLE`, ขั้น `SELECTION` ใช้ `SELECTED` / `NOT_SELECTED` ส่วน `APPROVED`, `REJECTED`, `RETURNED` ใช้ได้เฉพาะเมื่อไม่มี `step`
+- `comment`: ความเห็นของผู้พิจารณา โดยต้องระบุทุกครั้งที่ผลไม่ผ่าน (ทุกค่ายกเว้น `APPROVED`, `ENDORSED`, `ELIGIBLE`, `SELECTED`)
 - `reviewed_at`: วันเวลาที่บันทึกผลพิจารณา
 
 เก็บประวัติการพิจารณาทุกครั้ง เพื่อให้ตรวจสอบผลครั้งก่อนหน้าได้เมื่อมีการส่งแผนกลับมาแก้ไขและยื่นใหม่ ตารางนี้จึงต้องรองรับหลายรายการต่อหนึ่งแผน
@@ -63,9 +64,9 @@ V3 กำหนดสถานะสำหรับ Workflow ใหม่เป�
 - ใช้ Foreign Key เพื่อรักษาความสัมพันธ์ของข้อมูล และกำหนดค่า Role, Status และ Decision ให้ตรงกับค่าที่อนุญาต
 - Backend ต้องตรวจสอบเจ้าของแผน บทบาทผู้ใช้ และการมอบหมาย Advisor ทุกครั้งที่เข้าถึงหรือพิจารณาแผน
 - `STAFF` สามารถดูและพิจารณาแผนของนักศึกษาทุกคน ส่วน `ADVISOR` พิจารณาได้เฉพาะนักศึกษาที่ได้รับมอบหมาย
-- สถานะที่อนุญาตใน Workflow ใหม่ ได้แก่ `PREPARING`, `SUBMITTED`, `RETURNED`, `APPROVED` และ `REJECTED`
+- สถานะที่อนุญาตใน Workflow ใหม่ ได้แก่ `PREPARING`, `SUBMITTED`, `RETURNED`, `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED`, `NOT_SELECTED` (D2 ใน #125, migration `v3_04`) และ `APPROVED`, `REJECTED` ที่คงไว้จนกว่า #148 / #149 จะเลิกใช้
 - นักศึกษาแก้ไขแผนได้เฉพาะสถานะ `PREPARING` หรือ `RETURNED`
-- อนุญาตให้มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อนักศึกษาต่อรอบ โดยสถานะที่นับรวมคือ `PREPARING`, `SUBMITTED` และ `RETURNED`
+- อนุญาตให้มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อนักศึกษาต่อรอบ โดยสถานะที่นับรวมคือ `PREPARING`, `SUBMITTED`, `RETURNED`, `ENDORSED` และ `ELIGIBLE`
 - การบันทึกผลพิจารณา การเพิ่มประวัติใน `plan_reviews` และการเปลี่ยนสถานะต้องทำใน Database Transaction เดียวกัน
 - การเปลี่ยนสถานะต้องตรวจสอบว่าสถานะปัจจุบันยังเป็น `SUBMITTED` หากมีผู้พิจารณาคนอื่นบันทึกผลไปก่อน ให้ยกเลิก Transaction และส่ง `409 Conflict` โดยไม่เขียนทับผลเดิม
 

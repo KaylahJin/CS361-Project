@@ -15,9 +15,15 @@ done
 : "${COOP_APPROVED_ADVISOR_SUB:?Set approved advisor Cognito sub}"
 : "${COOP_APPROVED_STAFF_SUB:?Set approved staff Cognito sub}"
 : "${COOP_APPROVED_ADMIN_SUB:?Set approved admin Cognito sub}"
+# COM-1 is optional until #149 gives COMMITTEE something to do, so stacks
+# seeded before #147 keep working without a fifth Cognito account.
+COMMITTEE_SUB="${COOP_APPROVED_COMMITTEE_SUB:-}"
+APPROVED_SUBS=("$COOP_APPROVED_STUDENT_SUB" "$COOP_APPROVED_ADVISOR_SUB" "$COOP_APPROVED_STAFF_SUB" "$COOP_APPROVED_ADMIN_SUB")
+[ -n "$COMMITTEE_SUB" ] && APPROVED_SUBS+=("$COMMITTEE_SUB")
+EXPECTED="${#APPROVED_SUBS[@]}"
 
-if [ "$(printf '%s\n' "$COOP_APPROVED_STUDENT_SUB" "$COOP_APPROVED_ADVISOR_SUB" "$COOP_APPROVED_STAFF_SUB" "$COOP_APPROVED_ADMIN_SUB" | sort -u | wc -l | tr -d ' ')" != 4 ]; then
-  echo "error: approved subs must be four distinct values." >&2
+if [ "$(printf '%s\n' "${APPROVED_SUBS[@]}" | sort -u | wc -l | tr -d ' ')" != "$EXPECTED" ]; then
+  echo "error: approved subs must be $EXPECTED distinct values." >&2
   exit 1
 fi
 
@@ -58,7 +64,7 @@ if [ "$(psql_var "SELECT EXISTS (SELECT 1 FROM students WHERE student_id=:'id');
   exit 1
 fi
 
-# Resolve all four approved immutable sub values before making any DB changes.
+# Resolve every approved immutable sub value before making any DB changes.
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
@@ -66,6 +72,7 @@ aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
   COOP_APPROVED_ADVISOR_SUB="$COOP_APPROVED_ADVISOR_SUB" \
   COOP_APPROVED_STAFF_SUB="$COOP_APPROVED_STAFF_SUB" \
   COOP_APPROVED_ADMIN_SUB="$COOP_APPROVED_ADMIN_SUB" \
+  COOP_APPROVED_COMMITTEE_SUB="$COMMITTEE_SUB" \
   node -e '
     let raw="";
     process.stdin.on("data", c => raw += c);
@@ -76,6 +83,9 @@ aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
         [process.env.COOP_APPROVED_STAFF_SUB,"STAFF"],
         [process.env.COOP_APPROVED_ADMIN_SUB,"ADMIN"]
       ];
+      if (process.env.COOP_APPROVED_COMMITTEE_SUB) {
+        wanted.push([process.env.COOP_APPROVED_COMMITTEE_SUB,"COMMITTEE"]);
+      }
       const users=JSON.parse(raw).Users ?? [];
       const rows=[];
       for (const [sub,role] of wanted) {
@@ -87,7 +97,7 @@ aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
         }
         rows.push({sub,email,role});
       }
-      if (new Set(rows.map(x=>x.email)).size!==4) {
+      if (new Set(rows.map(x=>x.email)).size!==rows.length) {
         console.error("error: duplicate email attributes among approved users.");
         process.exitCode=1; return;
       }
@@ -95,8 +105,8 @@ aws cognito-idp list-users --user-pool-id "$POOL_ID" --output json |
     });
   ' > "$TMP"
 
-[ "$(wc -l < "$TMP" | tr -d ' ')" = 4 ] || {
-  echo "error: four approved users were not validated; database unchanged." >&2
+[ "$(wc -l < "$TMP" | tr -d ' ')" = "$EXPECTED" ] || {
+  echo "error: $EXPECTED approved users were not validated; database unchanged." >&2
   exit 1
 }
 
@@ -124,7 +134,7 @@ while IFS= read -r account; do
     BEGIN;
     UPDATE app_users SET cognito_sub=:'sub'
     WHERE lower(email)=lower(:'email') AND cognito_sub <> :'sub'
-      AND cognito_sub NOT IN (:'student_sub',:'advisor_sub',:'staff_sub',:'admin_sub');
+      AND cognito_sub NOT IN (:'student_sub',:'advisor_sub',:'staff_sub',:'admin_sub',:'committee_sub');
 
     INSERT INTO app_users(cognito_sub,email,role,student_id,is_active)
     VALUES (:'sub',:'email',:'role',$LINK_SQL,TRUE)
@@ -135,7 +145,7 @@ while IFS= read -r account; do
   " -v sub="$SUB" -v email="$EMAIL" -v role="$ROLE" \
     -v student_sub="$STUDENT_SUB" -v advisor_sub="$ADVISOR_SUB" \
     -v staff_sub="$STAFF_SUB" -v admin_sub="$ADMIN_SUB" \
-    "${LINK_ARGS[@]}" >/dev/null
+    -v committee_sub="$COMMITTEE_SUB" "${LINK_ARGS[@]}" >/dev/null
 
   if [ "$ROLE" = ADVISOR ]; then
     psql_var "
@@ -149,10 +159,11 @@ done < "$TMP"
 # Deactivate by immutable identity, never by mutable email.
 psql_var "
   UPDATE app_users SET is_active=FALSE
-  WHERE cognito_sub NOT IN (:'student_sub',:'advisor_sub',:'staff_sub',:'admin_sub')
+  WHERE cognito_sub NOT IN (:'student_sub',:'advisor_sub',:'staff_sub',:'admin_sub',:'committee_sub')
     AND is_active=TRUE;
 " -v student_sub="$STUDENT_SUB" -v advisor_sub="$ADVISOR_SUB" \
-  -v staff_sub="$STAFF_SUB" -v admin_sub="$ADMIN_SUB" >/dev/null
+  -v staff_sub="$STAFF_SUB" -v admin_sub="$ADMIN_SUB" \
+  -v committee_sub="$COMMITTEE_SUB" >/dev/null
 
 psql -X -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
   -v ON_ERROR_STOP=1 \
