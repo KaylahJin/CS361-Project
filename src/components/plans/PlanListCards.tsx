@@ -7,6 +7,8 @@ interface PlanListCardsProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff (#147). */
+  reviewableStatus?: PlanReviewItem['status'];
 }
 
 function formatDate(isoString: string | null): string {
@@ -27,11 +29,12 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
   plans,
   onOpen,
   onReview,
+  reviewableStatus = 'SUBMITTED',
 }) => {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {plans.map((plan) => {
-        const isPending = plan.status === 'SUBMITTED';
+        const isPending = plan.status === reviewableStatus;
         // Only a viewer who was given onReview can review. Without it the plan is
         // read-only, so the button must not offer "ตรวจแผน" and look clickable.
         const canReview = isPending && Boolean(onReview);
