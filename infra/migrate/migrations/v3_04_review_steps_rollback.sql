@@ -20,6 +20,30 @@ ALTER TABLE plan_reviews DROP CONSTRAINT IF EXISTS chk_plan_reviews_step;
 ALTER TABLE plan_reviews DROP CONSTRAINT IF EXISTS chk_plan_reviews_comment;
 ALTER TABLE app_users DROP CONSTRAINT IF EXISTS app_users_role_check;
 
+-- APPROVED and REJECTED keep their schema.sql constraints: a reviewer and a
+-- time on both (chk_coop_plans_decision), a reason on REJECTED
+-- (chk_coop_plans_reject_reason). The new final statuses never needed those
+-- columns, so fill any gap from the plan's latest review, then a fixed marker.
+UPDATE coop_plans p
+SET reviewer_name  = COALESCE(p.reviewer_name, left(r.email, 100), 'v3_04 rollback'),
+    reviewed_at    = COALESCE(p.reviewed_at, r.reviewed_at, NOW()),
+    review_comment = CASE
+        WHEN p.status = 'SELECTED' THEN p.review_comment
+        ELSE COALESCE(NULLIF(btrim(p.review_comment), ''), r.comment,
+                      'v3_04 rollback: ' || p.status)
+    END
+FROM coop_plans src
+LEFT JOIN LATERAL (
+    SELECT u.email, pr.reviewed_at, NULLIF(btrim(pr.comment), '') AS comment
+    FROM plan_reviews pr
+    LEFT JOIN app_users u ON u.cognito_sub = pr.reviewer_sub
+    WHERE pr.plan_id = src.plan_id
+    ORDER BY pr.reviewed_at DESC, pr.review_id DESC
+    LIMIT 1
+) r ON TRUE
+WHERE src.plan_id = p.plan_id
+  AND p.status IN ('SELECTED', 'NOT_ELIGIBLE', 'NOT_SELECTED');
+
 UPDATE coop_plans SET status = 'SUBMITTED' WHERE status IN ('ENDORSED', 'ELIGIBLE');
 UPDATE coop_plans SET status = 'APPROVED'  WHERE status = 'SELECTED';
 UPDATE coop_plans SET status = 'REJECTED'  WHERE status IN ('NOT_ELIGIBLE', 'NOT_SELECTED');

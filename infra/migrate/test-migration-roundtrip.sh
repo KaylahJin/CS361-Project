@@ -127,6 +127,12 @@ runfile infra/migrate/migrations/v3_04_review_steps_upgrade.sql
 runfile infra/migrate/migrations/v3_04_review_steps_upgrade.sql   # idempotent
 psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -v ON_ERROR_STOP=1 \
   -v plans_before="$PLANS_BEFORE" -f infra/migrate/migrations/v3_04_review_steps_verify.sql
+if psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -v ON_ERROR_STOP=1 -q \
+     -v plans_before="$((PLANS_BEFORE + 1))" -f infra/migrate/migrations/v3_04_review_steps_verify.sql >/dev/null 2>&1; then
+  echo "UNEXPECTED: verify passed with a wrong plans_before" >&2
+  exit 1
+fi
+echo "verify fails as expected when the plan count does not match"
 END_PLAN="$(q "SELECT min(plan_id) FROM coop_plans WHERE status='SUBMITTED' AND plan_id <> $PLAN_ID;")"
 q "INSERT INTO app_users (cognito_sub, email, role)
    VALUES ('sub-committee-test', 'committee-test@example.com', 'COMMITTEE');" >/dev/null
@@ -145,11 +151,32 @@ if q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step)
   exit 1
 fi
 echo "rejected as expected: NOT_ENDORSED without a reason, decision under the wrong step"
+# A final status with none of the legacy review columns set: rollback must
+# fill them from the review, or REJECTED breaks chk_coop_plans_decision.
+NE_PLAN="$(q "SELECT min(plan_id) FROM coop_plans WHERE status='SUBMITTED' AND plan_id NOT IN ($PLAN_ID, $END_PLAN);")"
+q "UPDATE coop_plans SET status='NOT_ELIGIBLE', reviewer_name=NULL, reviewed_at=NULL, review_comment=NULL
+   WHERE plan_id=$NE_PLAN;" >/dev/null
+q "INSERT INTO plan_reviews (plan_id, reviewer_sub, decision, step, comment)
+   VALUES ($NE_PLAN, 'sub-staff-renewed', 'NOT_ELIGIBLE', 'SCREENING', 'GPA below minimum');" >/dev/null
 runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql
 runfile infra/migrate/migrations/v3_04_review_steps_rollback.sql  # re-runnable
-echo "plan $END_PLAN after rollback: $(q "SELECT status FROM coop_plans WHERE plan_id=$END_PLAN;") (expected SUBMITTED)"
-echo "committee account after rollback: $(q "SELECT role || ' active=' || is_active FROM app_users WHERE cognito_sub='sub-committee-test';")"
-echo "plans: $PLANS_BEFORE before, $(q 'SELECT count(*) FROM coop_plans;') after rollback"
+# Checked here, before the v3_01 rollback below drops app_users.
+expect() {
+  if [ "$2" != "$3" ]; then
+    echo "ERROR: $1 is '$2', expected '$3'" >&2
+    exit 1
+  fi
+  echo "ok: $1 = $2"
+}
+expect "plan $END_PLAN status after rollback" \
+  "$(q "SELECT status FROM coop_plans WHERE plan_id=$END_PLAN;")" "SUBMITTED"
+expect "committee account after rollback" \
+  "$(q "SELECT role || ' active=' || is_active FROM app_users WHERE cognito_sub='sub-committee-test';")" \
+  "STAFF active=false"
+expect "plan $NE_PLAN after rollback" \
+  "$(q "SELECT status || ' / ' || review_comment || ' / ' || (reviewer_name IS NOT NULL AND reviewed_at IS NOT NULL) FROM coop_plans WHERE plan_id=$NE_PLAN;")" \
+  "REJECTED / GPA below minimum / true"
+expect "plan count after rollback" "$(q 'SELECT count(*) FROM coop_plans;')" "$PLANS_BEFORE"
 echo
 
 echo "### 7b. attachments migration: upgrade, re-run, FK, rollback"
