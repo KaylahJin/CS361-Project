@@ -797,6 +797,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
           }
         }
       }}
+      onEndorse={
+        canEndorsePlans(role)
+          ? async ({ planId, decision, comment }) =>
+              endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
       onSaved={handleSavedReview}
     />
   );
@@ -1081,30 +1087,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         )}
       </main>
 
-      {/* Plan Detail & Consideration Modal (V3-05.2) */}
-      {canReview && (
-        <PlanDetailModal
-          plan={reviewPlan}
-          open={Boolean(reviewPlan)}
-          onOpenChange={(open) => {
-            if (!open) setReviewPlan(null);
-          }}
-          reviewerName={user?.email || 'ผู้ตรวจสอบ'}
-          getIdToken={getIdToken}
-          onSubmitReview={async ({ planId, decision, comment }) => {
-            const token = await getIdToken();
-            await reviewCoopPlan(planId, decision, comment, token);
-            await loadPlans();
-          }}
-          onEndorse={
-            canEndorsePlans(role)
-              ? async ({ planId, decision, comment }) =>
-                  endorseCoopPlan(planId, decision, comment, await getIdToken())
-              : undefined
-          }
-          onSaved={handleSavedReview}
-        />
-      )}
       {reviewDialog}
     </div>
   );
