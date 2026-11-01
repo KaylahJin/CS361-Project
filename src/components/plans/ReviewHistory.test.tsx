@@ -92,7 +92,7 @@ describe('PlanActivityTimeline', () => {
           plan_id: 1,
           student_id: '6600000001',
           period_id: 'P2568-1',
-          position_id: 1,
+          position_id: 'POS-01',
           status: 'APPROVED',
           acknowledged_pre_course: true,
           terms_accepted_at: '2026-10-21T09:00:00Z',
