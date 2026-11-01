@@ -113,6 +113,16 @@ export async function assertCanEndorsePlan(user, plan, queryable = getPool()) {
 }
 
 /**
+ * Screening (documents and the period's criteria) is staff's step alone (D1/D2
+ * in #125), on any student's plan. It also covers reading a plan's
+ * eligibility result, which exists for that form.
+ */
+export async function assertCanScreenPlan(user) {
+  if (user.role === 'STAFF') return;
+  throw new ForbiddenError(`role ${user.role} may not screen coop plans`);
+}
+
+/**
  * Row filter for the student routes, same shape as buildCoopPlanListFilter:
  * a SQL fragment with `$PARAM` placeholders plus the params to bind. `sql` is
  * '' when the role may see every student.
