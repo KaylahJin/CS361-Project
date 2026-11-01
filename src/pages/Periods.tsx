@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, CheckCircle2, CircleMinus } from 'lucide-react';
+import { Calendar, CheckCircle2, CircleMinus, Clock } from 'lucide-react';
 import { getPeriodTimeline, PeriodApiError } from '../data/periodAPI';
 import type {
     ScheduleTimelineResponse,
     CoopSchedule,
     ActivityType,
 } from '../types/period';
+import { classifyScheduleDeadline } from '../utils/deadline';
 
 const ScheduleCard: React.FC<{
     schedule: CoopSchedule;
     index: number;
 }> = ({ schedule, index }) => {
+    const deadlineInfo = classifyScheduleDeadline(schedule.end_date);
     const formatDate = (isoStr?: string) => {
         if (!isoStr) return '';
         return isoStr.split('T')[0];
@@ -50,10 +52,16 @@ const ScheduleCard: React.FC<{
                     {/* Schedule Info */}
                     <div className="min-w-0 flex-1">
 
-                        {/* Activity Type + Active */}
+                        {/* Activity Type + Deadline Status Badge */}
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
                                 {schedule.activity_type}
+                            </span>
+                            <span
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${deadlineInfo.badgeClass}`}
+                            >
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                <span>{deadlineInfo.label}</span>
                             </span>
                         </div>
 

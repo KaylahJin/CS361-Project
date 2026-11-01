@@ -24,10 +24,21 @@ export type EndorseDecision = 'ENDORSED' | 'NOT_ENDORSED';
 
 export type PlanReviewItem = CoopPlan;
 
+export type ReviewHistoryDecision =
+  | ReviewDecision
+  | EndorseDecision
+  | 'ELIGIBLE'
+  | 'INCOMPLETE'
+  | 'NOT_ELIGIBLE'
+  | 'SELECTED'
+  | 'NOT_SELECTED'
+  | (string & {});
+
 /** One decision from plan_reviews, as GET /coop-plans/{id} returns it. */
 export interface PlanReviewHistoryItem {
   review_id: number;
-  decision: ReviewDecision;
+  step?: string | null;
+  decision: ReviewHistoryDecision;
   comment: string | null;
   reviewed_at: string;
   reviewer_name: string | null;

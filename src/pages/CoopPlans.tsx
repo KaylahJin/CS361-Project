@@ -48,9 +48,19 @@ import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
 import { canEndorsePlans, canManageOwnPlan, canReviewPlans } from '../auth/roles';
-import { PlanFilters } from '../components/plans/PlanFilters';
-import { ReviewHistory } from '../components/plans/ReviewHistory';
-import { PlanListTable } from '../components/plans/PlanListTable';
+import {
+  PlanFilters,
+  type CompanyFilterOption,
+  type PeriodFilterOption,
+} from '../components/plans/PlanFilters';
+import {
+  ReviewHistory,
+  PlanActivityTimeline,
+} from '../components/plans/ReviewHistory';
+import {
+  PlanListTable,
+  PlanDeadlineBadge,
+} from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
 import { PlanDetailModal } from '../components/plans/PlanDetailModal';
@@ -388,7 +398,13 @@ function PlanDetail({
           </div>
 
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <StatusBadge status={plan.status} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={plan.status} />
+              <PlanDeadlineBadge
+                deadline={plan.submission_deadline ?? plan.application_deadline ?? null}
+                status={plan.status}
+              />
+            </div>
 
             {isStudent && isPlanEditable(plan.status) && (
               <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -567,6 +583,13 @@ function PlanDetail({
             <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
             <ReviewHistory reviews={plan.reviews} />
           </div>
+
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">
+              บันทึกกิจกรรมของแผน (Activity History)
+            </h3>
+            <PlanActivityTimeline plan={plan} />
+          </div>
         </section>
 
         <PlanAttachmentSummary
@@ -662,6 +685,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const [curriculumFilter, setCurriculumFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [periodId, setPeriodId] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const [toast, setToast] = useState<ToastState>({
@@ -837,6 +861,35 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const isUnauthenticated =
     error && error.title === 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ';
 
+  const companyOptions: CompanyFilterOption[] = Array.from(
+    plans.reduce((map, p) => {
+      if (p.company_id && !map.has(p.company_id)) {
+        const name = p.company_short_name || p.company_name || p.company_id;
+        map.set(p.company_id, {
+          company_id: p.company_id,
+          label: `${name} (${p.company_id})`,
+        });
+      }
+      return map;
+    }, new Map<string, CompanyFilterOption>()).values()
+  );
+
+  const periodOptions: PeriodFilterOption[] = (() => {
+    const map = new Map<string, PeriodFilterOption>([
+      ['P2568-1', { period_id: 'P2568-1', label: 'ปีการศึกษา 2568/1' }],
+      ['P2567-2', { period_id: 'P2567-2', label: 'ปีการศึกษา 2567/2' }],
+    ]);
+    for (const p of plans) {
+      if (p.period_id && !map.has(p.period_id)) {
+        map.set(p.period_id, {
+          period_id: p.period_id,
+          label: p.period_name || p.period_id,
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
+
   const displayedPlans = plans.filter((plan) => {
     if (statusFilter && statusFilter !== 'ALL') {
       if (plan.status !== statusFilter) return false;
@@ -846,6 +899,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     }
     if (periodId) {
       if (plan.period_id !== periodId) return false;
+    }
+    if (companyId) {
+      if (plan.company_id !== companyId) return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -1000,6 +1056,10 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 onCurriculumChange={setCurriculumFilter}
                 periodId={periodId}
                 onPeriodChange={setPeriodId}
+                companyId={companyId}
+                onCompanyChange={setCompanyId}
+                companyOptions={companyOptions}
+                periodOptions={periodOptions}
               />
             )}
           </div>
@@ -1038,17 +1098,27 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               ไม่พบรายการแผนสหกิจศึกษา
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-sm">
-              {searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL'
+              {searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
                 : 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'}
             </p>
-            {(searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL') && (
+            {(searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId) && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
                   setCurriculumFilter('ALL');
+                  setPeriodId('');
+                  setCompanyId('');
                 }}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
               >

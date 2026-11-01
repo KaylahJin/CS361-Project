@@ -1,6 +1,16 @@
 import React from 'react';
-import { Search, X, Filter, Calendar } from 'lucide-react';
+import { Search, X, Filter, Calendar, Building2 } from 'lucide-react';
 import type { PlanCounts } from '../../types/planReview';
+
+export interface CompanyFilterOption {
+  company_id: string;
+  label: string;
+}
+
+export interface PeriodFilterOption {
+  period_id: string;
+  label: string;
+}
 
 interface PlanFiltersProps {
   value: string;
@@ -13,6 +23,10 @@ interface PlanFiltersProps {
   onCurriculumChange?: (curriculum: string) => void;
   periodId?: string;
   onPeriodChange?: (periodId: string) => void;
+  companyId?: string;
+  onCompanyChange?: (companyId: string) => void;
+  companyOptions?: CompanyFilterOption[];
+  periodOptions?: PeriodFilterOption[];
 }
 
 // Every status the plan list can show, in the order the tabs appear. Counting
@@ -36,6 +50,11 @@ const PREPARING_IDS = ['PREPARING', 'DRAFT'];
 // Statuses that always get a tab, even at zero, so the row does not jump
 // around while the list is being filtered.
 const ALWAYS_SHOWN = new Set(['SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED']);
+
+const DEFAULT_PERIOD_OPTIONS: PeriodFilterOption[] = [
+  { period_id: 'P2568-1', label: 'ปีการศึกษา 2568/1' },
+  { period_id: 'P2567-2', label: 'ปีการศึกษา 2567/2' },
+];
 
 const countOf = (counts: PlanCounts, id: string) => counts[id] ?? 0;
 
@@ -90,18 +109,25 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
   onCurriculumChange,
   periodId = '',
   onPeriodChange,
+  companyId = '',
+  onCompanyChange,
+  companyOptions = [],
+  periodOptions,
 }) => {
   const tabs = buildStatusTabs(counts, total);
+  const periods =
+    periodOptions && periodOptions.length > 0 ? periodOptions : DEFAULT_PERIOD_OPTIONS;
 
   return (
     <div className="space-y-4">
-      {/* Search and Secondary Filter Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* Search and Secondary Filter Controls (FR8: Student, Employer, Period, Status) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {onSearchChange && (
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
+              aria-label="ค้นหานักศึกษา ตำแหน่ง หรือสถานประกอบการ"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="ค้นหารหัสนักศึกษา ชื่อ ตำแหน่ง หรือบริษัท..."
@@ -120,17 +146,21 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
           </div>
         )}
 
-        {onCurriculumChange && (
+        {onCompanyChange && (
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+            <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
             <select
-              value={curriculum}
-              onChange={(e) => onCurriculumChange(e.target.value)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+              aria-label="กรองตามสถานประกอบการ"
+              value={companyId}
+              onChange={(e) => onCompanyChange(e.target.value)}
+              className="h-10 max-w-[220px] rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
             >
-              <option value="ALL">ทุกหลักสูตร</option>
-              <option value="61">หลักสูตร 61</option>
-              <option value="66">หลักสูตร 66</option>
+              <option value="">ทุกสถานประกอบการ</option>
+              {companyOptions.map((c) => (
+                <option key={c.company_id} value={c.company_id}>
+                  {c.label}
+                </option>
+              ))}
             </select>
           </div>
         )}
@@ -139,12 +169,33 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
             <select
+              aria-label="กรองตามรอบปีการศึกษา"
               value={periodId}
               onChange={(e) => onPeriodChange(e.target.value)}
               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
             >
               <option value="">ทุกรอบปีการศึกษา</option>
-              <option value="P2568-1">ปีการศึกษา 2568/1</option>
+              {periods.map((p) => (
+                <option key={p.period_id} value={p.period_id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {onCurriculumChange && (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+            <select
+              aria-label="กรองตามหลักสูตร"
+              value={curriculum}
+              onChange={(e) => onCurriculumChange(e.target.value)}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+            >
+              <option value="ALL">ทุกหลักสูตร</option>
+              <option value="61">หลักสูตร 61</option>
+              <option value="66">หลักสูตร 66</option>
             </select>
           </div>
         )}
