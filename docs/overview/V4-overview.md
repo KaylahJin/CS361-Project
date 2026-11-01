@@ -1,7 +1,7 @@
 # V4: Planning, Tracking & Reliability — Overview
 
-> เอกสารภาพรวมขอบเขต V4 ใช้เป็นจุดอ้างอิงร่วมของทีมสำหรับ Requirements, User Stories, Acceptance Tests, Architecture, Issues และหลักฐาน
-> กำหนดส่ง: **2 พฤศจิกายน 2569 (2/11)**
+> เอกสารภาพรวมขอบเขต V4 ใช้เป็นจุดอ้างอิงร่วมของทีมสำหรับ Requirements, User Stories, Acceptance Tests, Architecture, Issues และหลักฐาน  
+> กำหนดส่ง: **2 พฤศจิกายน 2569 (2/11)**  
 > สถานะเอกสาร: **ฉบับปรับตาม Reviewer feedback — รอตรวจสอบ Implementation, หลักฐาน และการยืนยันจากทีม**
 
 ## 1. Overview
@@ -20,7 +20,7 @@ V4 ใช้ Login, Role, Assignment, Workflow, API, Database และ Infrastr
 - หนึ่งสถานประกอบการต่อหนึ่งแผน (One Employer per Plan)
 - ใช้ Period ที่ V3 มีอยู่แล้ว ไม่สร้างระบบ Period ใหม่
 - Deadline เป็นการแสดงข้อมูลที่มีอยู่ ไม่สร้างระบบจัดการ Deadline ใหม่
-- ใช้ Status Model หลักตาม V3 ส่วนสถานะหลังอนุมัติเป็นประเด็นที่ต้องยืนยันแยกต่างหากตาม FR5
+- ใช้ Status Model ที่มีอยู่จริงใน V3 โดยแยกสถานะ Workflow หลักออกจากสถานะที่เกี่ยวข้องกับการรับรองคุณสมบัติและการคัดเลือก
 - ใช้ข้อมูลและโครงสร้างเดิมก่อน การเพิ่ม Schema หรือเปลี่ยน Infrastructure ต้องตรวจสอบผลกระทบก่อนดำเนินการ
 
 เอกสารนี้แยก **สิ่งที่ยืนยันแล้ว**, **สิ่งที่เสนอ**, **สิ่งที่ยังต้องตัดสินใจ** และ **สิ่งที่ยังไม่ได้ทดสอบ** ออกจากกันอย่างชัดเจน การระบุไว้ในเอกสารไม่ถือเป็นหลักฐานว่า Implementation เสร็จหรือผ่านการทดสอบแล้ว
@@ -82,7 +82,8 @@ V4 ใช้ Login, Role, Assignment, Workflow, API, Database และ Infrastr
 - รองรับการติดตามการส่งแผน การตรวจสอบ การส่งกลับแก้ไข และการส่งใหม่ตาม Workflow V3
 - แสดงสถานะที่ตรงกับข้อมูลจาก Backend ไม่ใช้สถานะที่คำนวณหรือกำหนดขึ้นเองใน Frontend
 - ไม่เพิ่มหรือเปลี่ยน State Model ของ V3 โดยไม่มีข้อสรุปจากทีม
-- สถานะหลังอนุมัติที่โจทย์ยกตัวอย่าง เช่น `Applied`, `Accepted`, `In Progress`, `Completed` จะเป็น Open Decision แยกจาก Workflow หลักของ V3 (ดู §8)
+- สถานะ `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED` และ `NOT_SELECTED` ต้องคงชื่อเดิมตาม Implementation และต้องตรวจสอบความหมายกับเงื่อนไขการเปลี่ยนสถานะในระบบก่อนนำไปใช้เป็นกติกาทางธุรกิจ
+- สถานะหลังอนุมัติที่โจทย์ยกตัวอย่าง เช่น `Applied`, `Accepted`, `In Progress`, `Completed` เป็น Open Decision แยกจาก Workflow หลักของ V3 (ดู §8) ไม่ควรถือว่าเป็นชื่อเดียวกับสถานะที่มีอยู่ในระบบโดยอัตโนมัติ
 
 **หมายเหตุเรื่อง Under Review:** ในโจทย์ใช้คำว่า `Under Review` เพื่อสื่อว่าแผนอยู่ระหว่างการพิจารณา ส่วน V3 ใช้ `SUBMITTED` สำหรับแผนที่นักศึกษายื่นและรอผู้มีสิทธิ์พิจารณา จึงใช้เป็นคำอธิบายเชิงกระบวนการได้โดยไม่จำเป็นต้องสร้างสถานะ DB ใหม่
 
@@ -271,22 +272,29 @@ Network Diagram ฉบับตรวจสอบจริงต้องเพ�
 | Returned | `RETURNED` | ส่งกลับให้นักศึกษาแก้ไขและยื่นใหม่ |
 | Approved | `APPROVED` | ผลอนุมัติตาม Workflow V3 |
 | Rejected | `REJECTED` | ผลพิจารณาปฏิเสธตาม Workflow V3 |
-| Applied | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะหลังอนุมัติจาก FR5; รอทีมตัดสินใจ |
-| Accepted | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะหลังอนุมัติจาก FR5; รอทีมตัดสินใจ |
-| In Progress | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะหลังอนุมัติจาก FR5; รอทีมตัดสินใจ |
-| Completed | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะหลังอนุมัติจาก FR5; รอทีมตัดสินใจ |
+| Applied | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะในโจทย์ FR5; รอทีมตัดสินใจ |
+| Accepted | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะในโจทย์ FR5; รอทีมตัดสินใจ |
+| In Progress | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะในโจทย์ FR5; รอทีมตัดสินใจ |
+| Completed | ยังไม่มีสถานะ V3 ที่ยืนยันว่าเทียบตรง | ตัวอย่างสถานะในโจทย์ FR5; รอทีมตัดสินใจ |
+| `ENDORSED` | มีใน Implementation หลัง PR #175 | สถานะที่เกี่ยวข้องกับการรับรองโดย Advisor ต้องตรวจสอบเงื่อนไขจริงก่อนนำไปเทียบกับคำในโจทย์ |
+| `ELIGIBLE` | มีใน Implementation หลัง PR #173 | สถานะที่เกี่ยวข้องกับคุณสมบัติ ต้องตรวจสอบเงื่อนไขจริง |
+| `NOT_ELIGIBLE` | มีใน Implementation หลัง PR #173 | สถานะที่เกี่ยวข้องกับคุณสมบัติ ต้องตรวจสอบเงื่อนไขจริง |
+| `SELECTED` | มีใน Implementation หลัง PR #173 | สถานะที่เกี่ยวข้องกับการคัดเลือก ต้องตรวจสอบเงื่อนไขจริง |
+| `NOT_SELECTED` | มีใน Implementation หลัง PR #173 | สถานะที่เกี่ยวข้องกับการคัดเลือก ต้องตรวจสอบเงื่อนไขจริง |
 
-**ข้อควรระวัง:** คำว่า `Selected` ไม่ได้อยู่ในข้อความโจทย์ V4 ที่ใช้อ้างอิงในเอกสารฉบับนี้ และไม่ควรนำมาเทียบกับ `APPROVED` โดยไม่มีแหล่งข้อมูลยืนยัน ห้ามเปลี่ยนชื่อสถานะใน DB/API หรือใช้ mapping นี้เป็น business rule จนกว่าจะตรวจ implementation และข้อสรุปของทีม
+**ข้อควรระวัง:** สถานะ `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED` และ `NOT_SELECTED` ไม่ใช่คำที่ระบุโดยตรงในโจทย์ฉบับที่ 5 แต่มีข้อมูลว่าถูกเพิ่มใน Implementation ของ V3 แล้ว จึงต้องคงชื่อสถานะตามระบบ ห้ามเปลี่ยนชื่อใน DB/API และห้ามกำหนด mapping เป็น `APPROVED` หรือสถานะอื่นโดยไม่มีหลักฐานยืนยัน
 
 ### 5.2 V3 Status Reference
 
-สถานะ Workflow ที่มีในเอกสาร V3:
+สถานะ Workflow หลักที่ระบุในเอกสาร V3 ได้แก่:
 
 - `PREPARING` — นักศึกษากำลังจัดทำหรือแก้ไขแผน
-- `SUBMITTED` — นักศึกษายื่นแผนเพื่อรอการพิจารณา (มีความหมายเชิงกระบวนการใกล้เคียง Under Review)
+- `SUBMITTED` — นักศึกษายื่นแผนเพื่อรอการพิจารณา มีความหมายเชิงกระบวนการใกล้เคียง `Under Review`
 - `RETURNED` — ผู้ตรวจส่งกลับให้นักศึกษาแก้ไข
 - `APPROVED` — ผู้ตรวจอนุมัติแผน
 - `REJECTED` — ผู้ตรวจปฏิเสธแผน
+
+นอกจากสถานะ Workflow หลักข้างต้น Implementation หลัง PR #173 และ PR #175 มีสถานะเพิ่มเติม 5 ชื่อ ได้แก่ `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED` และ `NOT_SELECTED` ให้คงชื่อเหล่านี้ตาม Implementation และตรวจสอบความหมาย เงื่อนไขการเปลี่ยนสถานะ และความสัมพันธ์กับข้อมูลแผนจาก Source Code/API/Schema ก่อนใช้เป็นกติกาในการทดสอบหรือพัฒนาต่อ
 
 กติกาที่ต้องรักษา:
 
@@ -295,14 +303,14 @@ Network Diagram ฉบับตรวจสอบจริงต้องเพ�
 - ผู้ตรวจพิจารณาแผนที่อยู่ในสถานะที่อนุญาตเท่านั้น
 - `RETURNED` และ `REJECTED` ต้องมีเหตุผล/ความคิดเห็นที่ไม่ว่าง
 - Advisor ต้องได้รับมอบหมายให้ดูแลนักศึกษาก่อนเข้าถึงหรือพิจารณาแผน
-- หนึ่ง Student มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อ Period ตามกติกา V3
+- หนึ่ง Student มีแผนที่ยังดำเนินการอยู่ได้ไม่เกินหนึ่งแผนต่อ Period ตามกติกา V3 โดยการพิจารณาว่าสถานะใดถือเป็นแผนที่ยังดำเนินการอยู่ต้องอิงเงื่อนไขจริงใน Implementation
 - การพิจารณาที่ขัดแย้งกับสถานะล่าสุดต้องไม่เขียนทับผลเดิม และตอบ `409 Conflict` ตาม API contract
 
-**หมายเหตุ:** รายการข้างต้นเป็น Reference จากเอกสาร V3 ที่ต้องตรวจเทียบกับ Schema/API implementation ก่อนใช้เป็นหลักฐานยืนยันสถานะจริง
+**หมายเหตุ:** รายการสถานะและกติกาข้างต้นต้องตรวจเทียบกับ Schema/API implementation ก่อนใช้เป็นหลักฐานยืนยันพฤติกรรมจริง โดยเฉพาะสถานะเพิ่มเติมทั้งห้าซึ่งไม่ควรสรุปว่าเป็นสถานะที่ active หรือ inactive ทั้งหมดจากชื่อเพียงอย่างเดียว
 
 ### 5.3 Shared Error / Field Reference
 
-รายการนี้เป็นโครงสร้างกลางสำหรับรวบรวมชื่อจาก API Specification, Lambda และ Database Schema ก่อนส่งมอบ ห้ามสร้างรหัสที่ไม่มีใน implementation
+รายการนี้เป็นโครงสร้างกลางสำหรับรวบรวมชื่อจาก API Specification, Lambda และ Database Schema ก่อนส่งมอบ ห้ามสร้างรหัสที่ไม่มีใน Implementation
 
 | หมวด | ชื่อ/ตัวอย่าง | แหล่งที่ต้องยืนยัน |
 |---|---|---|
@@ -394,7 +402,7 @@ Network Diagram ฉบับตรวจสอบจริงต้องเพ�
 |---|---|---|
 | **RT1: Advisor Assignment Authorization** | Advisor เปิดหรือพิจารณาแผนของนักศึกษาที่ไม่ได้รับมอบหมาย | ระบบปฏิเสธการเข้าถึง/ดำเนินการ และข้อมูล/สถานะไม่เปลี่ยน |
 | **RT2: Review Comment Validation** | Reviewer เลือก `RETURNED` หรือ `REJECTED` โดยไม่ระบุเหตุผล | ระบบปฏิเสธคำขอ และสถานะไม่เปลี่ยน |
-| **RT3: One Active Plan per Period** | Student สร้างแผนที่ยังดำเนินการอยู่ซ้ำใน Period เดียวกัน | ระบบปฏิเสธการสร้างซ้ำ และแผนเดิมไม่ถูกกระทบ |
+| **RT3: One Active Plan per Period** | Student พยายามสร้างแผนใน Period เดียวกัน ขณะที่มีแผนเดิมอยู่ในสถานะ `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED` หรือ `NOT_SELECTED` โดยตรวจแต่ละสถานะตามเงื่อนไข active-plan ที่พบจริงใน Implementation | ระบบปฏิเสธการสร้างซ้ำเมื่อแผนเดิมเข้าเงื่อนไข active-plan ของ V3 หากสถานะใดไม่เข้าเงื่อนไข ให้บันทึกผลตาม Implementation และหลักฐานที่ตรวจสอบได้ ไม่เหมารวมว่าสถานะทั้งห้า active ทั้งหมด แผนเดิมต้องไม่ถูกเปลี่ยนแปลงจากคำขอที่ถูกปฏิเสธ |
 | **RT4: Review Status Validation** | Reviewer พิจารณาแผนที่ไม่ได้อยู่ในสถานะที่อนุญาต | ระบบปฏิเสธ และสถานะเดิมคงอยู่ |
 | **RT5: Concurrent Review Protection** | มีคำขอพิจารณาแผนเดียวกันพร้อมกันหรือใช้สถานะเดิมที่ล้าสมัย | ยอมรับการเปลี่ยนแปลงที่ถูกต้องเพียงรายการเดียว คำขอที่ขัดแย้งได้ `409 Conflict` และไม่เขียนทับผลเดิม |
 
@@ -405,6 +413,7 @@ Network Diagram ฉบับตรวจสอบจริงต้องเพ�
 - กรณีปฏิเสธต้องยืนยันว่าไม่มี side effect ที่ไม่ถูกต้อง
 - เก็บคำสั่ง ผลทดสอบ screenshot/log หรือหลักฐานที่ตรวจสอบย้อนหลังได้
 - หากพฤติกรรมจริงต่างจากเอกสาร ให้ตรวจ API/Workflow และ Shared Reference ก่อนแก้ Expected Result
+- สำหรับ RT3 ต้องตรวจเงื่อนไขการนับ active plan จาก Implementation จริงก่อนกำหนด Expected Result ของแต่ละสถานะ
 
 ### 6.5 Reliability Test Cases (REL1–REL6)
 
@@ -502,6 +511,7 @@ REL5 ทำเฉพาะเมื่อมีสภาพแวดล้อม
 
 - ทุกกรณีมีผลทดสอบหรือเหตุผลที่ไม่ได้ทดสอบ
 - RT1–RT5 ยืนยันกติกา V3
+- RT3 ตรวจเงื่อนไข active-plan สำหรับสถานะเพิ่มเติมตาม Implementation จริง
 - ไม่กล่าวอ้างว่าผ่านหากไม่มีผลทดสอบจริง
 
 **ไม่รวม:** SLA guarantee, large-scale load test, full disaster recovery
@@ -572,11 +582,12 @@ REL5 ทำเฉพาะเมื่อมีสภาพแวดล้อม
 รายการต่อไปนี้เป็นประเด็นที่ยังต้องยืนยันก่อน implement หรือก่อนระบุผลว่า Verified:
 
 1. **FR5 — Post-Approval Status Model:** โจทย์ยกตัวอย่าง `Applied`, `Accepted`, `In Progress`, `Completed` ทีมต้องยืนยันว่าจะใช้สถานะใด ความหมายและลำดับการเปลี่ยนสถานะเป็นอย่างไร ใครมีสิทธิ์เปลี่ยน และเชื่อมกับ `APPROVED` ของ V3 อย่างไร ระหว่างยังไม่ตัดสินใจให้คง Workflow V3 และไม่เพิ่มสถานะลง DB/API
-2. **FR6 — Near Deadline Threshold:** หากโจทย์ไม่ได้กำหนดจำนวนวัน ต้องให้ทีมยืนยันเกณฑ์ Near Deadline ก่อน implement; Overdue ใช้วันที่ปัจจุบันเทียบ Deadline ที่ยืนยันแล้ว และต้องพิจารณาว่ารายการเสร็จสิ้นแล้วหรือไม่
-3. **FR7 — History Data Availability:** ข้อมูลเดิมมี actor/timestamp/event เพียงพอหรือไม่ หากไม่พอให้ทีมเลือกว่าจะทำ Minimal Audit History ใน V4 หรือบันทึกข้อจำกัดและเลื่อนส่วนที่ทำไม่ได้ โดยไม่กล่าวอ้างว่า FR7 ผ่านครบ
-4. **FR7 — Role Coverage:** ยืนยันการจับคู่ Employer Coordinator และ Admin/Executive จากโจทย์กับ Role/Permission ที่มีจริงใน V3 หากไม่มี Role ที่ตรงกันให้ระบุ Gap/ขอบเขตที่ยังไม่รองรับ ไม่สร้าง Role หรือ Permission ใหม่โดยไม่มีข้อสรุป
-5. **FR8 — Filter Semantics:** ยืนยัน field ที่ใช้ค้น Student/Employer/Period/Status และการแสดงผลแยกตาม Role ให้ตรงกับข้อมูลจริง
-6. **AWS Network Changes:** สิทธิ์ AWS Academy และผลกระทบต่อ Lambda connectivity อนุญาตให้เปลี่ยน RDS เป็น Private ได้หรือไม่ หากไม่ได้ให้ส่งมอบ Review/Target Diagram แทน
+2. **FR5 — Existing Additional Statuses:** ยืนยันความหมายและเงื่อนไขของ `ENDORSED`, `ELIGIBLE`, `NOT_ELIGIBLE`, `SELECTED` และ `NOT_SELECTED` จาก Implementation จริงก่อนกำหนด mapping หรือใช้เป็น Expected Result ใน Test Case
+3. **FR6 — Near Deadline Threshold:** หากโจทย์ไม่ได้กำหนดจำนวนวัน ต้องให้ทีมยืนยันเกณฑ์ Near Deadline ก่อน implement; Overdue ใช้วันที่ปัจจุบันเทียบ Deadline ที่ยืนยันแล้ว และต้องพิจารณาว่ารายการเสร็จสิ้นแล้วหรือไม่
+4. **FR7 — History Data Availability:** ข้อมูลเดิมมี actor/timestamp/event เพียงพอหรือไม่ หากไม่พอให้ทีมเลือกว่าจะทำ Minimal Audit History ใน V4 หรือบันทึกข้อจำกัดและเลื่อนส่วนที่ทำไม่ได้ โดยไม่กล่าวอ้างว่า FR7 ผ่านครบ
+5. **FR7 — Role Coverage:** ยืนยันการจับคู่ Employer Coordinator และ Admin/Executive จากโจทย์กับ Role/Permission ที่มีจริงใน V3 หากไม่มี Role ที่ตรงกันให้ระบุ Gap/ขอบเขตที่ยังไม่รองรับ ไม่สร้าง Role หรือ Permission ใหม่โดยไม่มีข้อสรุป
+6. **FR8 — Filter Semantics:** ยืนยัน field ที่ใช้ค้น Student/Employer/Period/Status และการแสดงผลแยกตาม Role ให้ตรงกับข้อมูลจริง
+7. **AWS Network Changes:** สิทธิ์ AWS Academy และผลกระทบต่อ Lambda connectivity อนุญาตให้เปลี่ยน RDS เป็น Private ได้หรือไม่ หากไม่ได้ให้ส่งมอบ Review/Target Diagram แทน
 
 ## 9. Evidence & Verification Plan
 
@@ -584,7 +595,7 @@ REL5 ทำเฉพาะเมื่อมีสภาพแวดล้อม
 
 | Evidence ID | สิ่งที่ต้องแนบ/ลิงก์ | ใช้ยืนยัน |
 |---|---|---|
-| E1 | ข้อความโจทย์ V4 ฉบับที่ทีมได้รับ โดยอ้างอิงข้อความโจทย์ใน Issue #177 | FR1–FR10 และขอบเขตงาน |
+| E1 | ข้อความโจทย์ที่ 5 ฉบับเต็มตามต้นฉบับที่ทีมได้รับ โดยแนบไฟล์หรือวางข้อความฉบับเต็มไว้ใน Issue #177 | FR1–FR10, Requirements ตาม Version และขอบเขตงาน |
 | E2 | Terminology Mapping และ Shared Reference ในเอกสารนี้ | คำในโจทย์และชื่อสถานะ/field ที่ตรวจสอบจากระบบ |
 | E3 | System Diagram + Current/Target Network Diagram | Application flow และ AWS Network |
 | E4 | Terraform/AWS outputs, screenshots หรือ CLI results พร้อมวันที่ตรวจ | Subnets, Routes, SG, Lambda VPC, RDS Publicly Accessible |
@@ -592,7 +603,7 @@ REL5 ทำเฉพาะเมื่อมีสภาพแวดล้อม
 | E6 | RT1–RT5 และ REL1–REL6 test output | V3 Regression / Reliability |
 | E7 | Issue/PR links และ review approvals | Traceability และ Cross-review |
 
-**หมายเหตุ:** ข้อความโจทย์ที่ทีมใช้อ้างอิงในเอกสารนี้ได้รับจากเนื้อหาที่ทีมได้รับ ไม่มีการอ้างชื่อไฟล์ต้นฉบับแยกต่างหากหรือสร้าง URL ขึ้นเอง หากต้องการหลักฐานใน Issue #177 ให้บันทึกข้อความโจทย์หรือแนบหลักฐานที่ทีมมีอยู่จริง
+**หมายเหตุ E1:** ข้อความโจทย์ที่ 5 ฉบับเต็มที่ได้รับจากทีมมีเนื้อหาอยู่ในเอกสาร/ข้อความต้นฉบับที่ทีมใช้ ต้องแนบไฟล์จริงหรือวางข้อความฉบับเต็มลงใน Issue #177 ก่อนอ้างว่า Issue มีหลักฐานนี้แล้ว ห้ามอ้างว่าแนบไฟล์หรือมีข้อความใน Issue หากยังไม่ได้ดำเนินการและตรวจสอบจริง
 
 ### 9.2 Verification Matrix
 
@@ -607,7 +618,7 @@ REL5 ทำเฉพาะเมื่อมีสภาพแวดล้อม
 | FR8 | Filter Student/Employer/Period/Status และ permission boundary | input/expected/actual + API response |
 | RT1 | Advisor เข้าถึงแผนที่ไม่ได้รับมอบหมาย | 403/denial + unchanged data |
 | RT2 | RETURNED/REJECTED ไม่มี comment | validation response + unchanged status |
-| RT3 | Active plan ซ้ำใน Period | rejection/conflict + original plan unchanged |
+| RT3 | Active plan ซ้ำใน Period รวมถึงการตรวจสถานะเพิ่มเติมทั้งห้าตามเงื่อนไขจริง | rejection/conflict + original plan unchanged + หลักฐานเงื่อนไขของแต่ละสถานะ |
 | RT4 | Review จาก status ที่ไม่อนุญาต | rejection + unchanged status |
 | RT5 | Concurrent/stale review | successful request + 409 conflict + final DB state |
 | REL1–REL4 | Invalid input/transition/duplicate/API error | test output + data integrity |
@@ -625,11 +636,11 @@ V4 จะถือว่าบรรลุเป้าหมายในส่�
 - **FR2:** ระบบเรียกใช้ข้อมูล Student, Plan, Employer, Position และ Period ได้อย่างถูกต้อง และความสัมพันธ์ของข้อมูลไม่ขัดแย้งกัน
 - **TC1 ผ่าน:** Advisor ตรวจแผนของนักศึกษาที่ได้รับมอบหมาย ส่งกลับพร้อมเหตุผล และ Student ส่งแผนเดิมกลับเข้าพิจารณาได้
 - **TC2 ผ่าน:** Student ค้นหา Employer/Period สร้างแผนหนึ่ง Employer ต่อหนึ่ง Plan ส่งแผน และติดตามสถานะได้
-- **FR5:** แสดงสถานะล่าสุดตรงกับ Backend และไม่ทำให้ Workflow V3 เสียหาย ส่วนสถานะหลังอนุมัติให้รายงานตามข้อสรุปของทีม หากยังไม่ตัดสินใจต้องไม่เพิ่มสถานะใหม่
+- **FR5:** แสดงสถานะล่าสุดตรงกับ Backend และไม่ทำให้ Workflow V3 เสียหาย ส่วนสถานะหลังอนุมัติให้รายงานตามข้อสรุปของทีม หากยังไม่ตัดสินใจต้องไม่เพิ่มสถานะใหม่ และต้องคงชื่อสถานะเพิ่มเติมที่มีใน Implementation
 - **FR6:** แสดงรายการ Upcoming, Near Deadline และ Overdue จาก Deadline ที่มีแหล่งข้อมูลยืนยันและใช้ threshold ที่ทีมตกลง; รายการที่ไม่มีวันที่ต้องระบุ No Deadline/Unknown หากไม่มีข้อมูลหรือเกณฑ์ยืนยัน ให้ระบุ Not Run/ข้อจำกัด
 - **FR7:** มีการควบคุมสิทธิ์ตาม Role/ownership/assignment และตรวจสอบประวัติการเปลี่ยนแปลงตามข้อมูลที่มี หาก History หรือ Role ใดไม่รองรับ ต้องระบุ Gap และไม่กล่าวอ้างว่าครบ FR7
 - **FR8:** กรองรายการตาม Student, Employer, Period และ Status ได้ โดยผลลัพธ์ตรงกับข้อมูลจริงและไม่ข้ามสิทธิ์
-- **RT1–RT5:** มีผล Pass/Fail/Not Run พร้อมหลักฐาน โดยไม่เปลี่ยนกติกา V3 เอง
+- **RT1–RT5:** มีผล Pass/Fail/Not Run พร้อมหลักฐาน โดยไม่เปลี่ยนกติกา V3 เอง และ RT3 ต้องตรวจเงื่อนไข active-plan ตาม Implementation จริง
 - **REL1–REL6:** มีผลทดสอบตามที่ทำได้อย่างปลอดภัย และระบุ Not Run พร้อมเหตุผลเมื่อไม่มี environment
 - **System Diagram:** มี Logical System Diagram และ Network Diagram ที่แยก Current State/Recommended Target State พร้อมหลักฐาน
 - **Shared Reference:** มี Terminology Mapping, Status, Error และ Field Reference ที่ตรวจจาก source จริง หรือระบุรายการที่ยังรอตรวจอย่างชัดเจน
@@ -637,13 +648,14 @@ V4 จะถือว่าบรรลุเป้าหมายในส่�
 - ความสามารถและ Workflow เดิมของ V3 ที่เกี่ยวข้องยังทำงานได้
 - ไม่มีการระบุ Pass หรือ Verified สำหรับรายการที่ยังไม่ได้ทดสอบ/ตรวจสอบ
 
-FR9 และ FR10 ไม่อยู่ในขอบเขต V4 ตามการกำหนดขอบเขตในตารางโจทย์ ทีมอาจพิจารณาความสามารถเหล่านี้สำหรับรุ่นถัดไป
+FR9 และ FR10 ไม่อยู่ในขอบเขต V4 ตามการกำหนดขอบเขตในตารางโจทย์ โดยทีมอาจพิจารณาความสามารถเหล่านี้สำหรับรุ่นถัดไป
 
 ## 11. Development Constraints & Team Working Agreement
 
 - กำหนดส่ง 2/11; จัดลำดับ TC1, TC2, FR1/FR2, FR6/FR8 และ Regression ที่สำคัญก่อน
 - ใช้ V3 เป็นฐาน หลีกเลี่ยงการเขียน Authentication, Authorization หรือ Workflow ใหม่
 - ไม่เพิ่มสถานะหลังอนุมัติจนกว่าจะมีมติทีมตาม FR5
+- คงชื่อสถานะที่มีอยู่ใน Implementation และตรวจความหมาย/เงื่อนไขจริงก่อนนำไปใช้
 - ใช้หนึ่ง Employer ต่อหนึ่ง Plan, Period เดิมของ V3 และ Deadline display only ตามขอบเขตที่ตกลง
 - ตรวจสอบ Source Code, API, Schema, Terraform และ AWS configuration ก่อนแก้ไข
 - การเปลี่ยน RDS Networking ต้องประเมิน Lambda connectivity และข้อจำกัด AWS Academy ก่อน
@@ -667,6 +679,6 @@ FR9 และ FR10 ไม่อยู่ในขอบเขต V4 ตามก
 - Permission Matrix: `docs/permission-matrix.md`
 - Team Working Agreement: `docs/working-agreement.md`
 - V2 Feedback Analysis: `docs/reviews/v2-feedback-analysis.md`
-- V4 Assignment: ใช้ข้อความโจทย์ฉบับที่ทีมได้รับเป็นแหล่งอ้างอิงหลัก โดยไม่อ้างไฟล์ต้นฉบับแยกต่างหากที่ไม่มีอยู่ในชุดข้อมูล
+- V4 Assignment: **โจทย์ที่ 5 — ระบบจัดการแผนสหกิจศึกษา (Cooperative Education Planning & Management System)** ตามข้อความต้นฉบับที่ทีมได้รับ ต้องแนบไฟล์จริงหรือวางข้อความโจทย์ฉบับเต็มไว้ใน Issue #177 เพื่อให้ตรวจสอบย้อนกลับได้
 - GitHub Overview Issue: https://github.com/KaylahJin/CS361-Project/issues/177
 - Team milestone: https://github.com/KaylahJin/CS361-Project/milestone/6
