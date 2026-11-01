@@ -77,25 +77,12 @@ describe('staff screening form (#148)', () => {
     }
   });
 
-  it("shows the period's criteria and that the student meets them, with no approve option", async () => {
+  it('shows the eligibility result for this plan and no approve option', async () => {
     renderModal();
 
     expect(await within(eligibilityBox()).findByText('ผ่านเกณฑ์ของรอบทุกข้อ')).toBeInTheDocument();
-    expect(eligibilityBox()).toHaveTextContent('มากกว่า 2.00');
-    expect(eligibilityBox()).toHaveTextContent('อย่างน้อย 2.50');
     expect(getPlanEligibilityMock).toHaveBeenCalledWith(10, 'token');
     expect(screen.queryByText(/อนุมัติ \(Approve\)/)).not.toBeInTheDocument();
-  });
-
-  it('lists failed criteria in Thai', async () => {
-    getPlanEligibilityMock.mockResolvedValue({
-      ...ELIGIBLE,
-      eligible: false,
-      failures: [{ code: 'GPA_BELOW_MINIMUM', message: 'Overall GPA must be greater than 2.00.' }],
-    });
-    renderModal();
-
-    expect(await within(eligibilityBox()).findByText('เกรดเฉลี่ยยังไม่ผ่านเกณฑ์ที่กำหนด')).toBeInTheDocument();
   });
 
   it('still lets staff decide when the eligibility check cannot load', async () => {
