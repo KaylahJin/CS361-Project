@@ -16,7 +16,6 @@ API ทั้งสองรายการมีอยู่ใน Repository �
 | POST | `/coop-plans` | Student | สร้างแผนของตนเอง |
 | PATCH | `/coop-plans/{planId}` | Student เจ้าของแผน | แก้ไขแผน |
 | POST | `/coop-plans/{planId}/submit` | Student เจ้าของแผน | ยื่นแผนหรือยื่นใหม่หลังแก้ไข |
-| POST | `/coop-plans/{planId}/review` | Staff | อนุมัติ ไม่อนุมัติ หรือส่งแผนกลับแก้ไข เฉพาะแผนที่อาจารย์รับรองแล้ว (`ENDORSED`) |
 | POST | `/coop-plans/{planId}/endorse` | Advisor ที่รับผิดชอบ | รับรอง (`ENDORSED`) หรือไม่รับรองพร้อมเหตุผล (`NOT_ENDORSED` → แผนเป็น `RETURNED`) จาก `SUBMITTED` เท่านั้น (#147) |
 | POST | `/coop-plans/{planId}/screen` | Staff | ตรวจเอกสารและคุณสมบัติแผนที่รับรองแล้ว (`ENDORSED`): `ELIGIBLE`, `INCOMPLETE` (แผนเป็น `RETURNED`) หรือ `NOT_ELIGIBLE` สองอย่างหลังต้องมีเหตุผล (#148) |
 | GET | `/coop-plans/{planId}/eligibility` | Staff | ผลตรวจคุณสมบัติตามเกณฑ์ของรอบของแผน (`criteria`, `eligible`, `failures`) ไม่บันทึกอะไร (#148) |
@@ -64,32 +63,30 @@ Backend ตรวจสอบเจ้าของแผน คุณสมบ�
 
 Response เมื่อสำเร็จ: `200 OK`
 
-## 6. พิจารณาแผน
+## 6. พิจารณาแผน (3 ขั้น, #147–#149)
 
-`POST /coop-plans/{planId}/review`
+route `POST /coop-plans/{planId}/review` (อนุมัติ / ไม่อนุมัติในครั้งเดียว) เลิกใช้แล้วใน #148 แผนผ่านทีละขั้น แต่ละขั้นมี role เดียวที่ทำได้
+
+| ขั้น | Route | Role | จากสถานะ | `decision` → สถานะแผน |
+|---|---|---|---|---|
+| รับรอง | `POST /coop-plans/{planId}/endorse` | Advisor ที่รับผิดชอบ | `SUBMITTED` | `ENDORSED` → `ENDORSED`, `NOT_ENDORSED` → `RETURNED` |
+| ตรวจ | `POST /coop-plans/{planId}/screen` | Staff | `ENDORSED` | `ELIGIBLE` → `ELIGIBLE`, `INCOMPLETE` → `RETURNED`, `NOT_ELIGIBLE` → `NOT_ELIGIBLE` |
+| คัดเลือก | (#149) | Committee | `ELIGIBLE` | `SELECTED` / `NOT_SELECTED` |
 
 ตัวอย่าง Request:
 
 ```json
 {
-  "decision": "RETURNED",
-  "comment": "กรุณาแก้ไขรายละเอียดของแผน"
+  "decision": "INCOMPLETE",
+  "comment": "ไม่มีไฟล์ Transcript"
 }
 ```
 
-ค่า `decision` ที่อนุญาต ได้แก่ `APPROVED`, `REJECTED` และ `RETURNED`
+ผลที่ไม่ผ่าน (`NOT_ENDORSED`, `INCOMPLETE`, `NOT_ELIGIBLE`) ต้องระบุ `comment` ที่ไม่ใช่ค่าว่าง
 
-- `APPROVED` เปลี่ยนสถานะเป็น `APPROVED`
-- `REJECTED` เปลี่ยนสถานะเป็น `REJECTED`
-- `RETURNED` เปลี่ยนสถานะเป็น `RETURNED`
+Backend ใช้ `sub` จาก Token ที่ตรวจสอบแล้วเพื่อระบุตัวผู้ตรวจ ล็อกแถวแผน (`FOR UPDATE`) แล้วตรวจ role และสถานะเดิม จากนั้นเปลี่ยนสถานะและเพิ่มแถว `plan_reviews` (พร้อม `step`) ใน Transaction เดียว ถ้าแผนไม่อยู่ในสถานะของขั้นนั้นแล้ว (เช่น มีคนบันทึกไปก่อน) ตอบ `409 Conflict` และไม่เขียนทับผลเดิม
 
-กรณี `REJECTED` และ `RETURNED` ต้องระบุ `comment` ที่ไม่ใช่ค่าว่าง
-
-Backend ใช้ `sub` จาก Token ที่ตรวจสอบแล้วเพื่อระบุตัวผู้ตรวจ และตรวจว่าผู้ตรวจมีบทบาท Staff หรือเป็น Advisor ที่รับผิดชอบนักศึกษาคนนั้น รวมถึงตรวจว่าแผนยังอยู่ในสถานะ `SUBMITTED`
-
-การบันทึกผลพิจารณาและเปลี่ยนสถานะต้องทำภายใน Transaction เดียว โดยตรวจเงื่อนไขว่าสถานะเดิมยังเป็น `SUBMITTED` ขณะบันทึก หากมีผู้ตรวจคนอื่นเปลี่ยนสถานะสำเร็จก่อน ต้องตอบกลับ `409 Conflict` และห้ามเขียนทับผลเดิม
-
-Response เมื่อสำเร็จ: `200 OK`
+Response เมื่อสำเร็จ: `200 OK` พร้อมแผนที่บันทึกแล้ว
 
 ## 7. การยืนยันตัวตนและตรวจสิทธิ์
 

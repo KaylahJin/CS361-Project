@@ -28,7 +28,6 @@ import {
   getCoopPlan,
   getCoopPlans,
   submitCoopPlan,
-  reviewCoopPlan,
   endorseCoopPlan,
   screenCoopPlan,
   CoopPlanApiError,
@@ -821,19 +820,6 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       }}
       reviewerName={user?.email || 'ผู้ตรวจสอบ'}
       getIdToken={getIdToken}
-      onSubmitReview={async ({ planId, decision, comment }) => {
-        const token = await getIdToken();
-        await reviewCoopPlan(planId, decision, comment, token);
-        await loadPlans();
-        // On the plan page, show the new result and the new history entry.
-        if (selectedPlan?.plan_id === planId) {
-          try {
-            setSelectedPlan(await getCoopPlan(planId, await getIdToken()));
-          } catch {
-            // keep what is on screen
-          }
-        }
-      }}
       onEndorse={
         canEndorsePlans(role)
           ? async ({ planId, decision, comment }) =>

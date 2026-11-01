@@ -35,7 +35,6 @@ import { getCoopPlanById } from './getCoopPlanById.mjs';
 import { createCoopPlan } from './createCoopPlan.mjs';
 import { updateCoopPlan } from './updateCoopPlan.mjs';
 import { submitCoopPlan } from './submitCoopPlan.mjs';
-import { reviewCoopPlan } from './reviewCoopPlan.mjs';
 import { endorseCoopPlan } from './endorseCoopPlan.mjs';
 import { screenCoopPlan } from './screenCoopPlan.mjs';
 import { getPlanEligibility } from './getPlanEligibility.mjs';
@@ -61,7 +60,6 @@ const ROUTES = Object.assign(Object.create(null), {
   'POST /coop-plans': createCoopPlan,
   'PATCH /coop-plans/{planId}': updateCoopPlan,
   'POST /coop-plans/{planId}/submit': submitCoopPlan,
-  'POST /coop-plans/{planId}/review': reviewCoopPlan,
   'POST /coop-plans/{planId}/endorse': endorseCoopPlan,
   'POST /coop-plans/{planId}/screen': screenCoopPlan,
   'GET /coop-plans/{planId}/eligibility': getPlanEligibility,

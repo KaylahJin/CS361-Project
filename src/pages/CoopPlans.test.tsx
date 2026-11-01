@@ -12,7 +12,6 @@ const getCoopPlanMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
-const reviewCoopPlanMock = vi.fn();
 const screenCoopPlanMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
@@ -26,7 +25,6 @@ vi.mock('../data/coopPlanApi', async () => {
     createCoopPlan: createCoopPlanMock,
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
-    reviewCoopPlan: reviewCoopPlanMock,
     screenCoopPlan: screenCoopPlanMock,
     getPlanEligibility: vi.fn().mockResolvedValue({
       plan_id: 1,

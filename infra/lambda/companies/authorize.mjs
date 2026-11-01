@@ -88,16 +88,6 @@ export async function assertCanViewPlan(user, plan) {
 }
 
 /**
- * Throws ForbiddenError when this caller may not review this plan.
- * Staff may review any plan. Since #147 an advisor endorses instead
- * (assertCanEndorsePlan) and may no longer approve; everyone else is refused.
- */
-export async function assertCanReviewPlan(user) {
-  if (user.role === 'STAFF') return;
-  throw new ForbiddenError(`role ${user.role} may not review coop plans`);
-}
-
-/**
  * Endorsement is the advisor's step alone (D1/D2 in #125): an advisor endorses
  * only the plans of students assigned to them. Staff screens and the committee
  * selects; neither endorses, and nor does anyone else.
