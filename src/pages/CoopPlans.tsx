@@ -47,7 +47,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canManageOwnPlan, canReviewPlans } from '../auth/roles';
+import { canEndorsePlans, canManageOwnPlan, canReviewPlans, reviewableStatusFor } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
@@ -318,6 +318,7 @@ function PlanDetail({
   onEdit,
   onSubmitted,
   onReview,
+  reviewableStatus,
 }: {
   plan: CoopPlan;
   isStudent: boolean;
@@ -325,6 +326,7 @@ function PlanDetail({
   onEdit: () => void;
   onSubmitted: (plan: CoopPlan) => void;
   onReview?: (plan: CoopPlan) => void;
+  reviewableStatus: CoopPlanStatus;
 }) {
   const locked = isStudent ? lockedReason(plan.status) : null;
   const { getIdToken } = useAuth();
@@ -422,7 +424,7 @@ function PlanDetail({
               </button>
             )}
 
-            {plan.status === 'SUBMITTED' && onReview && (
+            {plan.status === reviewableStatus && onReview && (
               <button
                 type="button"
                 onClick={() => onReview(plan)}
@@ -674,6 +676,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // Only reviewer roles get the review button and form. A student sees their
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
+  const reviewableStatus = reviewableStatusFor(role);
   const canCreatePlan = canManageOwnPlan(role);
 
   const loadPlans = async () => {
@@ -823,9 +826,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             void loadPlans();
           }}
           onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
+          reviewableStatus={reviewableStatus}
         />
         {reviewDialog}
       </>
+
     );
   }
 
@@ -1063,12 +1068,14 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             ) : (
               <PlanListCards
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             )}
 

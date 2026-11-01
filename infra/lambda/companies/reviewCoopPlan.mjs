@@ -1,7 +1,8 @@
 // POST /coop-plans/{planId}/review — records a review decision (APPROVED, RETURNED, REJECTED)
-// and reviewer comment for a submitted coop plan.
+// and reviewer comment for a coop plan the advisor has endorsed.
 //
-// Concurrency control: A plan can only be reviewed if its current status is 'SUBMITTED'.
+// Concurrency control: A plan can only be reviewed if its current status is 'ENDORSED'
+// (#147: staff no longer skips the advisor's step). #148 replaces the decisions with screening.
 // If another reviewer acts on the plan concurrently, the second request fails with 409 Conflict.
 //
 // The update to coop_plans and the audit record in plan_reviews are committed in a
@@ -93,11 +94,11 @@ export async function reviewCoopPlan(event) {
       throw err;
     }
 
-    // Must be in SUBMITTED status
-    if (plan.status !== 'SUBMITTED') {
+    // Must be endorsed by the advisor first, and not decided yet
+    if (plan.status !== 'ENDORSED') {
       await client.query('ROLLBACK');
       return jsonResponse(409, {
-        error: 'Conflict: plan is not in SUBMITTED status',
+        error: 'Conflict: plan is not in ENDORSED status',
         currentStatus: plan.status,
       });
     }

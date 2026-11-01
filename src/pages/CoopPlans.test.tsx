@@ -298,8 +298,10 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('opens the review dialog from the button on the plan page, not only from the list (F11)', async () => {
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+    // Signed in as STAFF, who reviews once the advisor has endorsed (#176).
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValue(endorsed);
 
     render(<CoopPlans />);
 
@@ -312,6 +314,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('after a review from the plan page, shows the new result and the new history entry', async () => {
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
     const reviewed = {
       ...SUBMITTED_PLAN,
       status: 'APPROVED',
@@ -327,8 +330,8 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
         },
       ],
     };
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValueOnce(SUBMITTED_PLAN).mockResolvedValue(reviewed);
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValueOnce(endorsed).mockResolvedValue(reviewed);
     reviewCoopPlanMock.mockResolvedValue(undefined);
 
     render(<CoopPlans />);
@@ -344,8 +347,10 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('opens and closes plan detail modal when clicking a plan row', async () => {
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+    // Signed in as STAFF, who reviews once the advisor has endorsed (#147).
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValue(endorsed);
 
     render(<CoopPlans />);
 
@@ -389,13 +394,26 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it.each([['ADVISOR'], ['STAFF']])('role %s: sees the review button', async (role) => {
+  it.each([
+    ['ADVISOR', 'SUBMITTED'],
+    ['STAFF', 'ENDORSED'],
+  ])('role %s: sees the review button on a %s plan', async (role, status) => {
     signedIn(role);
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+    getCoopPlansMock.mockResolvedValue([{ ...SUBMITTED_PLAN, status }]);
 
     render(<CoopPlans />);
 
     expect(await screen.findByRole('button', { name: /ตรวจแผน/ })).toBeInTheDocument();
+  });
+
+  it('role STAFF: no review button before the advisor endorses', async () => {
+    signedIn('STAFF');
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6609600001')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ตรวจแผน/ })).not.toBeInTheDocument();
   });
 
   it('switches view mode between table and cards view', async () => {

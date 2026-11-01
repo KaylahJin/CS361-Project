@@ -43,8 +43,8 @@ describe('reviewCoopPlan', () => {
     signedInAs(STAFF);
   });
 
-  it('STAFF approves a SUBMITTED plan: returns 200 and records decision in both tables', async () => {
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+  it('STAFF approves an ENDORSED plan: returns 200 and records decision in both tables', async () => {
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
@@ -97,8 +97,8 @@ describe('reviewCoopPlan', () => {
     expect(releaseMock).toHaveBeenCalled();
   });
 
-  it('STAFF returns a SUBMITTED plan with mandatory comment: returns 200', async () => {
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+  it('STAFF returns an ENDORSED plan with mandatory comment: returns 200', async () => {
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -120,8 +120,8 @@ describe('reviewCoopPlan', () => {
     expect(body.status).toBe('RETURNED');
   });
 
-  it('STAFF rejects a SUBMITTED plan with comment: returns 200', async () => {
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+  it('STAFF rejects an ENDORSED plan with comment: returns 200', async () => {
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -147,7 +147,7 @@ describe('reviewCoopPlan', () => {
   // for a student assigned to them.
   it('ADVISOR assigned to the student is refused with 403 Forbidden', async () => {
     signedInAs(ADVISOR);
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -173,7 +173,7 @@ describe('reviewCoopPlan', () => {
 
   it('STUDENT role cannot review plans and is refused with 403 Forbidden', async () => {
     signedInAs(STUDENT);
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -194,7 +194,7 @@ describe('reviewCoopPlan', () => {
 
   it('ADMIN role cannot review plans directly and is refused with 403 Forbidden', async () => {
     signedInAs(ADMIN);
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
+    const plan = { plan_id: 10, student_id: '6600000001', status: 'ENDORSED' };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -213,8 +213,9 @@ describe('reviewCoopPlan', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('returns 409 Conflict when the plan is not in SUBMITTED status (Concurrency control)', async () => {
-    const alreadyApprovedPlan = { plan_id: 10, student_id: '6600000001', status: 'APPROVED' };
+  // SUBMITTED: the advisor has not endorsed it yet, so staff cannot skip that step.
+  it.each(['APPROVED', 'SUBMITTED'])('returns 409 Conflict when the plan is %s, not ENDORSED', async (status) => {
+    const alreadyApprovedPlan = { plan_id: 10, student_id: '6600000001', status };
 
     clientQueryMock.mockImplementation(async (sql) => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
@@ -233,7 +234,7 @@ describe('reviewCoopPlan', () => {
     expect(res.statusCode).toBe(409);
     const body = JSON.parse(res.body);
     expect(body.error).toMatch(/Conflict/);
-    expect(body.currentStatus).toBe('APPROVED');
+    expect(body.currentStatus).toBe(status);
     const calls = clientQueryMock.mock.calls.map((c) => c[0]);
     expect(calls).toContain('ROLLBACK');
   });
