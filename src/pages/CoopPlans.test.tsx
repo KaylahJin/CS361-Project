@@ -800,3 +800,120 @@ describe('CoopPlans: create and edit', () => {
       );
     });
   });
+
+  describe('V4-03 (#192) — Deadline display, 4-way filtering, and limited activity history', () => {
+    beforeEach(() => {
+      useAuthMock.mockReset();
+      getCoopPlansMock.mockReset();
+      getCoopPlanMock.mockReset();
+      signedIn();
+    });
+
+    it('filters plans across all 4 FR8 dimensions: Student, Employer, Period, and Status', async () => {
+      const planA: CoopPlan = fullPlan({
+        plan_id: 201,
+        student_id: '6600000001',
+        first_name: 'สมชาย',
+        last_name: 'ใจดี',
+        company_id: 'C18',
+        company_name: 'บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)',
+        company_short_name: 'SCG',
+        period_id: 'P2568-1',
+        period_name: 'ภาคการศึกษาที่ 1/2568',
+        status: 'SUBMITTED',
+        submission_deadline: '2025-06-15',
+      });
+      const planB: CoopPlan = fullPlan({
+        plan_id: 202,
+        student_id: '6600000004',
+        first_name: 'กานดา',
+        last_name: 'มีสุข',
+        company_id: 'C29',
+        company_name: 'บริษัทกสิกร บิซิเนส-เทคโนโลยี กรุ๊ป',
+        company_short_name: 'KBTG',
+        period_id: 'P2567-2',
+        period_name: 'ภาคการศึกษาที่ 2/2567',
+        status: 'APPROVED',
+        submission_deadline: null,
+      });
+
+      getCoopPlansMock.mockResolvedValue([planA, planB]);
+      render(<CoopPlans />);
+
+      expect(await screen.findByText('6600000001')).toBeInTheDocument();
+      expect(screen.getByText('6600000004')).toBeInTheDocument();
+
+      // 1. Filter by Employer (companyId)
+      const companySelect = screen.getByLabelText('กรองตามสถานประกอบการ');
+      fireEvent.change(companySelect, { target: { value: 'C29' } });
+      expect(screen.queryByText('6600000001')).not.toBeInTheDocument();
+      expect(screen.getByText('6600000004')).toBeInTheDocument();
+
+      // Reset Employer filter
+      fireEvent.change(companySelect, { target: { value: '' } });
+      expect(screen.getByText('6600000001')).toBeInTheDocument();
+
+      // 2. Filter by Period (periodId)
+      const periodSelect = screen.getByLabelText('กรองตามรอบปีการศึกษา');
+      fireEvent.change(periodSelect, { target: { value: 'P2568-1' } });
+      expect(screen.getByText('6600000001')).toBeInTheDocument();
+      expect(screen.queryByText('6600000004')).not.toBeInTheDocument();
+
+      // Reset Period filter
+      fireEvent.change(periodSelect, { target: { value: '' } });
+
+      // 3. Filter by Status
+      fireEvent.click(screen.getByRole('button', { name: /อนุมัติแล้ว/ }));
+      expect(screen.queryByText('6600000001')).not.toBeInTheDocument();
+      expect(screen.getByText('6600000004')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /ทั้งหมด/ }));
+
+      // 4. Filter by Student search
+      const searchInput = screen.getByLabelText('ค้นหานักศึกษา ตำแหน่ง หรือสถานประกอบการ');
+      fireEvent.change(searchInput, { target: { value: '6600000001' } });
+      expect(screen.getByText('6600000001')).toBeInTheDocument();
+      expect(screen.queryByText('6600000004')).not.toBeInTheDocument();
+    });
+
+    it('shows deadline classification and limited activity history with step labels in plan detail', async () => {
+      const detailPlan: CoopPlan = fullPlan({
+        plan_id: 301,
+        status: 'RETURNED',
+        submission_deadline: '2025-06-15',
+        terms_accepted_at: '2025-05-20T03:00:00Z',
+        acknowledged_pre_course: true,
+        submitted_at: '2025-05-20T03:05:00Z',
+        reviews: [
+          {
+            review_id: 55,
+            step: 'ENDORSEMENT',
+            decision: 'NOT_ENDORSED',
+            comment: 'กรุณาแนบรายละเอียดงานเพิ่มเติม',
+            reviewed_at: '2025-05-22T04:00:00Z',
+            reviewer_name: 'advisor1@example.com',
+          },
+        ],
+      });
+
+      getCoopPlansMock.mockResolvedValue([detailPlan]);
+      getCoopPlanMock.mockResolvedValue(detailPlan);
+
+      render(<CoopPlans />);
+      fireEvent.click(await screen.findByText(detailPlan.student_id));
+
+      // Deadline classification for a RETURNED plan whose deadline (2025-06-15) has passed
+      expect(await screen.findByText(/เกินกำหนดส่ง \(Overdue\)/)).toBeInTheDocument();
+
+      // Review history shows step & decision label
+      const reviewList = await screen.findByRole('list', { name: 'ประวัติการพิจารณา' });
+      expect(within(reviewList).getByText('ไม่รับรอง (ส่งกลับแก้ไข)')).toBeInTheDocument();
+      expect(within(reviewList).getByText('ขั้นรับรองโดยอาจารย์ที่ปรึกษา')).toBeInTheDocument();
+
+      // Limited Activity History timeline and limitation notice
+      const activityList = screen.getByRole('list', { name: 'ประวัติกิจกรรมของแผน' });
+      expect(within(activityList).getByText(/สร้างแผนสหกิจศึกษา/)).toBeInTheDocument();
+      expect(within(activityList).getByText(/ยื่นแผนสหกิจศึกษา/)).toBeInTheDocument();
+      expect(screen.getByText(/ข้อจำกัดข้อมูล \(Limited Activity History\)/)).toBeInTheDocument();
+    });
+  });
