@@ -192,9 +192,10 @@ all" and does **not** replace the per-action status checks below.
 | `POST /coop-plans/{id}/submit` | own, from `PREPARING` / `RETURNED` | 403 | 403 | 403 |
 | `POST /coop-plans/{id}/endorse` | 403 | assigned students, only from `SUBMITTED` | 403 | 403 |
 | `POST /coop-plans/{id}/screen` | 403 | 403 | any student, only from `ENDORSED` | 403 |
+| `POST /coop-plans/{id}/select` | 403 | 403 | 403 | 403 |
 | `GET /coop-plans/{id}/eligibility` | 403 | 403 | any student | 403 |
 
-COMMITTEE (#147) is refused on every action above; #149 gives it selection.
+COMMITTEE (#149) may select (`POST /coop-plans/{id}/select`) any plan from `ELIGIBLE`, within the period's capacity, and list or read only plans in `ELIGIBLE`, `SELECTED` or `NOT_SELECTED` (D9 in #125, attachments included). It is refused on every other action above.
 
 Additional rules those issues must enforce (from
 `docs/overview/V3-01-workflow-permissions.md` §4–§5):

@@ -71,7 +71,7 @@ route `POST /coop-plans/{planId}/review` (อนุมัติ / ไม่อ�
 |---|---|---|---|---|
 | รับรอง | `POST /coop-plans/{planId}/endorse` | Advisor ที่รับผิดชอบ | `SUBMITTED` | `ENDORSED` → `ENDORSED`, `NOT_ENDORSED` → `RETURNED` |
 | ตรวจ | `POST /coop-plans/{planId}/screen` | Staff | `ENDORSED` | `ELIGIBLE` → `ELIGIBLE`, `INCOMPLETE` → `RETURNED`, `NOT_ELIGIBLE` → `NOT_ELIGIBLE` |
-| คัดเลือก | (#149) | Committee | `ELIGIBLE` | `SELECTED` / `NOT_SELECTED` |
+| คัดเลือก | `POST /coop-plans/{planId}/select` | Committee | `ELIGIBLE` | `SELECTED` → `SELECTED` (ไม่เกินจำนวนรับของรอบ เกินได้ `409 CAPACITY_REACHED`), `NOT_SELECTED` → `NOT_SELECTED` |
 
 ตัวอย่าง Request:
 

@@ -24,6 +24,11 @@ const ASSIGNED_STUDENTS = `p.student_id IN (
   SELECT student_id FROM advisor_student_assignments WHERE advisor_sub = ${PARAM}
 )`;
 
+// D9 in #125: the committee sees only the applicants screening let through,
+// and their results. Literal statuses, no params.
+const COMMITTEE_STATUSES = ['ELIGIBLE', 'SELECTED', 'NOT_SELECTED'];
+const COMMITTEE_PLANS = `p.status IN (${COMMITTEE_STATUSES.map((s) => `'${s}'`).join(', ')})`;
+
 const IS_ASSIGNED = `SELECT student_id
 FROM advisor_student_assignments
 WHERE advisor_sub = $1 AND student_id = $2`;
@@ -66,6 +71,10 @@ export async function buildCoopPlanListFilter(user) {
     return { sql: '', params: [] };
   }
 
+  if (user.role === 'COMMITTEE') {
+    return { sql: COMMITTEE_PLANS, params: [] };
+  }
+
   throw new ForbiddenError(`role ${user.role} may not list coop plans`);
 }
 
@@ -82,6 +91,11 @@ export async function assertCanViewPlan(user, plan) {
     const result = await getPool().query(IS_ASSIGNED, [user.sub, plan.student_id]);
     if (result.rows.length > 0) return;
     throw new ForbiddenError('advisor is not assigned to this student');
+  }
+
+  if (user.role === 'COMMITTEE') {
+    if (COMMITTEE_STATUSES.includes(plan.status)) return;
+    throw new ForbiddenError('committee sees only plans that passed screening');
   }
 
   throw new ForbiddenError(`role ${user.role} may not view coop plans`);
@@ -110,6 +124,12 @@ export async function assertCanEndorsePlan(user, plan, queryable = getPool()) {
 export async function assertCanScreenPlan(user) {
   if (user.role === 'STAFF') return;
   throw new ForbiddenError(`role ${user.role} may not screen coop plans`);
+}
+
+/** Selection is the committee's step alone (D1/D2 in #125), on any plan that passed screening. */
+export async function assertCanSelectPlan(user) {
+  if (user.role === 'COMMITTEE') return;
+  throw new ForbiddenError(`role ${user.role} may not select coop plans`);
 }
 
 /**
