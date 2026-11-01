@@ -56,7 +56,10 @@ echo "V2 status constraint: $(q "SELECT pg_get_constraintdef(oid) FROM pg_constr
 echo
 
 echo "### 2. put a plan on the V2-only status UNDER_REVIEW"
-q "UPDATE coop_plans SET status='UNDER_REVIEW' WHERE plan_id = (SELECT min(plan_id) FROM coop_plans);" >/dev/null
+# pick a SUBMITTED plan: UNDER_REVIEW implies it was submitted, and
+# chk_coop_plans_submitted requires submitted_at/terms/acknowledgement
+q "UPDATE coop_plans SET status='UNDER_REVIEW'
+    WHERE plan_id = (SELECT min(plan_id) FROM coop_plans WHERE status='SUBMITTED');" >/dev/null
 echo "UNDER_REVIEW rows before upgrade: $(q "SELECT count(*) FROM coop_plans WHERE status='UNDER_REVIEW';")"
 echo
 
@@ -117,7 +120,9 @@ fi
 echo
 
 echo "### 6. put a plan on RETURNED, the V3-only status"
-q "UPDATE coop_plans SET status='RETURNED' WHERE plan_id=$PLAN_ID;" >/dev/null
+# use a SUBMITTED plan: RETURNED implies it was submitted first
+q "UPDATE coop_plans SET status='RETURNED'
+    WHERE plan_id = (SELECT min(plan_id) FROM coop_plans WHERE status='SUBMITTED');" >/dev/null
 echo "RETURNED rows before rollback: $(q "SELECT count(*) FROM coop_plans WHERE status='RETURNED';")"
 echo
 
