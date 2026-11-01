@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# AI review that leaves one-click "Commit suggestion" fixes on every PR.
+# It only comments: approvals stay human (docs/working-agreement.md §10 ข้อ 5).
+language: th-TH
+reviews:
+  profile: chill
+  # Never approve or request changes, so a bot review never counts toward
+  # the ruleset's required approval or trips the PR Standards check.
+  request_changes_workflow: false
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!package-lock.json"
+    - "!docs/evidence/**"
+    - "!infra/migrate/source/**"
+    - "!src/data/*.json"
+  path_instructions:
+    - path: "src/**/*.tsx"
+      instructions: >-
+        ตรวจตาม docs/working-agreement.md §7 และ §10: UI ต้องใช้ component กลางใน src/components/ui
+        ถ้ามีอยู่แล้ว, ข้อความบนหน้าเว็บเป็นภาษาไทย, ห้ามซ่อนหัวข้อเมื่อไม่มีข้อมูล,
+        ห้ามมีปุ่มที่กดแล้วไม่ทำอะไร, ห้ามดึงข้อมูล mock หรือข้อมูลส่วนบุคคลเข้า bundle,
+        และหน้าเว็บต้องมีข้อความรองรับทุกรหัส error ที่ backend ส่งมา
+    - path: "infra/lambda/**/*.mjs"
+      instructions: >-
+        ตรวจว่าสิทธิ์ผ่าน authorize.mjs, ใช้ helper กลางใน planHttp.mjs และ planQueries.mjs
+        แทนการคัดลอกโค้ด, SQL ใช้ parameter ทุกจุด, ห้ามใช้ student_id จาก request เป็นตัวระบุตัวตน,
+        และ error ใช้รูปแบบ {error, code, message}
+    - path: "infra/migrate/migrations/**"
+      instructions: >-
+        migration ต้องรันซ้ำได้และมีไฟล์ rollback คู่กัน ต้องไม่ทำข้อมูลเดิมหาย
+    - path: "**/*.test.*"
+      instructions: >-
+        เทสต์ควรผูกกับ Acceptance Criteria ของ issue และไม่ mock สิ่งที่กำลังทดสอบอยู่
+chat:
+  auto_reply: true
