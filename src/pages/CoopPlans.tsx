@@ -47,7 +47,12 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canManageOwnPlan, canReviewPlans } from '../auth/roles';
+import {
+  canEndorsePlans,
+  canManageOwnPlan,
+  canReviewPlans,
+  canUsePlanReviewTools,
+} from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
@@ -675,6 +680,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
   const canCreatePlan = canManageOwnPlan(role);
+  // A student sees only their own plans, so the reviewer's search and filters
+  // would be noise (#203).
+  const showReviewTools = canUsePlanReviewTools(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -988,7 +996,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               </div>
             </div>
 
-            {!isUnauthenticated && (
+            {!isUnauthenticated && showReviewTools && (
               <PlanFilters
                 value={statusFilter}
                 onChange={setStatusFilter}
@@ -1004,7 +1012,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             )}
           </div>
 
-          {!isUnauthenticated && total > 0 && (
+          {!isUnauthenticated && showReviewTools && total > 0 && (
             <div className="lg:sticky lg:top-20">
               <PlanProgressChart counts={counts} total={total} />
             </div>
@@ -1040,7 +1048,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-sm">
               {searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL'
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
-                : 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'}
+                : showReviewTools
+                  ? 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'
+                  : 'คุณยังไม่มีแผนสหกิจศึกษา'}
             </p>
             {(searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL') && (
               <button
