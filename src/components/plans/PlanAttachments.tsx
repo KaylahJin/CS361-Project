@@ -16,6 +16,7 @@ import {
   listPlanAttachments,
   uploadPlanAttachment,
   type PlanAttachment,
+  type UploadStage,
 } from '../../data/attachmentApi';
 
 interface Props {
@@ -24,11 +25,23 @@ interface Props {
   getIdToken: () => Promise<string | null>;
 }
 
+type BusyAction = 'upload' | 'download' | 'delete' | null;
+
 const MAX_BYTES = 5 * 1024 * 1024;
 
 const formatSize = (bytes: number) =>
   `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 
+const getUploadStageText = (stage: UploadStage) => {
+  switch (stage) {
+    case 'requesting_url':
+      return 'กำลังเตรียมการอัปโหลด...';
+    case 'uploading':
+      return 'กำลังส่งไฟล์ไปยังพื้นที่จัดเก็บ...';
+    case 'confirming':
+      return 'กำลังตรวจสอบและบันทึกข้อมูลไฟล์...';
+  }
+};
 
 export const errorText = (error: unknown) => {
   if (error instanceof AttachmentApiError) {
@@ -53,7 +66,6 @@ export const errorText = (error: unknown) => {
         break;
     }
 
-    // ใช้ status สำหรับ error ที่ไม่มี code เฉพาะรองรับ
     if (error.status === 401) {
       return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
     }
@@ -72,7 +84,6 @@ export const errorText = (error: unknown) => {
   return 'เกิดข้อผิดพลาดในการจัดการไฟล์ กรุณาลองอีกครั้ง';
 };
 
-
 export default function PlanAttachments({
   planId,
   status,
@@ -81,15 +92,16 @@ export default function PlanAttachments({
   const [attachments, setAttachments] = useState<PlanAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const [operationStatus, setOperationStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const editable =
-    status === 'PREPARING' || status === 'RETURNED';
+  const editable = status === 'PREPARING' || status === 'RETURNED';
 
-  // โหลดไฟล์จาก Backend ทุกครั้งที่เปิดหน้า
+  // โหลดไฟล์จาก Backend เมื่อเปิดหน้า
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -111,10 +123,11 @@ export default function PlanAttachments({
   }, [refresh]);
 
   const onFileSelected = async (file?: File) => {
-    if (!file) return;
+    if (!file || busy) return;
 
     setError(null);
     setMessage(null);
+    setOperationStatus(null);
 
     if (!editable) {
       setError('แผนที่ยื่นแล้วไม่สามารถเพิ่มหรือลบไฟล์แนบได้');
@@ -164,13 +177,28 @@ export default function PlanAttachments({
     }
 
     setBusy(true);
+    setBusyAction('upload');
+    setOperationStatus('กำลังเตรียมการอัปโหลด...');
 
     try {
       const token = await getIdToken();
 
-      await uploadPlanAttachment(planId, file, token);
+      const newAttachment = await uploadPlanAttachment(
+        planId,
+        file,
+        token,
+        (stage) => {
+          setOperationStatus(getUploadStageText(stage));
+        },
+      );
 
-      await refresh();
+      // ใช้ข้อมูลที่ Backend ยืนยันแล้วอัปเดต State โดยตรง
+      setAttachments((prev) => [
+        ...prev.filter(
+          (item) => item.attachmentId !== newAttachment.attachmentId,
+        ),
+        newAttachment,
+      ]);
 
       setMessage(
         'แนบไฟล์เรียบร้อยแล้ว ไฟล์จะยังอยู่เมื่อกลับมาเปิดแผนนี้อีกครั้ง',
@@ -179,6 +207,8 @@ export default function PlanAttachments({
       setError(errorText(err));
     } finally {
       setBusy(false);
+      setBusyAction(null);
+      setOperationStatus(null);
 
       if (inputRef.current) {
         inputRef.current.value = '';
@@ -186,9 +216,13 @@ export default function PlanAttachments({
     }
   };
 
-  // ขอ URL สำหรับเปิดไฟล์ ไม่เปิด S3 bucket เป็นสาธารณะ
+  // ขอ URL สำหรับเปิดไฟล์ โดยไม่เปิด S3 bucket เป็นสาธารณะ
   const onDownload = async (attachment: PlanAttachment) => {
+    if (busy) return;
+
     setBusy(true);
+    setBusyAction('download');
+    setOperationStatus('กำลังเตรียมลิงก์สำหรับเปิดไฟล์...');
     setError(null);
     setMessage(null);
 
@@ -201,6 +235,8 @@ export default function PlanAttachments({
         token,
       );
 
+      setOperationStatus('กำลังเปิดไฟล์...');
+
       window.open(
         result.url,
         '_blank',
@@ -210,11 +246,14 @@ export default function PlanAttachments({
       setError(errorText(err));
     } finally {
       setBusy(false);
+      setBusyAction(null);
+      setOperationStatus(null);
     }
   };
 
   const onDelete = async (attachment: PlanAttachment) => {
     if (
+      busy ||
       !editable ||
       !window.confirm(
         `ยืนยันลบไฟล์ “${attachment.fileName}” หรือไม่?`,
@@ -224,25 +263,36 @@ export default function PlanAttachments({
     }
 
     setBusy(true);
+    setBusyAction('delete');
+    setOperationStatus('กำลังลบไฟล์แนบ...');
     setError(null);
     setMessage(null);
 
     try {
       const token = await getIdToken();
 
-      await deletePlanAttachment(
+      const result = await deletePlanAttachment(
         planId,
         attachment.attachmentId,
         token,
       );
 
-      await refresh();
+      // ลบรายการออกจาก State โดยตรง
+      if (result.deleted) {
+        setAttachments((prev) =>
+          prev.filter(
+            (item) => item.attachmentId !== result.attachmentId,
+          ),
+        );
+      }
 
       setMessage('ลบไฟล์แนบเรียบร้อยแล้ว');
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
+      setBusyAction(null);
+      setOperationStatus(null);
     }
   };
 
@@ -288,6 +338,17 @@ export default function PlanAttachments({
         </p>
       )}
 
+      {busy && operationStatus && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700"
+        >
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+          <span>{operationStatus}</span>
+        </div>
+      )}
+
       {loading ? (
         <p className="mt-5 flex items-center gap-2 text-sm text-slate-500">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -321,7 +382,11 @@ export default function PlanAttachments({
                   disabled={busy}
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  <Download className="h-4 w-4" />
+                  {busyAction === 'download' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                   เปิดไฟล์
                 </button>
 
@@ -332,7 +397,11 @@ export default function PlanAttachments({
                     disabled={busy}
                     className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {busyAction === 'delete' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                     ลบ
                   </button>
                 )}
@@ -377,10 +446,10 @@ export default function PlanAttachments({
             disabled={busy}
             className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {busy ? (
+            {busyAction === 'upload' ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                กำลังอัปโหลด...
+                กำลังดำเนินการ...
               </>
             ) : (
               <>

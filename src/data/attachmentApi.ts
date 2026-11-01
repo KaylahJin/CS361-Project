@@ -11,6 +11,13 @@ export interface PlanAttachment {
   createdAt: string;
 }
 
+export type UploadStage =
+  | 'requesting_url'
+  | 'uploading'
+  | 'confirming';
+
+export type UploadStageCallback = (stage: UploadStage) => void;
+
 export class AttachmentApiError extends Error {
   status?: number;
   code?: string;
@@ -82,6 +89,7 @@ export async function uploadPlanAttachment(
   planId: number,
   file: File,
   token?: string | null,
+  onStage?: UploadStageCallback,
 ): Promise<PlanAttachment> {
   if (
     file.type !== 'application/pdf' ||
@@ -109,7 +117,9 @@ export async function uploadPlanAttachment(
     );
   }
 
-  // Step 1: ขอ presigned POST URL จาก Backend
+  // Step 1: ขอ Presigned POST URL จาก Backend
+  onStage?.('requesting_url');
+
   const signed = await apiRequest<{
     url: string;
     fields: Record<string, string>;
@@ -129,6 +139,8 @@ export async function uploadPlanAttachment(
   );
 
   // Step 2: ส่ง fields และไฟล์ไป S3 โดยตรง
+  onStage?.('uploading');
+
   const form = new FormData();
 
   Object.entries(signed.fields).forEach(([key, value]) => {
@@ -150,6 +162,8 @@ export async function uploadPlanAttachment(
   }
 
   // Step 3: ให้ Backend ตรวจไฟล์ใน S3 และบันทึก metadata
+  onStage?.('confirming');
+
   return apiRequest<PlanAttachment>(
     `/coop-plans/${planId}/attachments`,
     token,
