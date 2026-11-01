@@ -482,7 +482,7 @@ describe('CoopPlans: create and edit', () => {
     getPeriodTimelineMock.mockReset();
     getPositionsMock.mockReset();
 
-    signedIn();
+    signedIn('STUDENT');
     getPeriodTimelineMock.mockResolvedValue({
       period: ACTIVE_PERIOD,
       all_periods: [ACTIVE_PERIOD],
@@ -493,13 +493,26 @@ describe('CoopPlans: create and edit', () => {
   });
 
   describe('the create button', () => {
-    it('is offered to a signed-in caller', async () => {
+    it('is offered to a signed-in student', async () => {
       getCoopPlansMock.mockResolvedValue([]);
 
       render(<CoopPlans />);
 
       expect(await screen.findByRole('button', { name: /สร้างแผนใหม่/ })).toBeInTheDocument();
     });
+
+    it.each(['ADVISOR', 'STAFF', 'ADMIN', 'COORDINATOR', 'COMMITTEE'])(
+      'is hidden from %s even when that role can list plans',
+      async (role) => {
+        signedIn(role);
+        getCoopPlansMock.mockResolvedValue([]);
+
+        render(<CoopPlans />);
+
+        await screen.findByText(/รายการคำร้องแผนสหกิจศึกษา/);
+        expect(screen.queryByRole('button', { name: /สร้างแผนใหม่/ })).not.toBeInTheDocument();
+      },
+    );
 
     it('is not offered to a signed-out visitor', async () => {
       signedOut();
@@ -571,6 +584,18 @@ describe('CoopPlans: create and edit', () => {
   });
 
   describe('editing a plan', () => {
+    it.each(['ADVISOR', 'STAFF', 'ADMIN'])(
+      '%s sees a read-only detail for a submitted plan',
+      async (role) => {
+        signedIn(role);
+        await openDetail(fullPlan({ status: 'SUBMITTED' }));
+
+        expect(screen.queryByRole('button', { name: 'แก้ไขแผน' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'ยื่นแผน' })).not.toBeInTheDocument();
+        expect(screen.queryByText(/แก้ไขได้เฉพาะนักศึกษาเจ้าของแผน/)).not.toBeInTheDocument();
+      },
+    );
+
     it.each(['PREPARING', 'RETURNED'] as CoopPlanStatus[])(
       'offers Edit on a %s plan and opens the form with the saved data',
       async (status) => {
@@ -678,7 +703,7 @@ describe('CoopPlans: create and edit', () => {
       getCoopPlanMock.mockReset();
       submitCoopPlanMock.mockReset();
 
-      signedIn();
+      signedIn('STUDENT');
 
       getPeriodTimelineMock.mockReset();
       getPeriodTimelineMock.mockResolvedValue({

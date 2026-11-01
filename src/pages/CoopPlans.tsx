@@ -47,7 +47,7 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canReviewPlans } from '../auth/roles';
+import { canEndorsePlans, canManageOwnPlan, canReviewPlans } from '../auth/roles';
 import {
   PlanFilters,
   type CompanyFilterOption,
@@ -323,18 +323,20 @@ function describeSubmissionError(error: unknown): string[] {
 
 function PlanDetail({
   plan,
+  isStudent,
   onBack,
   onEdit,
   onSubmitted,
   onReview,
 }: {
   plan: CoopPlan;
+  isStudent: boolean;
   onBack: () => void;
   onEdit: () => void;
   onSubmitted: (plan: CoopPlan) => void;
   onReview?: (plan: CoopPlan) => void;
 }) {
-  const locked = lockedReason(plan.status);
+  const locked = isStudent ? lockedReason(plan.status) : null;
   const { getIdToken } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
@@ -343,7 +345,7 @@ function PlanDetail({
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const canSubmit =
-    plan.status === 'PREPARING' || plan.status === 'RETURNED';
+    isStudent && (plan.status === 'PREPARING' || plan.status === 'RETURNED');
 
   const handleSubmitPlan = async () => {
     if (!canSubmit || submitting) return;
@@ -404,7 +406,7 @@ function PlanDetail({
               />
             </div>
 
-            {isPlanEditable(plan.status) && (
+            {isStudent && isPlanEditable(plan.status) && (
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <button
                   type="button"
@@ -696,6 +698,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // Only reviewer roles get the review button and form. A student sees their
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
+  const canCreatePlan = canManageOwnPlan(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -837,6 +840,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         <PlanDetail
           plan={selectedPlan}
           onBack={() => setSelectedPlan(null)}
+          isStudent={canCreatePlan}
           onEdit={() => openEditor(selectedPlan)}
           onSubmitted={(submitted) => {
             setSelectedPlan(submitted);
@@ -851,6 +855,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const canCreate =
     authStatus === 'authenticated' &&
+    canCreatePlan &&
     !(error && (error.status === 401 || error.status === 403));
 
   const isUnauthenticated =
