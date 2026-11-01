@@ -1,0 +1,53 @@
+name: PR Standards
+
+# docs/working-agreement.md §10.7. The rules live in .github/scripts/pr-standards.mjs;
+# this file only gathers the PR data. Re-runs when the description, labels,
+# commits or reviews change, so fixing the PR turns the check green.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-standards-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-standards:
+    name: PR Standards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { checkPullRequest } = await import(
+              `${process.env.GITHUB_WORKSPACE}/.github/scripts/pr-standards.mjs`
+            );
+            const req = { ...context.repo, pull_number: context.payload.pull_request.number };
+            // Read fresh: a review event carries the PR as it was when the review started.
+            const { data: pr } = await github.rest.pulls.get(req);
+            const files = await github.paginate(github.rest.pulls.listFiles, req);
+            const reviews = await github.paginate(github.rest.pulls.listReviews, req);
+
+            const { lines, problems } = checkPullRequest({
+              body: pr.body,
+              labels: pr.labels.map((l) => l.name),
+              files: files.map((f) => ({ filename: f.filename, additions: f.additions, deletions: f.deletions })),
+              reviews: reviews.map((r) => ({ user: r.user?.login ?? 'unknown', state: r.state, body: r.body })),
+            });
+
+            await core.summary
+              .addHeading('มาตรฐาน PR')
+              .addRaw(`ขนาดที่นับ: ${lines} บรรทัด`, true)
+              .addList(problems.length ? problems : ['ผ่านทุกข้อ'])
+              .write();
+            if (problems.length) core.setFailed(problems.join('\n'));
