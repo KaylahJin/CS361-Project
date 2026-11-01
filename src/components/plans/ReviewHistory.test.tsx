@@ -52,7 +52,9 @@ describe('ReviewHistory', () => {
     ['ELIGIBLE', 'ผ่านการตรวจ'],
     ['INCOMPLETE', 'เอกสารไม่ครบ'],
     ['NOT_ELIGIBLE', 'ไม่ผ่านคุณสมบัติ'],
-  ] as const)('labels the step decision %s in Thai (#147, #148)', (decision, label) => {
+    ['SELECTED', 'ได้รับการคัดเลือก'],
+    ['NOT_SELECTED', 'ไม่ได้รับการคัดเลือก'],
+  ] as const)('labels the step decision %s in Thai (#147–#149)', (decision, label) => {
     render(<ReviewHistory reviews={[{ ...history[0], decision }]} />);
     expect(screen.getByRole('listitem')).toHaveTextContent(label);
   });

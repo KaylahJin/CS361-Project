@@ -42,8 +42,8 @@ export type PlanReviewItem = CoopPlan;
 /** One decision from plan_reviews, as GET /coop-plans/{id} returns it. */
 export interface PlanReviewHistoryItem {
   review_id: number;
-  /** Any step's decision: the old single review, endorse (#147) or screen (#148). */
-  decision: ReviewDecision | EndorseDecision | ScreenDecision;
+  /** Any step's decision: the old single review, endorse (#147), screen (#148) or select (#149). */
+  decision: ReviewDecision | EndorseDecision | ScreenDecision | SelectDecision;
   comment: string | null;
   reviewed_at: string;
   reviewer_name: string | null;
