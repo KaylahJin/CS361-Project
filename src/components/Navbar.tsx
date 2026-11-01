@@ -14,7 +14,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { canViewStudentList } from '../auth/roles';
+import { canViewCoopPlans, canViewStudentList } from '../auth/roles';
 
 export type TabType =
   | 'home'
@@ -75,6 +75,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // signed-in student does not get the tab either.
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === 'students') return status === 'authenticated' && canViewStudentList(role);
+    if (item.id === 'coop-plans') {
+      // Keep the entry for signed-out visitors so they can reach the login
+      // prompt, but don't send an authenticated role to a page that returns 403.
+      return status !== 'authenticated' || canViewCoopPlans(role);
+    }
     return !('requiresAuth' in item && item.requiresAuth) || status === 'authenticated';
   });
 
