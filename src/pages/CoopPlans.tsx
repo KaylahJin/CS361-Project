@@ -30,6 +30,7 @@ import {
   submitCoopPlan,
   reviewCoopPlan,
   endorseCoopPlan,
+  screenCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -47,7 +48,13 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canManageOwnPlan, canReviewPlans, reviewableStatusFor } from '../auth/roles';
+import {
+  canEndorsePlans,
+  canManageOwnPlan,
+  canReviewPlans,
+  canScreenPlans,
+  reviewableStatusFor,
+} from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
@@ -768,6 +775,18 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     setPlans((prev) =>
       prev.map((p) => (p.plan_id === updatedPlan.plan_id ? updatedPlan : p))
     );
+    // Decided from the plan page: show the new result and the new history
+    // entry (#142), whichever step's form was used.
+    if (selectedPlan?.plan_id === updatedPlan.plan_id) {
+      setSelectedPlan(updatedPlan);
+      void (async () => {
+        try {
+          setSelectedPlan(await getCoopPlan(updatedPlan.plan_id, await getIdToken()));
+        } catch {
+          // keep what is on screen
+        }
+      })();
+    }
     setToast({
       show: true,
       title: 'บันทึกผลสำเร็จ',
@@ -819,6 +838,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         canEndorsePlans(role)
           ? async ({ planId, decision, comment }) =>
               endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onScreen={
+        canScreenPlans(role)
+          ? async ({ planId, decision, comment }) =>
+              screenCoopPlan(planId, decision, comment, await getIdToken())
           : undefined
       }
       onSaved={handleSavedReview}

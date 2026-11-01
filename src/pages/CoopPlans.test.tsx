@@ -13,6 +13,7 @@ const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
 const reviewCoopPlanMock = vi.fn();
+const screenCoopPlanMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
   const actual = await vi.importActual<typeof import('../data/coopPlanApi')>(
@@ -26,6 +27,14 @@ vi.mock('../data/coopPlanApi', async () => {
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
     reviewCoopPlan: reviewCoopPlanMock,
+    screenCoopPlan: screenCoopPlanMock,
+    getPlanEligibility: vi.fn().mockResolvedValue({
+      plan_id: 1,
+      period_id: 'P2568-1',
+      criteria: { min_gpa: 2, min_group_gpa: 2 },
+      eligible: true,
+      failures: [],
+    }),
   };
 });
 
@@ -298,7 +307,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('opens the review dialog from the button on the plan page, not only from the list (F11)', async () => {
-    // Signed in as STAFF, who reviews once the advisor has endorsed (#176).
+    // Signed in as STAFF, who screens once the advisor has endorsed (#176, #148).
     const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
     getCoopPlansMock.mockResolvedValue([endorsed]);
     getCoopPlanMock.mockResolvedValue(endorsed);
@@ -310,20 +319,20 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
 
     const modal = await screen.findByRole('dialog');
-    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+    expect(within(modal).getByText(/ตรวจเอกสารและคุณสมบัติ \(สำหรับเจ้าหน้าที่สหกิจ\)/)).toBeInTheDocument();
   });
 
-  it('after a review from the plan page, shows the new result and the new history entry', async () => {
+  it('after screening from the plan page, shows the new result and the new history entry', async () => {
     const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
-    const reviewed = {
+    const screened = {
       ...SUBMITTED_PLAN,
-      status: 'APPROVED',
+      status: 'ELIGIBLE',
       reviewer_name: 'staff1@example.com',
       reviewed_at: '2026-10-25T10:00:00Z',
       reviews: [
         {
           review_id: 9,
-          decision: 'APPROVED',
+          decision: 'ELIGIBLE',
           comment: null,
           reviewed_at: '2026-10-25T10:00:00Z',
           reviewer_name: 'staff1@example.com',
@@ -331,23 +340,23 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
       ],
     };
     getCoopPlansMock.mockResolvedValue([endorsed]);
-    getCoopPlanMock.mockResolvedValueOnce(endorsed).mockResolvedValue(reviewed);
-    reviewCoopPlanMock.mockResolvedValue(undefined);
+    getCoopPlanMock.mockResolvedValueOnce(endorsed).mockResolvedValue(screened);
+    screenCoopPlanMock.mockResolvedValue({ ...endorsed, status: 'ELIGIBLE' });
 
     render(<CoopPlans />);
     fireEvent.click(await screen.findByText('6609600001'));
     fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
     const modal = await screen.findByRole('dialog');
-    fireEvent.click(within(modal).getByRole('button', { name: 'บันทึกผลการพิจารณา' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'ผ่านการตรวจ' }));
 
-    await waitFor(() => expect(reviewCoopPlanMock).toHaveBeenCalledWith(SUBMITTED_PLAN.plan_id, 'APPROVED', '', 'a-token'));
+    await waitFor(() => expect(screenCoopPlanMock).toHaveBeenCalledWith(SUBMITTED_PLAN.plan_id, 'ELIGIBLE', '', 'a-token'));
     const history = await screen.findByRole('list', { name: 'ประวัติการพิจารณา' });
     expect(within(history).getByText('staff1@example.com')).toBeInTheDocument();
-    expect(within(history).getByText('อนุมัติ')).toBeInTheDocument();
+    expect(within(history).getByText('ผ่านการตรวจ')).toBeInTheDocument();
   });
 
   it('opens and closes plan detail modal when clicking a plan row', async () => {
-    // Signed in as STAFF, who reviews once the advisor has endorsed (#147).
+    // Signed in as STAFF, who screens once the advisor has endorsed (#147, #148).
     const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
     getCoopPlansMock.mockResolvedValue([endorsed]);
     getCoopPlanMock.mockResolvedValue(endorsed);
@@ -366,7 +375,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     expect(within(modal).getByText(/ตรวจและพิจารณาแผนสหกิจศึกษา/i)).toBeInTheDocument();
     expect(within(modal).getByText('Software Engineer Intern')).toBeInTheDocument();
     expect(within(modal).getByText(/สนใจด้าน Backend และ Distributed Systems/)).toBeInTheDocument();
-    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+    expect(within(modal).getByText(/ตรวจเอกสารและคุณสมบัติ \(สำหรับเจ้าหน้าที่สหกิจ\)/)).toBeInTheDocument();
 
     // Close modal via Cancel button
     const cancelBtn = within(modal).getByRole('button', { name: /ยกเลิก/i });
