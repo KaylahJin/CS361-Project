@@ -44,10 +44,22 @@ CREATE INDEX IF NOT EXISTS idx_advisor_assignments_student
 -- is the state reviewers act on.
 UPDATE coop_plans SET status = 'SUBMITTED' WHERE status = 'UNDER_REVIEW';
 
-ALTER TABLE coop_plans DROP CONSTRAINT IF EXISTS chk_coop_plans_status;
-ALTER TABLE coop_plans
-    ADD CONSTRAINT chk_coop_plans_status
-    CHECK (status IN ('PREPARING', 'SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED'));
+-- Only the V2 constraint (no RETURNED) is replaced. db:load re-runs this file
+-- after v3_04 has widened the list, and narrowing it back would fail on any
+-- ENDORSED / ELIGIBLE / SELECTED plan, or strip those statuses from an empty one.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_coop_plans_status'
+          AND pg_get_constraintdef(oid) LIKE '%RETURNED%'
+    ) THEN
+        ALTER TABLE coop_plans DROP CONSTRAINT IF EXISTS chk_coop_plans_status;
+        ALTER TABLE coop_plans
+            ADD CONSTRAINT chk_coop_plans_status
+            CHECK (status IN ('PREPARING', 'SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED'));
+    END IF;
+END $$;
 
 -- One plan in flight per student per period. APPROVED and REJECTED are final,
 -- so they fall outside the index and a student may start a new plan after one.
