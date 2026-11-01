@@ -3,6 +3,7 @@ import { Building2, Calendar, CheckCircle2, GraduationCap, X } from 'lucide-reac
 import type { CoopPlan } from '../../types/coopPlan';
 import type { EndorseDecision, ScreenDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
+import { ReviewHistory } from './ReviewHistory';
 import PlanAttachmentSummary from './PlanAttachmentSummary';
 import EndorseForm from './EndorseForm';
 import ScreenForm from './ScreenForm';
@@ -240,7 +241,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                 <Calendar className="h-4 w-4 text-amber-600" />
-                <span>ประวัติการพิจารณาล่าสุด</span>
+                <span>ประวัติการพิจารณา</span>
               </div>
               <div className="text-xs text-slate-600 space-y-1">
                 <div>
@@ -253,14 +254,9 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   <span className="text-slate-400">เมื่อ:</span>{' '}
                   <span>{formatDate(plan.reviewed_at)}</span>
                 </div>
-                {plan.review_comment && (
-                  <div className="rounded-lg bg-white p-2.5 border border-slate-200/60 mt-1">
-                    <span className="text-slate-400 block mb-0.5">
-                      ความคิดเห็น / เหตุผล:
-                    </span>
-                    <p className="text-slate-800">{plan.review_comment}</p>
-                  </div>
-                )}
+              </div>
+              <div className="pt-1">
+                <ReviewHistory reviews={plan.reviews} />
               </div>
             </div>
           )}
