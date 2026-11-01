@@ -47,8 +47,9 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canEndorsePlans, canReviewPlans, reviewableStatusFor } from '../auth/roles';
+import { canEndorsePlans, canManageOwnPlan, canReviewPlans, reviewableStatusFor } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
+import { ReviewHistory } from '../components/plans/ReviewHistory';
 import { PlanListTable } from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
@@ -312,6 +313,7 @@ function describeSubmissionError(error: unknown): string[] {
 
 function PlanDetail({
   plan,
+  isStudent,
   onBack,
   onEdit,
   onSubmitted,
@@ -319,13 +321,14 @@ function PlanDetail({
   reviewableStatus,
 }: {
   plan: CoopPlan;
+  isStudent: boolean;
   onBack: () => void;
   onEdit: () => void;
   onSubmitted: (plan: CoopPlan) => void;
   onReview?: (plan: CoopPlan) => void;
   reviewableStatus: CoopPlanStatus;
 }) {
-  const locked = lockedReason(plan.status);
+  const locked = isStudent ? lockedReason(plan.status) : null;
   const { getIdToken } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
@@ -334,7 +337,7 @@ function PlanDetail({
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const canSubmit =
-    plan.status === 'PREPARING' || plan.status === 'RETURNED';
+    isStudent && (plan.status === 'PREPARING' || plan.status === 'RETURNED');
 
   const handleSubmitPlan = async () => {
     if (!canSubmit || submitting) return;
@@ -389,7 +392,7 @@ function PlanDetail({
           <div className="flex flex-col items-start gap-2 sm:items-end">
             <StatusBadge status={plan.status} />
 
-            {isPlanEditable(plan.status) && (
+            {isStudent && isPlanEditable(plan.status) && (
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <button
                   type="button"
@@ -561,6 +564,11 @@ function PlanDetail({
           <InfoRow label="ผู้ตรวจสอบ" value={plan.reviewer_name} />
           <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
           <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
+
+          <div className="pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
+            <ReviewHistory reviews={plan.reviews} />
+          </div>
         </section>
 
         <PlanAttachmentSummary
@@ -669,6 +677,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
   const reviewableStatus = reviewableStatusFor(role);
+  const canCreatePlan = canManageOwnPlan(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -691,14 +700,23 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
-  const counts: PlanCounts = {
-    ALL: plans.length,
-    SUBMITTED: plans.filter((p) => p.status === 'SUBMITTED').length,
-    RETURNED: plans.filter((p) => p.status === 'RETURNED').length,
-    APPROVED: plans.filter((p) => p.status === 'APPROVED').length,
-    REJECTED: plans.filter((p) => p.status === 'REJECTED').length,
-    PREPARING: plans.filter((p) => p.status === 'PREPARING').length,
-  };
+  // Counted from the rows themselves, not from a fixed list of statuses: a
+  // status this page has never heard of still lands in `counts` and gets its
+  // own tab, so the numbers on the tabs always add up to the total (#142).
+  const counts: PlanCounts = plans.reduce(
+    (acc, plan) => {
+      acc[plan.status] = (acc[plan.status] ?? 0) + 1;
+      return acc;
+    },
+    {
+      ALL: plans.length,
+      SUBMITTED: 0,
+      RETURNED: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      PREPARING: 0,
+    } as PlanCounts,
+  );
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
@@ -761,24 +779,64 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     );
   }
 
+  // One dialog for both screens. It used to exist only below the list, so on the
+  // plan page "ตรวจพิจารณาแผน" set the plan to review and nothing opened (F11).
+  const reviewDialog = canReview && (
+    <PlanDetailModal
+      plan={reviewPlan}
+      open={Boolean(reviewPlan)}
+      onOpenChange={(open) => {
+        if (!open) setReviewPlan(null);
+      }}
+      reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+      getIdToken={getIdToken}
+      onSubmitReview={async ({ planId, decision, comment }) => {
+        const token = await getIdToken();
+        await reviewCoopPlan(planId, decision, comment, token);
+        await loadPlans();
+        // On the plan page, show the new result and the new history entry.
+        if (selectedPlan?.plan_id === planId) {
+          try {
+            setSelectedPlan(await getCoopPlan(planId, await getIdToken()));
+          } catch {
+            // keep what is on screen
+          }
+        }
+      }}
+      onEndorse={
+        canEndorsePlans(role)
+          ? async ({ planId, decision, comment }) =>
+              endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onSaved={handleSavedReview}
+    />
+  );
+
   if (selectedPlan) {
     return (
-      <PlanDetail
-        plan={selectedPlan}
-        onBack={() => setSelectedPlan(null)}
-        onEdit={() => openEditor(selectedPlan)}
-        onSubmitted={(submitted) => {
-          setSelectedPlan(submitted);
-          void loadPlans();
-        }}
-        onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
-        reviewableStatus={reviewableStatus}
-      />
+      <>
+        <PlanDetail
+          plan={selectedPlan}
+          onBack={() => setSelectedPlan(null)}
+          isStudent={canCreatePlan}
+          onEdit={() => openEditor(selectedPlan)}
+          onSubmitted={(submitted) => {
+            setSelectedPlan(submitted);
+            void loadPlans();
+          }}
+          onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
+          reviewableStatus={reviewableStatus}
+        />
+        {reviewDialog}
+      </>
+
     );
   }
 
   const canCreate =
     authStatus === 'authenticated' &&
+    canCreatePlan &&
     !(error && (error.status === 401 || error.status === 403));
 
   const isUnauthenticated =
@@ -1041,30 +1099,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         )}
       </main>
 
-      {/* Plan Detail & Consideration Modal (V3-05.2) */}
-      {canReview && (
-        <PlanDetailModal
-          plan={reviewPlan}
-          open={Boolean(reviewPlan)}
-          onOpenChange={(open) => {
-            if (!open) setReviewPlan(null);
-          }}
-          reviewerName={user?.email || 'ผู้ตรวจสอบ'}
-          getIdToken={getIdToken}
-          onSubmitReview={async ({ planId, decision, comment }) => {
-            const token = await getIdToken();
-            await reviewCoopPlan(planId, decision, comment, token);
-            await loadPlans();
-          }}
-          onEndorse={
-            canEndorsePlans(role)
-              ? async ({ planId, decision, comment }) =>
-                  endorseCoopPlan(planId, decision, comment, await getIdToken())
-              : undefined
-          }
-          onSaved={handleSavedReview}
-        />
-      )}
+      {reviewDialog}
     </div>
   );
 }
