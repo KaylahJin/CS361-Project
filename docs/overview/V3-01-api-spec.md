@@ -16,7 +16,8 @@ API ทั้งสองรายการมีอยู่ใน Repository �
 | POST | `/coop-plans` | Student | สร้างแผนของตนเอง |
 | PATCH | `/coop-plans/{planId}` | Student เจ้าของแผน | แก้ไขแผน |
 | POST | `/coop-plans/{planId}/submit` | Student เจ้าของแผน | ยื่นแผนหรือยื่นใหม่หลังแก้ไข |
-| POST | `/coop-plans/{planId}/review` | Advisor ที่รับผิดชอบ หรือ Staff | อนุมัติ ไม่อนุมัติ หรือส่งแผนกลับแก้ไข |
+| POST | `/coop-plans/{planId}/review` | Staff | อนุมัติ ไม่อนุมัติ หรือส่งแผนกลับแก้ไข |
+| POST | `/coop-plans/{planId}/endorse` | Advisor ที่รับผิดชอบ | รับรอง (`ENDORSED`) หรือไม่รับรองพร้อมเหตุผล (`NOT_ENDORSED` → แผนเป็น `RETURNED`) จาก `SUBMITTED` เท่านั้น (#147) |
 
 ไม่มี API `start-review` ผู้ตรวจสามารถพิจารณาแผนที่อยู่ในสถานะ `SUBMITTED` ได้โดยตรง
 

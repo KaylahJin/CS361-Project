@@ -143,52 +143,9 @@ describe('reviewCoopPlan', () => {
     expect(body.status).toBe('REJECTED');
   });
 
-  it('ADVISOR assigned to the student can review plan: returns 200', async () => {
-    signedInAs(ADVISOR);
-    const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
-
-    
-    clientQueryMock.mockImplementation(async (sql, params) => {
-      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
-        return {};
-      }
-
-      if (typeof sql === 'string' && sql.includes('FROM periods')) {
-        return { rows: [{ capacity: 2 }] };
-      }
-
-      if (
-        typeof sql === 'string' &&
-        sql.includes('COUNT(*)::int AS approved_count')
-      ) {
-        return { rows: [{ approved_count: 0 }] };
-      }
-
-      if (
-        typeof sql === 'string' &&
-        sql.includes('advisor_student_assignments')
-      ) {
-        return { rows: [{ student_id: '6600000001' }] };
-      }
-
-      if (typeof sql === 'string' && sql.includes('FOR UPDATE')) {
-        return { rows: [plan] };
-      }
-
-      return { rowCount: 1, rows: [] };
-    });
-
-
-    const event = {
-      pathParameters: { planId: '10' },
-      body: JSON.stringify({ decision: 'APPROVED' }),
-    };
-
-    const res = await reviewCoopPlan(event);
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('ADVISOR not assigned to the student is refused with 403 Forbidden', async () => {
+  // #147: an advisor endorses through /endorse and may no longer approve, even
+  // for a student assigned to them.
+  it('ADVISOR assigned to the student is refused with 403 Forbidden', async () => {
     signedInAs(ADVISOR);
     const plan = { plan_id: 10, student_id: '6600000001', status: 'SUBMITTED' };
 
@@ -198,7 +155,7 @@ describe('reviewCoopPlan', () => {
         return { rows: [plan] };
       }
       if (typeof sql === 'string' && sql.includes('advisor_student_assignments')) {
-        return { rows: [] }; // not assigned
+        return { rows: [{ student_id: '6600000001' }] };
       }
       return { rowCount: 1, rows: [] };
     });

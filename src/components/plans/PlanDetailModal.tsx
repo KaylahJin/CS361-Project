@@ -12,12 +12,13 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { CoopPlan } from '../../types/coopPlan';
-import type { ReviewDecision } from '../../types/planReview';
+import type { EndorseDecision, ReviewDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { CircleCheckFill } from './CircleCheckFill';
 import { CoopPlanApiError } from '../../data/coopPlanApi';
 import { ReviewHistory } from './ReviewHistory';
 import PlanAttachmentSummary from './PlanAttachmentSummary';
+import EndorseForm from './EndorseForm';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -31,6 +32,12 @@ export interface PlanDetailModalProps {
     decision: ReviewDecision;
     comment: string;
   }) => Promise<void>;
+  /** Given for an advisor: shows the endorse form instead of the review form (#147). */
+  onEndorse?: (payload: {
+    planId: number;
+    decision: EndorseDecision;
+    comment: string;
+  }) => Promise<CoopPlan>;
 }
 
 function formatDate(isoString: string | null): string {
@@ -57,6 +64,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   onSaved,
   getIdToken,
   onSubmitReview,
+  onEndorse,
 }) => {
   const [decision, setDecision] = useState<ReviewDecision>('APPROVED');
   const [comment, setComment] = useState('');
@@ -345,187 +353,199 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </div>
           )}
 
-          {/* Section 2: Form ผลการพิจารณา (V3-05.2 Readiness) */}
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border-2 border-blue-100 bg-blue-50/30 p-5 space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                  บันทึกผลการพิจารณา (สำหรับผู้ตรวจ)
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500">
-                ผู้ตรวจ:{' '}
-                <span className="font-semibold text-slate-700">
-                  {reviewerName}
+          {/* Section 2: Form ผลการพิจารณา (V3-05.2 Readiness), or the advisor's endorse form (#147) */}
+          {onEndorse ? (
+            <EndorseForm
+              advisorName={reviewerName}
+              onCancel={() => onOpenChange(false)}
+              onEndorse={async (decision, endorseComment) => {
+                const saved = await onEndorse({ planId: plan.plan_id, decision, comment: endorseComment });
+                onSaved?.(saved);
+                onOpenChange(false);
+              }}
+            />
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="rounded-2xl border-2 border-blue-100 bg-blue-50/30 p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    บันทึกผลการพิจารณา (สำหรับผู้ตรวจ)
+                  </h3>
+                </div>
+                <span className="text-xs text-slate-500">
+                  ผู้ตรวจ:{' '}
+                  <span className="font-semibold text-slate-700">
+                    {reviewerName}
+                  </span>
                 </span>
-              </span>
-            </div>
-
-            {/* Error Banner */}
-            {errorMessage && (
-              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-                <span>{errorMessage}</span>
               </div>
-            )}
 
-            {/* Decision Radio Buttons */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">
-                ผลการพิจารณา <span className="text-rose-500">*</span>
-              </label>
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                {/* 1. APPROVE */}
-                <label
-                  id="label-decision-approved"
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    decision === 'APPROVED'
-                      ? 'border-emerald-600 bg-emerald-50/40 text-emerald-800 ring-1 ring-emerald-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    id="radio-decision-approved"
-                    type="radio"
-                    name="decision"
-                    value="APPROVED"
-                    checked={decision === 'APPROVED'}
-                    onChange={() => setDecision('APPROVED')}
-                    className="sr-only"
-                  />
-                  <CircleCheckFill
-                    className={`h-4 w-4 shrink-0 transition-colors ${
+              {/* Error Banner */}
+              {errorMessage && (
+                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {/* Decision Radio Buttons */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">
+                  ผลการพิจารณา <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  {/* 1. APPROVE */}
+                  <label
+                    id="label-decision-approved"
+                    className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                       decision === 'APPROVED'
-                        ? 'text-emerald-600'
-                        : 'text-slate-400'
+                        ? 'border-emerald-600 bg-emerald-50/40 text-emerald-800 ring-1 ring-emerald-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
-                  />
-                  <span>อนุมัติ (Approve)</span>
-                </label>
+                  >
+                    <input
+                      id="radio-decision-approved"
+                      type="radio"
+                      name="decision"
+                      value="APPROVED"
+                      checked={decision === 'APPROVED'}
+                      onChange={() => setDecision('APPROVED')}
+                      className="sr-only"
+                    />
+                    <CircleCheckFill
+                      className={`h-4 w-4 shrink-0 transition-colors ${
+                        decision === 'APPROVED'
+                          ? 'text-emerald-600'
+                          : 'text-slate-400'
+                      }`}
+                    />
+                    <span>อนุมัติ (Approve)</span>
+                  </label>
 
-                {/* 2. RETURN */}
-                <label
-                  id="label-decision-returned"
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    decision === 'RETURNED'
-                      ? 'border-amber-500 bg-amber-50/50 text-amber-900 ring-1 ring-amber-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    id="radio-decision-returned"
-                    type="radio"
-                    name="decision"
-                    value="RETURNED"
-                    checked={decision === 'RETURNED'}
-                    onChange={() => setDecision('RETURNED')}
-                    className="sr-only"
-                  />
-                  <RotateCcw
-                    className={`h-4 w-4 ${
+                  {/* 2. RETURN */}
+                  <label
+                    id="label-decision-returned"
+                    className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                       decision === 'RETURNED'
-                        ? 'text-amber-500'
-                        : 'text-slate-400'
+                        ? 'border-amber-500 bg-amber-50/50 text-amber-900 ring-1 ring-amber-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
-                  />
-                  <span>ส่งกลับแก้ไข (Return)</span>
-                </label>
+                  >
+                    <input
+                      id="radio-decision-returned"
+                      type="radio"
+                      name="decision"
+                      value="RETURNED"
+                      checked={decision === 'RETURNED'}
+                      onChange={() => setDecision('RETURNED')}
+                      className="sr-only"
+                    />
+                    <RotateCcw
+                      className={`h-4 w-4 ${
+                        decision === 'RETURNED'
+                          ? 'text-amber-500'
+                          : 'text-slate-400'
+                      }`}
+                    />
+                    <span>ส่งกลับแก้ไข (Return)</span>
+                  </label>
 
-                {/* 3. REJECT */}
-                <label
-                  id="label-decision-rejected"
-                  className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    decision === 'REJECTED'
-                      ? 'border-rose-600 bg-rose-50/50 text-rose-900 ring-1 ring-rose-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    id="radio-decision-rejected"
-                    type="radio"
-                    name="decision"
-                    value="REJECTED"
-                    checked={decision === 'REJECTED'}
-                    onChange={() => setDecision('REJECTED')}
-                    className="sr-only"
-                  />
-                  <XCircle
-                    className={`h-4 w-4 ${
+                  {/* 3. REJECT */}
+                  <label
+                    id="label-decision-rejected"
+                    className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                       decision === 'REJECTED'
-                        ? 'text-rose-600'
-                        : 'text-slate-400'
+                        ? 'border-rose-600 bg-rose-50/50 text-rose-900 ring-1 ring-rose-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
-                  />
-                  <span>ไม่อนุมัติ (Reject)</span>
-                </label>
+                  >
+                    <input
+                      id="radio-decision-rejected"
+                      type="radio"
+                      name="decision"
+                      value="REJECTED"
+                      checked={decision === 'REJECTED'}
+                      onChange={() => setDecision('REJECTED')}
+                      className="sr-only"
+                    />
+                    <XCircle
+                      className={`h-4 w-4 ${
+                        decision === 'REJECTED'
+                          ? 'text-rose-600'
+                          : 'text-slate-400'
+                      }`}
+                    />
+                    <span>ไม่อนุมัติ (Reject)</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            {/* Comment Textarea */}
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label
-                  htmlFor="review-comment"
-                  className="text-xs font-bold text-slate-700"
+              {/* Comment Textarea */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label
+                    htmlFor="review-comment"
+                    className="text-xs font-bold text-slate-700"
+                  >
+                    ความคิดเห็น / เหตุผลการพิจารณา{' '}
+                    {(decision === 'RETURNED' || decision === 'REJECTED') && (
+                      <span className="text-rose-500 font-semibold">
+                        (จำเป็นต้องระบุ)
+                      </span>
+                    )}
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {comment.length} ตัวอักษร
+                  </span>
+                </div>
+                <textarea
+                  id="review-comment"
+                  rows={3}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder={
+                    decision === 'RETURNED'
+                      ? 'ระบุสิ่งที่นักศึกษาต้องแก้ไขเพิ่มเติม เช่น รายวิชาที่ยังไม่ผ่าน หรือแผนการเรียน...'
+                      : decision === 'REJECTED'
+                      ? 'ระบุเหตุผลที่ไม่อนุมัติแผนฉบับนี้...'
+                      : 'ระบุความคิดเห็นหรือคำแนะนำเพิ่มเติม (ถ้ามี)...'
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  id="btn-cancel-modal"
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
-                  ความคิดเห็น / เหตุผลการพิจารณา{' '}
-                  {(decision === 'RETURNED' || decision === 'REJECTED') && (
-                    <span className="text-rose-500 font-semibold">
-                      (จำเป็นต้องระบุ)
-                    </span>
+                  ยกเลิก
+                </button>
+                <button
+                  id="btn-submit-decision"
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 transition cursor-pointer"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>กำลังบันทึก...</span>
+                    </>
+                  ) : (
+                    <span>บันทึกผลการพิจารณา</span>
                   )}
-                </label>
-                <span className="text-[11px] text-slate-400">
-                  {comment.length} ตัวอักษร
-                </span>
+                </button>
               </div>
-              <textarea
-                id="review-comment"
-                rows={3}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  decision === 'RETURNED'
-                    ? 'ระบุสิ่งที่นักศึกษาต้องแก้ไขเพิ่มเติม เช่น รายวิชาที่ยังไม่ผ่าน หรือแผนการเรียน...'
-                    : decision === 'REJECTED'
-                    ? 'ระบุเหตุผลที่ไม่อนุมัติแผนฉบับนี้...'
-                    : 'ระบุความคิดเห็นหรือคำแนะนำเพิ่มเติม (ถ้ามี)...'
-                }
-                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                id="btn-cancel-modal"
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-              >
-                ยกเลิก
-              </button>
-              <button
-                id="btn-submit-decision"
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 transition cursor-pointer"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>กำลังบันทึก...</span>
-                  </>
-                ) : (
-                  <span>บันทึกผลการพิจารณา</span>
-                )}
-              </button>
-            </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
     </div>
