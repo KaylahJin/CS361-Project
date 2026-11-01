@@ -645,9 +645,21 @@ function PlanDetail({
 
 interface CoopPlansProps {
   onNavigateLogin?: () => void;
+  /**
+   * The plan detail the URL points at. Leave it out and the page keeps track of
+   * the open plan on its own; pass it (null for "none") together with
+   * onRoutePlanChange and the page follows the URL, so a refresh or the browser
+   * Back button lands on the same plan (#200).
+   */
+  routePlanId?: number | null;
+  onRoutePlanChange?: (planId: number | null) => void;
 }
 
-export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
+export default function CoopPlans({
+  onNavigateLogin,
+  routePlanId,
+  onRoutePlanChange,
+}: CoopPlansProps = {}) {
   const [plans, setPlans] = useState<PlanReviewItem[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(null);
   const [reviewPlan, setReviewPlan] = useState<CoopPlan | null>(null);
@@ -697,6 +709,42 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
+  const selectedPlanRef = useRef<CoopPlan | null>(null);
+  useEffect(() => {
+    selectedPlanRef.current = selectedPlan;
+  }, [selectedPlan]);
+
+  // Follow the URL: after a refresh, or Back/Forward, open the plan it names.
+  // Skipped when no router drives the page (routePlanId left out), and until
+  // the session is back, because the plan needs a token.
+  useEffect(() => {
+    if (routePlanId === undefined || authStatus !== 'authenticated') return;
+
+    if (routePlanId === null) {
+      setSelectedPlan(null);
+      return;
+    }
+
+    // Clicking a plan already set it; do not fetch it a second time.
+    if (selectedPlanRef.current?.plan_id === routePlanId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const plan = await getCoopPlan(routePlanId, await getIdToken());
+        if (!cancelled) setSelectedPlan(plan);
+      } catch {
+        // A plan that is gone, or not this account's, sends the user back to the list.
+        if (!cancelled) onRoutePlanChange?.(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routePlanId, authStatus]);
+
   // Counted from the rows themselves, not from a fixed list of statuses: a
   // status this page has never heard of still lands in `counts` and gets its
   // own tab, so the numbers on the tabs always add up to the total (#142).
@@ -718,6 +766,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const handleSelectPlan = async (plan: CoopPlan) => {
     setSelectedPlan(plan);
+    onRoutePlanChange?.(plan.plan_id);
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
       if (fresh) setSelectedPlan(fresh);
@@ -746,6 +795,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     savedInEditor.current = null;
     setEditor(null);
     setSelectedPlan(back);
+    onRoutePlanChange?.(back?.plan_id ?? null);
     void loadPlans();
   };
 
@@ -815,7 +865,10 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       <>
         <PlanDetail
           plan={selectedPlan}
-          onBack={() => setSelectedPlan(null)}
+          onBack={() => {
+            setSelectedPlan(null);
+            onRoutePlanChange?.(null);
+          }}
           isStudent={canCreatePlan}
           onEdit={() => openEditor(selectedPlan)}
           onSubmitted={(submitted) => {
