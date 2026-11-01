@@ -36,6 +36,15 @@ export interface PlanEligibility {
 
 export type PlanReviewItem = CoopPlan;
 
+/** One decision from plan_reviews, as GET /coop-plans/{id} returns it. */
+export interface PlanReviewHistoryItem {
+  review_id: number;
+  decision: ReviewDecision;
+  comment: string | null;
+  reviewed_at: string;
+  reviewer_name: string | null;
+}
+
 export interface ReviewSubmitPayload {
   planId: number;
   decision: ReviewDecision;

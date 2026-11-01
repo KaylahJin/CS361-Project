@@ -102,3 +102,28 @@ describe('Navbar and the student tab', () => {
     expect(onTabChange).toHaveBeenCalledWith('home');
   });
 });
+
+describe('Navbar and the coop-plan page', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    logout.mockReset();
+  });
+
+  it('hides the coop-plan tab from an authenticated ADMIN', () => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', role: 'ADMIN', logout });
+
+    renderNavbar('home');
+
+    expect(screen.queryByRole('button', { name: /แผนสหกิจ/ })).not.toBeInTheDocument();
+  });
+
+  it.each(['STUDENT', 'ADVISOR', 'STAFF', 'COORDINATOR', 'COMMITTEE'])(
+    'shows the coop-plan tab to %s', (role) => {
+      useAuthMock.mockReturnValue({ status: 'authenticated', role, logout });
+
+      renderNavbar('home');
+
+      expect(screen.getAllByRole('button', { name: /แผนสหกิจ/ }).length).toBeGreaterThan(0);
+    },
+  );
+});
