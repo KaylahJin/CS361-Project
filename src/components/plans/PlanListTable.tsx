@@ -3,6 +3,7 @@ import {
   Building2,
   Calendar,
   ChevronRight,
+  ClipboardCheck,
   FileText,
   RotateCcw,
   UserCheck,
@@ -45,6 +46,20 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
           <UserCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
           <span>อาจารย์รับรองแล้ว</span>
+        </span>
+      );
+    case 'ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600">
+          <ClipboardCheck className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+          <span>ผ่านการตรวจ รอคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ผ่านการตรวจคุณสมบัติ</span>
         </span>
       );
     case 'APPROVED':

@@ -193,6 +193,7 @@ all" and does **not** replace the per-action status checks below.
 | `POST /coop-plans/{id}/review` | 403 | 403 (endorses instead, #147) | any student, only from `ENDORSED` | 403 |
 | `POST /coop-plans/{id}/endorse` | 403 | assigned students, only from `SUBMITTED` | 403 | 403 |
 | `POST /coop-plans/{id}/screen` | 403 | 403 | any student, only from `ENDORSED` | 403 |
+| `GET /coop-plans/{id}/eligibility` | 403 | 403 | any student | 403 |
 
 COMMITTEE (#147) is refused on every action above; #149 gives it selection.
 
