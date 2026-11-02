@@ -844,6 +844,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const isUnauthenticated =
     error && error.title === 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ';
+  const showProgressChart = !isUnauthenticated && showReviewTools && total > 0;
 
   const displayedPlans = plans.filter((plan) => {
     if (statusFilter && statusFilter !== 'ALL') {
@@ -956,7 +957,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       {/* Main Workspace Layout */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-4">
+          <div className={`${showProgressChart ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="font-heading text-lg font-bold text-slate-800 tracking-tight">
@@ -1012,7 +1013,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             )}
           </div>
 
-          {!isUnauthenticated && showReviewTools && total > 0 && (
+          {showProgressChart && (
             <div className="lg:sticky lg:top-20">
               <PlanProgressChart counts={counts} total={total} />
             </div>
