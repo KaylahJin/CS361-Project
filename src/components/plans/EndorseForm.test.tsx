@@ -106,9 +106,9 @@ describe('advisor endorse form (#147)', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
-  it('staff without onEndorse still get the review form', () => {
+  it('without onEndorse or onScreen there is no decision form, and never an approve option (#148)', () => {
     renderModal({ onEndorse: undefined });
     expect(screen.queryByRole('button', { name: 'รับรอง' })).not.toBeInTheDocument();
-    expect(screen.getByText(/อนุมัติ \(Approve\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/อนุมัติ \(Approve\)/)).not.toBeInTheDocument();
   });
 });

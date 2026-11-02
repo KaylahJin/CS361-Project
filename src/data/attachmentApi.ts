@@ -11,6 +11,13 @@ export interface PlanAttachment {
   createdAt: string;
 }
 
+export type UploadStage =
+  | 'requesting_url'
+  | 'uploading'
+  | 'confirming';
+
+export type UploadStageCallback = (stage: UploadStage) => void;
+
 export class AttachmentApiError extends Error {
   status?: number;
   code?: string;
@@ -21,6 +28,12 @@ export class AttachmentApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+async function isPdfFileContent(file: File): Promise<boolean> {
+  const header = await file.slice(0, 5).text();
+
+  return header === '%PDF-';
 }
 
 async function apiRequest<T>(
@@ -82,6 +95,7 @@ export async function uploadPlanAttachment(
   planId: number,
   file: File,
   token?: string | null,
+  onStage?: UploadStageCallback,
 ): Promise<PlanAttachment> {
   if (
     file.type !== 'application/pdf' ||
@@ -109,7 +123,20 @@ export async function uploadPlanAttachment(
     );
   }
 
-  // Step 1: ขอ presigned POST URL จาก Backend
+  // ตรวจสอบเนื้อหาไฟล์ว่าเป็น PDF จริงหรือไม่
+  const isPdf = await isPdfFileContent(file);
+
+  if (!isPdf) {
+    throw new AttachmentApiError(
+      'ไฟล์ที่เลือกไม่ใช่ PDF ที่ถูกต้อง กรุณาเลือกไฟล์ PDF จริง',
+      400,
+      'ATTACHMENT_INVALID_TYPE',
+    );
+  }
+
+  // Step 1: ขอ Presigned POST URL จาก Backend
+  onStage?.('requesting_url');
+
   const signed = await apiRequest<{
     url: string;
     fields: Record<string, string>;
@@ -129,6 +156,8 @@ export async function uploadPlanAttachment(
   );
 
   // Step 2: ส่ง fields และไฟล์ไป S3 โดยตรง
+  onStage?.('uploading');
+
   const form = new FormData();
 
   Object.entries(signed.fields).forEach(([key, value]) => {
@@ -150,6 +179,8 @@ export async function uploadPlanAttachment(
   }
 
   // Step 3: ให้ Backend ตรวจไฟล์ใน S3 และบันทึก metadata
+  onStage?.('confirming');
+
   return apiRequest<PlanAttachment>(
     `/coop-plans/${planId}/attachments`,
     token,

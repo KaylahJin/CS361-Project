@@ -28,8 +28,9 @@ import {
   getCoopPlan,
   getCoopPlans,
   submitCoopPlan,
-  reviewCoopPlan,
   endorseCoopPlan,
+  screenCoopPlan,
+  selectCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -52,6 +53,9 @@ import {
   canManageOwnPlan,
   canReviewPlans,
   canUsePlanReviewTools,
+  canScreenPlans,
+  canSelectPlans,
+  reviewableStatusFor,
 } from '../auth/roles';
 import { PlanFilters } from '../components/plans/PlanFilters';
 import { ReviewHistory } from '../components/plans/ReviewHistory';
@@ -80,6 +84,22 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
     ENDORSED: {
       label: 'อาจารย์รับรองแล้ว',
       className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    },
+    ELIGIBLE: {
+      label: 'ผ่านการตรวจ รอคัดเลือก',
+      className: 'bg-teal-50 text-teal-700 border-teal-200',
+    },
+    NOT_ELIGIBLE: {
+      label: 'ไม่ผ่านการตรวจคุณสมบัติ',
+      className: 'bg-red-50 text-red-700 border-red-200',
+    },
+    SELECTED: {
+      label: 'ได้รับการคัดเลือก',
+      className: 'bg-violet-50 text-violet-700 border-violet-200',
+    },
+    NOT_SELECTED: {
+      label: 'ไม่ได้รับการคัดเลือก',
+      className: 'bg-slate-100 text-slate-700 border-slate-300',
     },
     APPROVED: {
       label: 'อนุมัติแล้ว',
@@ -259,6 +279,14 @@ function lockedReason(status: CoopPlanStatus): string | null {
       return 'แผนนี้ได้รับอนุมัติแล้ว แก้ไขไม่ได้';
     case 'REJECTED':
       return 'แผนนี้ไม่ได้รับอนุมัติ แก้ไขไม่ได้';
+    case 'ELIGIBLE':
+      return 'แผนนี้ผ่านการตรวจแล้ว รอคัดเลือก แก้ไขไม่ได้';
+    case 'NOT_ELIGIBLE':
+      return 'แผนนี้ไม่ผ่านการตรวจคุณสมบัติ แก้ไขไม่ได้';
+    case 'SELECTED':
+      return 'แผนนี้ได้รับการคัดเลือกแล้ว แก้ไขไม่ได้';
+    case 'NOT_SELECTED':
+      return 'แผนนี้ไม่ได้รับการคัดเลือก แก้ไขไม่ได้ และยื่นแผนใหม่ในรอบนี้ไม่ได้';
     default:
       return null;
   }
@@ -323,6 +351,7 @@ function PlanDetail({
   onEdit,
   onSubmitted,
   onReview,
+  reviewableStatus,
 }: {
   plan: CoopPlan;
   isStudent: boolean;
@@ -330,6 +359,7 @@ function PlanDetail({
   onEdit: () => void;
   onSubmitted: (plan: CoopPlan) => void;
   onReview?: (plan: CoopPlan) => void;
+  reviewableStatus: CoopPlanStatus;
 }) {
   const locked = isStudent ? lockedReason(plan.status) : null;
   const { getIdToken } = useAuth();
@@ -427,7 +457,7 @@ function PlanDetail({
               </button>
             )}
 
-            {plan.status === 'SUBMITTED' && onReview && (
+            {plan.status === reviewableStatus && onReview && (
               <button
                 type="button"
                 onClick={() => onReview(plan)}
@@ -679,6 +709,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // Only reviewer roles get the review button and form. A student sees their
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
+  const reviewableStatus = reviewableStatusFor(role);
   const canCreatePlan = canManageOwnPlan(role);
   // A student sees only their own plans, so the reviewer's search and filters
   // would be noise (#203).
@@ -761,6 +792,18 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     setPlans((prev) =>
       prev.map((p) => (p.plan_id === updatedPlan.plan_id ? updatedPlan : p))
     );
+    // Decided from the plan page: show the new result and the new history
+    // entry (#142), whichever step's form was used.
+    if (selectedPlan?.plan_id === updatedPlan.plan_id) {
+      setSelectedPlan(updatedPlan);
+      void (async () => {
+        try {
+          setSelectedPlan(await getCoopPlan(updatedPlan.plan_id, await getIdToken()));
+        } catch {
+          // keep what is on screen
+        }
+      })();
+    }
     setToast({
       show: true,
       title: 'บันทึกผลสำเร็จ',
@@ -795,23 +838,22 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       }}
       reviewerName={user?.email || 'ผู้ตรวจสอบ'}
       getIdToken={getIdToken}
-      onSubmitReview={async ({ planId, decision, comment }) => {
-        const token = await getIdToken();
-        await reviewCoopPlan(planId, decision, comment, token);
-        await loadPlans();
-        // On the plan page, show the new result and the new history entry.
-        if (selectedPlan?.plan_id === planId) {
-          try {
-            setSelectedPlan(await getCoopPlan(planId, await getIdToken()));
-          } catch {
-            // keep what is on screen
-          }
-        }
-      }}
       onEndorse={
         canEndorsePlans(role)
           ? async ({ planId, decision, comment }) =>
               endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onScreen={
+        canScreenPlans(role)
+          ? async ({ planId, decision, comment }) =>
+              screenCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onSelect={
+        canSelectPlans(role)
+          ? async ({ planId, decision, comment }) =>
+              selectCoopPlan(planId, decision, comment, await getIdToken())
           : undefined
       }
       onSaved={handleSavedReview}
@@ -831,9 +873,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             void loadPlans();
           }}
           onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
+          reviewableStatus={reviewableStatus}
         />
         {reviewDialog}
       </>
+
     );
   }
 
@@ -1074,12 +1118,14 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             ) : (
               <PlanListCards
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             )}
 
