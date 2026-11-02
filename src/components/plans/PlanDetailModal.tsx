@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { Building2, Calendar, CheckCircle2, GraduationCap, X } from 'lucide-react';
 import type { CoopPlan } from '../../types/coopPlan';
-import type { EndorseDecision, ScreenDecision } from '../../types/planReview';
+import type { EndorseDecision, ScreenDecision, SelectDecision } from '../../types/planReview';
 import { PlanStatusBadge } from './PlanListTable';
 import { ReviewHistory } from './ReviewHistory';
 import PlanAttachmentSummary from './PlanAttachmentSummary';
 import EndorseForm from './EndorseForm';
 import ScreenForm from './ScreenForm';
+import SelectForm from './SelectForm';
 
 export interface PlanDetailModalProps {
   plan: CoopPlan | null;
@@ -25,6 +26,12 @@ export interface PlanDetailModalProps {
   onScreen?: (payload: {
     planId: number;
     decision: ScreenDecision;
+    comment: string;
+  }) => Promise<CoopPlan>;
+  /** Given for the committee: shows the selection form (#149). */
+  onSelect?: (payload: {
+    planId: number;
+    decision: SelectDecision;
     comment: string;
   }) => Promise<CoopPlan>;
 }
@@ -54,6 +61,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   getIdToken,
   onEndorse,
   onScreen,
+  onSelect,
 }) => {
   // Handle ESC key to close
   useEffect(() => {
@@ -261,7 +269,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </div>
           )}
 
-          {/* Section 2: the advisor's endorse form (#147) or staff's screening form (#148). Approving in one step is gone (#148). */}
+          {/* Section 2: the form of the viewer's step: endorse (#147), screen (#148) or select (#149). */}
           {onEndorse ? (
             <EndorseForm
               advisorName={reviewerName}
@@ -281,6 +289,16 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               onCancel={() => onOpenChange(false)}
               onScreen={async (decision, screenComment) => {
                 const saved = await onScreen({ planId: plan.plan_id, decision, comment: screenComment });
+                onSaved?.(saved);
+                onOpenChange(false);
+              }}
+            />
+          ) : onSelect ? (
+            <SelectForm
+              committeeName={reviewerName}
+              onCancel={() => onOpenChange(false)}
+              onSelect={async (decision, selectComment) => {
+                const saved = await onSelect({ planId: plan.plan_id, decision, comment: selectComment });
                 onSaved?.(saved);
                 onOpenChange(false);
               }}

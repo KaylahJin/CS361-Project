@@ -15,7 +15,7 @@ import type {
   CreateCoopPlanInput,
   UpdateCoopPlanInput,
 } from '../types/coopPlan';
-import type { EndorseDecision, PlanEligibility, ScreenDecision } from '../types/planReview';
+import type { EndorseDecision, PlanEligibility, ScreenDecision, SelectDecision } from '../types/planReview';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -392,6 +392,30 @@ export async function screenCoopPlan(
 
   if (!res.ok) {
     throw await writeError(res, `screen coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Committee selection (POST /coop-plans/{planId}/select, #149). Resolves with
+ * the plan as saved. 409 carries CAPACITY_REACHED / CAPACITY_NOT_SET when no
+ * seat can be given, PLAN_NOT_SELECTABLE when the plan was no longer ELIGIBLE.
+ */
+export async function selectCoopPlan(
+  planId: number,
+  decision: SelectDecision,
+  comment: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/select`;
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: jsonWriteHeaders(idToken),
+    body: JSON.stringify(comment ? { decision, comment } : { decision }),
+  });
+
+  if (!res.ok) {
+    throw await writeError(res, `select coop plan ${planId}`);
   }
   return await res.json();
 }

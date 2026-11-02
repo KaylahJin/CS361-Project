@@ -12,6 +12,8 @@ const DECISION_LABEL: Record<Decision, string> = {
   ELIGIBLE: 'ผ่านการตรวจ',
   INCOMPLETE: 'เอกสารไม่ครบ',
   NOT_ELIGIBLE: 'ไม่ผ่านคุณสมบัติ',
+  SELECTED: 'ได้รับการคัดเลือก',
+  NOT_SELECTED: 'ไม่ได้รับการคัดเลือก',
 };
 
 const DECISION_STYLE: Record<Decision, string> = {
@@ -23,6 +25,8 @@ const DECISION_STYLE: Record<Decision, string> = {
   ELIGIBLE: 'bg-teal-50 text-teal-700 border-teal-200',
   INCOMPLETE: 'bg-amber-50 text-amber-700 border-amber-200',
   NOT_ELIGIBLE: 'bg-rose-50 text-rose-700 border-rose-200',
+  SELECTED: 'bg-violet-50 text-violet-700 border-violet-200',
+  NOT_SELECTED: 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
 function formatWhen(iso: string): string {

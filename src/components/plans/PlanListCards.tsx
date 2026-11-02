@@ -7,7 +7,7 @@ interface PlanListCardsProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
-  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff (#147). */
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff, ELIGIBLE for the committee. */
   reviewableStatus?: PlanReviewItem['status'];
 }
 
