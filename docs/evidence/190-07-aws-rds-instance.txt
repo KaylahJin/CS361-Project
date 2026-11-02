@@ -1,0 +1,20 @@
+﻿Evidence: 190-07-aws-rds-instance.txt
+Title: AWS RDS Instance Configuration
+Generated: 2026-11-02 16:37:55
+Region: us-east-1
+============================================================
+{
+    "Identifier": "****-coop-db-dev",
+    "Status": "available",
+    "Engine": "postgres",
+    "EngineVersion": "16.15",
+    "Endpoint": "****-coop-db-dev.cjdoketeijjk.us-east-1.rds.amazonaws.com",
+    "Port": 5432,
+    "PubliclyAccessible": true,
+    "VpcId": "vpc-0b53bc4c5d49d2127",
+    "SubnetGroup": "default",
+    "SecurityGroups": [
+        "sg-0c32d8d33a74425ae"
+    ]
+}
+
