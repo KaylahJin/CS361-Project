@@ -733,9 +733,12 @@ export default function CoopPlans({
       try {
         const plan = await getCoopPlan(routePlanId, await getIdToken());
         if (!cancelled) setSelectedPlan(plan);
-      } catch {
+      } catch (err) {
         // A plan that is gone, or not this account's, sends the user back to the list.
-        if (!cancelled) onRoutePlanChange?.(null);
+        if (!cancelled) {
+          onRoutePlanChange?.(null);
+          setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+        }
       }
     })();
 

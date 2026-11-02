@@ -125,7 +125,7 @@ describe('keeping the page on refresh (#200)', () => {
     await userEvent.click(screen.getAllByRole('button', { name: /นักศึกษา/ })[0]);
     await screen.findByText(/ไม่พบข้อมูลนักศึกษา/);
 
-    // Back/Forward change the hash without a click on the navbar.
+    // Browser history changes the hash without a navbar click.
     act(() => {
       window.location.hash = '#home';
     });
@@ -133,5 +133,13 @@ describe('keeping the page on refresh (#200)', () => {
     await waitFor(() => {
       expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
     });
+
+    act(() => window.history.back());
+    await screen.findByText(/ไม่พบข้อมูลนักศึกษา/);
+    expect(window.location.hash).toBe('#students');
+
+    act(() => window.history.forward());
+    await waitFor(() => expect(window.location.hash).toBe('#home'));
+    expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
   });
 });
