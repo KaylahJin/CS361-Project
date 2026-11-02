@@ -546,6 +546,7 @@ describe('CoopPlans: create and edit', () => {
   describe('creating a plan', () => {
     it('opens the form, saves a draft, and shows the new plan on the way back', async () => {
       const created = fullPlan({ student_note: null });
+      getCoopPlanMock.mockResolvedValue(created);
       getCoopPlansMock.mockResolvedValueOnce([]).mockResolvedValue([created]);
       createCoopPlanMock.mockResolvedValue(created);
       const user = userEvent.setup();
@@ -652,7 +653,9 @@ describe('CoopPlans: create and edit', () => {
 
     it('saves, and the detail page then shows what the API returned', async () => {
       const user = await openDetail(fullPlan({ student_note: 'old note' }));
-      updateCoopPlanMock.mockResolvedValue(fullPlan({ student_note: 'new note from the database' }));
+      const updated = fullPlan({ student_note: 'new note from the database' });
+      updateCoopPlanMock.mockResolvedValue(updated);
+      getCoopPlanMock.mockResolvedValue(updated);
 
       await user.click(screen.getByRole('button', { name: 'แก้ไขแผน' }));
       await user.clear(await screen.findByLabelText(/หมายเหตุจากนักศึกษา/));
@@ -749,6 +752,7 @@ describe('CoopPlans: create and edit', () => {
       submitCoopPlanMock.mockResolvedValue(submitted);
 
       const user = await openDetail(fullPlan({ status: 'PREPARING' }));
+      getCoopPlanMock.mockResolvedValue(submitted);
 
       await user.click(screen.getByRole('button', { name: 'ยื่นแผน' }));
 

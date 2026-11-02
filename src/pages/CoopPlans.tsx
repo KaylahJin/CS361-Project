@@ -673,6 +673,7 @@ interface CoopPlansProps {
 export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const [plans, setPlans] = useState<PlanReviewItem[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(null);
+  const [detailError, setDetailError] = useState<PlanError | null>(null);
   const [reviewPlan, setReviewPlan] = useState<CoopPlan | null>(null);
 
   const [editor, setEditor] = useState<{ plan?: CoopPlan } | null>(null);
@@ -742,11 +743,13 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const handleSelectPlan = async (plan: CoopPlan) => {
     setSelectedPlan(plan);
+    setDetailError(null);
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
-      if (fresh) setSelectedPlan(fresh);
-    } catch {
-      // keep existing
+      if (!fresh) throw new Error('Plan detail is empty');
+      setSelectedPlan(fresh);
+    } catch (err) {
+      setDetailError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     }
   };
 
@@ -755,8 +758,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
       if (fresh) setReviewPlan(fresh);
-    } catch {
-      // keep existing
+    } catch (err) {
+      setReviewPlan(null);
+      setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     }
   };
 
@@ -767,9 +771,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const closeEditor = () => {
     const back = savedInEditor.current ?? editor?.plan ?? null;
+    const wasSaved = savedInEditor.current !== null;
     savedInEditor.current = null;
     setEditor(null);
     setSelectedPlan(back);
+    if (back && wasSaved) void handleSelectPlan(back);
     void loadPlans();
   };
 
@@ -837,17 +843,23 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   if (selectedPlan) {
     return (
       <>
-        <PlanDetail
+        {detailError ? (
+          <div><button type="button" onClick={() => { setSelectedPlan(null); setDetailError(null); }}>กลับรายการคำร้อง</button><ErrorState
+            title={detailError.title}
+            message={detailError.detail}
+            onRetry={detailError.canRetry ? () => void handleSelectPlan(selectedPlan) : undefined}
+          /></div>
+        ) : <PlanDetail
           plan={selectedPlan}
           onBack={() => setSelectedPlan(null)}
           isStudent={canCreatePlan}
           onEdit={() => openEditor(selectedPlan)}
           onSubmitted={(submitted) => {
-            setSelectedPlan(submitted);
+            void handleSelectPlan(submitted);
             void loadPlans();
           }}
           onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
-        />
+        />}
         {reviewDialog}
       </>
     );
@@ -875,10 +887,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   );
 
   const periodOptions: PeriodFilterOption[] = (() => {
-    const map = new Map<string, PeriodFilterOption>([
-      ['P2568-1', { period_id: 'P2568-1', label: 'ปีการศึกษา 2568/1' }],
-      ['P2567-2', { period_id: 'P2567-2', label: 'ปีการศึกษา 2567/2' }],
-    ]);
+    const map = new Map<string, PeriodFilterOption>();
     for (const p of plans) {
       if (p.period_id && !map.has(p.period_id)) {
         map.set(p.period_id, {

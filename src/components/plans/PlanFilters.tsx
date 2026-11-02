@@ -51,11 +51,6 @@ const PREPARING_IDS = ['PREPARING', 'DRAFT'];
 // around while the list is being filtered.
 const ALWAYS_SHOWN = new Set(['SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED']);
 
-const DEFAULT_PERIOD_OPTIONS: PeriodFilterOption[] = [
-  { period_id: 'P2568-1', label: 'ปีการศึกษา 2568/1' },
-  { period_id: 'P2567-2', label: 'ปีการศึกษา 2567/2' },
-];
-
 const countOf = (counts: PlanCounts, id: string) => counts[id] ?? 0;
 
 /**
@@ -112,11 +107,10 @@ export const PlanFilters: React.FC<PlanFiltersProps> = ({
   companyId = '',
   onCompanyChange,
   companyOptions = [],
-  periodOptions,
+  periodOptions = [],
 }) => {
   const tabs = buildStatusTabs(counts, total);
-  const periods =
-    periodOptions && periodOptions.length > 0 ? periodOptions : DEFAULT_PERIOD_OPTIONS;
+  const periods = periodOptions;
 
   return (
     <div className="space-y-4">
