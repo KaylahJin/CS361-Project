@@ -30,6 +30,12 @@ export class AttachmentApiError extends Error {
   }
 }
 
+async function isPdfFileContent(file: File): Promise<boolean> {
+  const header = await file.slice(0, 5).text();
+
+  return header === '%PDF-';
+}
+
 async function apiRequest<T>(
   path: string,
   token: string | null | undefined,
@@ -114,6 +120,17 @@ export async function uploadPlanAttachment(
       'ไฟล์มีขนาดเกิน 5 MB กรุณาเลือกไฟล์ที่เล็กกว่านี้',
       400,
       'ATTACHMENT_TOO_LARGE',
+    );
+  }
+
+  // ตรวจสอบเนื้อหาไฟล์ว่าเป็น PDF จริงหรือไม่
+  const isPdf = await isPdfFileContent(file);
+
+  if (!isPdf) {
+    throw new AttachmentApiError(
+      'ไฟล์ที่เลือกไม่ใช่ PDF ที่ถูกต้อง กรุณาเลือกไฟล์ PDF จริง',
+      400,
+      'ATTACHMENT_INVALID_TYPE',
     );
   }
 
