@@ -851,3 +851,46 @@ describe('CoopPlans: create and edit', () => {
       );
     });
   });
+
+describe('CoopPlans reviewer tools are not shown to students (#203)', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    getCoopPlansMock.mockReset();
+    getCoopPlanMock.mockReset();
+    getCoopPlansMock.mockResolvedValue([PLAN]);
+  });
+
+  it('shows a student only their plan, with no search, filters, tabs or progress ring', async () => {
+    signedIn('STUDENT');
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6600000001')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/ค้นหารหัสนักศึกษา/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /ทั้งหมด/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('ตรวจแล้ว')).not.toBeInTheDocument();
+  });
+
+  it('does not talk to a student about the reviewer scope when they have no plan', async () => {
+    signedIn('STUDENT');
+    getCoopPlansMock.mockResolvedValue([]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('คุณยังไม่มีแผนสหกิจศึกษา')).toBeInTheDocument();
+    expect(screen.queryByText(/ขอบเขตของผู้ตรวจ/)).not.toBeInTheDocument();
+  });
+
+  it.each(['ADVISOR', 'STAFF'])('still shows %s the search, filters and progress ring', async (role) => {
+    signedIn(role);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6600000001')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ค้นหารหัสนักศึกษา/)).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /ทั้งหมด/ })).toBeInTheDocument();
+    expect(screen.getByText('ตรวจแล้ว')).toBeInTheDocument();
+  });
+});

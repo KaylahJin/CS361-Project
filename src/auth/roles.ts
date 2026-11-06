@@ -30,6 +30,15 @@ export function canViewCoopPlans(role: string | null | undefined): boolean {
   return role != null && COOP_PLAN_ROLES.includes(role);
 }
 
+/**
+ * The search box, filters, status tabs and progress ring on the plan list are
+ * for the people who work through many students' plans. A student only ever
+ * sees their own, so none of it is shown to them (#203).
+ */
+export function canUsePlanReviewTools(role: string | null | undefined): boolean {
+  return canViewCoopPlans(role) && role !== 'STUDENT';
+}
+
 /** Creating, editing, and submitting plans are student-only actions. */
 export function canManageOwnPlan(role: string | null | undefined): boolean {
   return role === 'STUDENT';
