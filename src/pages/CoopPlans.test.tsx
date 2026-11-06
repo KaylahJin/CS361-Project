@@ -851,3 +851,89 @@ describe('CoopPlans: create and edit', () => {
       );
     });
   });
+
+describe('CoopPlans follows the plan named by the URL (#200)', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    getCoopPlansMock.mockReset();
+    getCoopPlanMock.mockReset();
+    getCoopPlansMock.mockResolvedValue([PLAN]);
+  });
+
+  it('reopens the plan detail after a refresh', async () => {
+    signedIn();
+    getCoopPlanMock.mockResolvedValue({ ...PLAN, plan_id: 7 });
+
+    render(<CoopPlans routePlanId={7} onRoutePlanChange={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' })).toBeInTheDocument();
+    expect(screen.getByText(/Plan #7/)).toBeInTheDocument();
+    expect(getCoopPlanMock).toHaveBeenCalledWith(7, 'a-token');
+  });
+
+  it('waits for the session to come back before asking for the plan', async () => {
+    // A refresh starts signed out while the saved session is restored. The plan
+    // needs a token, so asking now would only fail and drop the plan from the URL.
+    useAuthMock.mockReturnValue({
+      status: 'loading',
+      role: null,
+      getIdToken: async () => null,
+    });
+    const onRoutePlanChange = vi.fn();
+
+    render(<CoopPlans routePlanId={7} onRoutePlanChange={onRoutePlanChange} />);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(getCoopPlanMock).not.toHaveBeenCalled();
+    expect(onRoutePlanChange).not.toHaveBeenCalled();
+  });
+
+  it('goes back to the list when the plan in the URL cannot be opened', async () => {
+    signedIn();
+    getCoopPlanMock.mockRejectedValue(new CoopPlanApiError('not found', 404));
+    const onRoutePlanChange = vi.fn();
+
+    render(<CoopPlans routePlanId={99} onRoutePlanChange={onRoutePlanChange} />);
+
+    await waitFor(() => expect(onRoutePlanChange).toHaveBeenCalledWith(null));
+  });
+
+  it('reports the plan that is opened, and null when going back to the list', async () => {
+    signedIn();
+    getCoopPlanMock.mockResolvedValue(PLAN);
+    const onRoutePlanChange = vi.fn();
+
+    const { rerender } = render(
+      <CoopPlans routePlanId={null} onRoutePlanChange={onRoutePlanChange} />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /ดูรายละเอียด/ }));
+
+    expect(onRoutePlanChange).toHaveBeenCalledWith(PLAN.plan_id);
+
+    // The parent writes it into the URL and passes it back down.
+    rerender(
+      <CoopPlans routePlanId={PLAN.plan_id} onRoutePlanChange={onRoutePlanChange} />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /กลับรายการคำร้อง/ }));
+
+    expect(onRoutePlanChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it('closes the plan detail when Back removes the plan from the URL', async () => {
+    signedIn();
+    getCoopPlanMock.mockResolvedValue(PLAN);
+
+    const { rerender } = render(
+      <CoopPlans routePlanId={PLAN.plan_id} onRoutePlanChange={vi.fn()} />,
+    );
+    await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' });
+
+    rerender(<CoopPlans routePlanId={null} onRoutePlanChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { name: 'รายละเอียดแผนสหกิจ' }),
+      ).not.toBeInTheDocument();
+    });
+  });
+});
