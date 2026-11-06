@@ -9,7 +9,18 @@ import { buildCoopPlanListFilter, ForbiddenError } from './authorize.mjs';
 
 // V3 workflow statuses. UNDER_REVIEW was a V2 state and is gone: reviewers act
 // on SUBMITTED directly, and RETURNED is the plan sent back for edits.
-export const VALID_STATUSES = ['PREPARING', 'SUBMITTED', 'RETURNED', 'APPROVED', 'REJECTED'];
+export const VALID_STATUSES = [
+  'PREPARING',
+  'SUBMITTED',
+  'RETURNED',
+  'ENDORSED',
+  'ELIGIBLE',
+  'NOT_ELIGIBLE',
+  'SELECTED',
+  'NOT_SELECTED',
+  'APPROVED',
+  'REJECTED'
+];
 
 const SELECT_COLUMNS = `SELECT p.plan_id, p.student_id, p.period_id, p.position_id, p.status,
        p.acknowledged_pre_course, p.terms_accepted_at, p.student_note,
