@@ -96,7 +96,7 @@ export default function PlanAttachmentSummary({
 
   return (
     <section
-      className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       aria-labelledby="plan-attachment-heading"
     >
       {/* Card heading */}
