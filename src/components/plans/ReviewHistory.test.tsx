@@ -46,6 +46,19 @@ describe('ReviewHistory', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['ENDORSED', 'อาจารย์รับรอง'],
+    ['NOT_ENDORSED', 'อาจารย์ไม่รับรอง'],
+    ['ELIGIBLE', 'ผ่านการตรวจ'],
+    ['INCOMPLETE', 'เอกสารไม่ครบ'],
+    ['NOT_ELIGIBLE', 'ไม่ผ่านคุณสมบัติ'],
+    ['SELECTED', 'ได้รับการคัดเลือก'],
+    ['NOT_SELECTED', 'ไม่ได้รับการคัดเลือก'],
+  ] as const)('labels the step decision %s in Thai (#147–#149)', (decision, label) => {
+    render(<ReviewHistory reviews={[{ ...history[0], decision }]} />);
+    expect(screen.getByRole('listitem')).toHaveTextContent(label);
+  });
+
   it('renders step labels for multi-step review decisions (ENDORSEMENT, SCREENING, SELECTION)', () => {
     const steppedReviews: PlanReviewHistoryItem[] = [
       {
@@ -75,11 +88,11 @@ describe('ReviewHistory', () => {
     ];
 
     render(<ReviewHistory reviews={steppedReviews} />);
-    expect(screen.getByText('ได้รับคัดเลือก')).toBeInTheDocument();
+    expect(screen.getByText('ได้รับการคัดเลือก')).toBeInTheDocument();
     expect(screen.getByText('ขั้นคัดเลือกโดยกรรมการ')).toBeInTheDocument();
-    expect(screen.getByText('ผ่านคุณสมบัติ')).toBeInTheDocument();
+    expect(screen.getByText('ผ่านการตรวจ')).toBeInTheDocument();
     expect(screen.getByText('ขั้นตรวจคุณสมบัติโดยเจ้าหน้าที่')).toBeInTheDocument();
-    expect(screen.getByText('รับรองความประพฤติ')).toBeInTheDocument();
+    expect(screen.getByText('อาจารย์รับรอง')).toBeInTheDocument();
     expect(screen.getByText('ขั้นรับรองโดยอาจารย์ที่ปรึกษา')).toBeInTheDocument();
   });
 });

@@ -3,6 +3,8 @@ import {
   Building2,
   Calendar,
   ChevronRight,
+  Award,
+  ClipboardCheck,
   Clock,
   FileText,
   RotateCcw,
@@ -17,6 +19,8 @@ interface PlanListTableProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff, ELIGIBLE for the committee. */
+  reviewableStatus?: PlanReviewItem['status'];
 }
 
 export const PlanDeadlineBadge: React.FC<{
@@ -72,6 +76,34 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
           <span>อาจารย์รับรองแล้ว</span>
         </span>
       );
+    case 'ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600">
+          <ClipboardCheck className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+          <span>ผ่านการตรวจ รอคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ผ่านการตรวจคุณสมบัติ</span>
+        </span>
+      );
+    case 'SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600">
+          <Award className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+          <span>ได้รับการคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ได้รับการคัดเลือก</span>
+        </span>
+      );
     case 'APPROVED':
       return (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
@@ -115,6 +147,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
   plans,
   onOpen,
   onReview,
+  reviewableStatus = 'SUBMITTED',
 }) => {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
@@ -133,7 +166,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {plans.map((plan) => {
-              const isPending = plan.status === 'SUBMITTED';
+              const isPending = plan.status === reviewableStatus;
               // Only a viewer who was given onReview can review. Without it the plan
               // is read-only, so the button must not offer "ตรวจแผน".
               const canReview = isPending && Boolean(onReview);

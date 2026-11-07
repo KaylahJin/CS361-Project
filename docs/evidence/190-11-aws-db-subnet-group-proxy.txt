@@ -1,0 +1,50 @@
+﻿Evidence: 190-11-aws-db-subnet-group-proxy.txt
+Title: AWS RDS DB Subnet Group and Proxy
+Generated: 2026-11-02 16:38:10
+Region: us-east-1
+============================================================
+===== DB SUBNET GROUP =====
+[
+    {
+        "Name": "default",
+        "VpcId": "vpc-0b53bc4c5d49d2127",
+        "Subnets": [
+            {
+                "SubnetId": "subnet-0d9d17f40337425c6",
+                "AZ": "us-east-1d",
+                "Status": "Active"
+            },
+            {
+                "SubnetId": "subnet-0749a7750020ad1d6",
+                "AZ": "us-east-1e",
+                "Status": "Active"
+            },
+            {
+                "SubnetId": "subnet-0c7cf779266719056",
+                "AZ": "us-east-1a",
+                "Status": "Active"
+            },
+            {
+                "SubnetId": "subnet-0d6775b2491ec7427",
+                "AZ": "us-east-1f",
+                "Status": "Active"
+            },
+            {
+                "SubnetId": "subnet-0ea9233be7199ab19",
+                "AZ": "us-east-1b",
+                "Status": "Active"
+            },
+            {
+                "SubnetId": "subnet-0177e17661f06c9f9",
+                "AZ": "us-east-1c",
+                "Status": "Active"
+            }
+        ]
+    }
+]
+
+===== RDS PROXY =====
+{
+    "DBProxies": []
+}
+

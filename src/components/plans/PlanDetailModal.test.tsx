@@ -41,8 +41,10 @@ function renderModal(p: CoopPlan) {
       plan={p}
       open
       onOpenChange={vi.fn()}
-      reviewerName="staff1@example.com"
+      reviewerName="advisor1@example.com"
       getIdToken={async () => 'test-token'}
+      // The one-step review form is gone (#148); each step's form starts empty.
+      onEndorse={vi.fn()}
     />,
   );
 }

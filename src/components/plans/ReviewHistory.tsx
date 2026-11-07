@@ -6,13 +6,13 @@ const DECISION_LABEL: Record<string, string> = {
   APPROVED: 'อนุมัติ',
   RETURNED: 'ส่งกลับให้แก้ไข',
   REJECTED: 'ไม่อนุมัติ',
-  ENDORSED: 'รับรองความประพฤติ',
-  NOT_ENDORSED: 'ไม่รับรอง (ส่งกลับแก้ไข)',
-  ELIGIBLE: 'ผ่านคุณสมบัติ',
-  INCOMPLETE: 'เอกสารไม่ครบ (ส่งกลับแก้ไข)',
+  ENDORSED: 'อาจารย์รับรอง',
+  NOT_ENDORSED: 'อาจารย์ไม่รับรอง',
+  ELIGIBLE: 'ผ่านการตรวจ',
+  INCOMPLETE: 'เอกสารไม่ครบ',
   NOT_ELIGIBLE: 'ไม่ผ่านคุณสมบัติ',
-  SELECTED: 'ได้รับคัดเลือก',
-  NOT_SELECTED: 'ไม่ได้รับคัดเลือก',
+  SELECTED: 'ได้รับการคัดเลือก',
+  NOT_SELECTED: 'ไม่ได้รับการคัดเลือก',
 };
 
 const DECISION_STYLE: Record<string, string> = {
@@ -25,7 +25,7 @@ const DECISION_STYLE: Record<string, string> = {
   INCOMPLETE: 'bg-amber-50 text-amber-700 border-amber-200',
   NOT_ELIGIBLE: 'bg-rose-50 text-rose-700 border-rose-200',
   SELECTED: 'bg-violet-50 text-violet-700 border-violet-200',
-  NOT_SELECTED: 'bg-rose-50 text-rose-700 border-rose-200',
+  NOT_SELECTED: 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
 const STEP_LABEL: Record<string, string> = {
