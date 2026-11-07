@@ -1,0 +1,57 @@
+=== [V5-01] Infrastructure & Automation Audit Evidence (#222) ===
+Date: 2026-11-08
+Auditor: @Pawit-Billamas
+
+1. Terraform Configuration Validation
+Command: terraform -chdir=infra/terraform validate
+Output:
+Success! The configuration is valid.
+
+2. Terraform Resource & Data Inventory (infra/terraform/*.tf)
+- api.tf:
+  - resource "aws_apigatewayv2_api" "this"
+  - resource "aws_apigatewayv2_authorizer" "cognito"
+  - resource "aws_apigatewayv2_integration" "lambda"
+  - resource "aws_apigatewayv2_route" "public"
+  - resource "aws_apigatewayv2_route" "protected"
+  - resource "aws_apigatewayv2_stage" "default"
+  - resource "aws_lambda_permission" "apigw"
+- auth.tf:
+  - resource "aws_cognito_user_pool" "this"
+  - resource "aws_cognito_user_pool_client" "web"
+  - resource "aws_cognito_user_group" "roles"
+- db.tf:
+  - resource "aws_db_subnet_group" "this"
+  - resource "aws_db_instance" "postgres"
+- lambda.tf:
+  - data "archive_file" "lambda"
+  - resource "aws_lambda_function" "api"
+- main.tf:
+  - data "aws_caller_identity" "current"
+  - data "aws_iam_role" "lab_role"
+- network.tf:
+  - data "aws_availability_zones" "available"
+  - resource "aws_vpc" "this"
+  - resource "aws_internet_gateway" "this"
+  - resource "aws_subnet" "public"
+  - resource "aws_subnet" "private"
+  - resource "aws_route_table" "public"
+  - resource "aws_route_table_association" "public"
+  - resource "aws_security_group" "lambda"
+  - resource "aws_security_group" "rds"
+- s3_web.tf & s3_attachments.tf:
+  - Locals & outputs only (no aws_s3_bucket resource in Terraform due to AWS Academy SCP denying s3:GetBucketObjectLockConfiguration; provisioned via infra/deploy-web.sh and infra/deploy-attachments-bucket.sh).
+
+3. Deployment & Operational Scripts Inventory
+- infra/deploy-infra.sh              (npm run infra:plan / infra:apply / infra:destroy / infra:output)
+- infra/deploy-web.sh                (npm run web:deploy)
+- infra/deploy-attachments-bucket.sh (missing npm script in package.json -> Gap #1)
+- infra/sync-env.sh                  (npm run env:sync -> only syncs VITE_API_URL, missing Cognito vars -> Gap #3)
+- infra/seed-cognito-users.sh        (npm run auth:seed)
+
+4. Secret & State Tracking Check
+Command: git ls-files "*.tfstate*" "*tfplan*" "*tfvars*" ".env*"
+Output:
+.env.example
+infra/terraform/terraform.tfvars.example
+(Result: PASS - 0 sensitive .env, .tfvars, tfplan, or .tfstate files tracked in Git)
