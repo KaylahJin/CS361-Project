@@ -669,6 +669,7 @@ export default function CoopPlans({
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PlanError | null>(null);
+  const [routePlanError, setRoutePlanError] = useState<PlanError | null>(null);
 
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [curriculumFilter, setCurriculumFilter] = useState('ALL');
@@ -729,6 +730,7 @@ export default function CoopPlans({
     if (selectedPlanRef.current?.plan_id === routePlanId) return;
 
     let cancelled = false;
+    setRoutePlanError(null);
     (async () => {
       try {
         const plan = await getCoopPlan(routePlanId, await getIdToken());
@@ -737,7 +739,7 @@ export default function CoopPlans({
         // A plan that is gone, or not this account's, sends the user back to the list.
         if (!cancelled) {
           onRoutePlanChange?.(null);
-          setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+          setRoutePlanError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
         }
       }
     })();
@@ -768,6 +770,7 @@ export default function CoopPlans({
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
+    setRoutePlanError(null);
     setSelectedPlan(plan);
     onRoutePlanChange?.(plan.plan_id);
     try {
@@ -1003,6 +1006,24 @@ export default function CoopPlans({
 
       {/* Main Workspace Layout */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+        {routePlanError && (
+          <section
+            role="alert"
+            className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <div>
+              <p className="font-semibold text-red-800">{routePlanError.title}</p>
+              <p className="mt-0.5 text-xs text-red-700">{routePlanError.detail}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRoutePlanError(null)}
+              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition cursor-pointer"
+            >
+              ปิดข้อความ
+            </button>
+          </section>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

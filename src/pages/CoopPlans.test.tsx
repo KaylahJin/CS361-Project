@@ -870,6 +870,11 @@ describe('CoopPlans follows the plan named by the URL (#200)', () => {
     render(<CoopPlans routePlanId={99} onRoutePlanChange={onRoutePlanChange} />);
 
     await waitFor(() => expect(onRoutePlanChange).toHaveBeenCalledWith(null));
+    expect(await screen.findByText('6600000001')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('ไม่พบคำร้องที่ขอ');
+
+    await userEvent.click(screen.getByRole('button', { name: 'ปิดข้อความ' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('reports the plan that is opened, and null when going back to the list', async () => {
