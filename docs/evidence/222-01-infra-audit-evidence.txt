@@ -8,46 +8,45 @@ Output:
 Success! The configuration is valid.
 
 2. Terraform Resource & Data Inventory (infra/terraform/*.tf)
-- api.tf:
-  - resource "aws_apigatewayv2_api" "this"
-  - resource "aws_apigatewayv2_authorizer" "cognito"
+- apigateway.tf:
+  - resource "aws_apigatewayv2_api" "companies"
   - resource "aws_apigatewayv2_integration" "lambda"
-  - resource "aws_apigatewayv2_route" "public"
-  - resource "aws_apigatewayv2_route" "protected"
   - resource "aws_apigatewayv2_stage" "default"
-  - resource "aws_lambda_permission" "apigw"
-- auth.tf:
-  - resource "aws_cognito_user_pool" "this"
-  - resource "aws_cognito_user_pool_client" "web"
-  - resource "aws_cognito_user_group" "roles"
-- db.tf:
-  - resource "aws_db_subnet_group" "this"
-  - resource "aws_db_instance" "postgres"
+  - resource "aws_apigatewayv2_route" (22 routes: 6 public + 16 JWT-protected)
+- cognito.tf:
+  - resource "aws_cognito_user_pool" "app"
+  - resource "aws_cognito_user_pool_client" "spa"
+  - resource "aws_apigatewayv2_authorizer" "cognito_jwt"
+- data.tf:
+  - data "aws_vpc" "default"
+  - data "aws_subnets" "default"
+  - data "aws_iam_role" "lab_role"
+  - data "aws_caller_identity" "current"
 - lambda.tf:
   - data "archive_file" "lambda"
-  - resource "aws_lambda_function" "api"
-- main.tf:
-  - data "aws_caller_identity" "current"
-  - data "aws_iam_role" "lab_role"
-- network.tf:
-  - data "aws_availability_zones" "available"
-  - resource "aws_vpc" "this"
-  - resource "aws_internet_gateway" "this"
-  - resource "aws_subnet" "public"
-  - resource "aws_subnet" "private"
-  - resource "aws_route_table" "public"
-  - resource "aws_route_table_association" "public"
+  - resource "aws_lambda_function" "companies"
+  - resource "aws_lambda_permission" "api_gateway"
+- rds.tf:
+  - resource "aws_db_instance" "coop_db"
+- security_groups.tf:
+  - data "aws_route_tables" "default"
+  - resource "aws_vpc_endpoint" "s3"
   - resource "aws_security_group" "lambda"
   - resource "aws_security_group" "rds"
+  - resource "aws_security_group_rule" "lambda_egress_rds"
+  - resource "aws_security_group_rule" "lambda_egress_s3"
+  - resource "aws_security_group_rule" "rds_ingress_lambda"
+  - resource "aws_security_group_rule" "rds_ingress_my_ip"
 - s3_web.tf & s3_attachments.tf:
   - Locals & outputs only (no aws_s3_bucket resource in Terraform due to AWS Academy SCP denying s3:GetBucketObjectLockConfiguration; provisioned via infra/deploy-web.sh and infra/deploy-attachments-bucket.sh).
 
 3. Deployment & Operational Scripts Inventory
-- infra/deploy-infra.sh              (npm run infra:plan / infra:apply / infra:destroy / infra:output)
-- infra/deploy-web.sh                (npm run web:deploy)
-- infra/deploy-attachments-bucket.sh (missing npm script in package.json -> Gap #1)
-- infra/sync-env.sh                  (npm run env:sync -> only syncs VITE_API_URL, missing Cognito vars -> Gap #3)
-- infra/seed-cognito-users.sh        (npm run auth:seed)
+- infra/deploy-web.sh                (npm run web:deploy -> missing Cognito env vars on build -> Gap #4)
+- infra/deploy-attachments-bucket.sh (missing "attachments:deploy" script in package.json -> Gap #2)
+- infra/sync-env.sh                  (npm run env:sync -> only syncs VITE_API_URL, missing Cognito vars -> Gap #5)
+- infra/load-db.sh                   (npm run db:load)
+- infra/seed-app-users.sh            (npm run db:seed-users)
+- infra/migrate/test-migration-roundtrip.sh (npm run db:test-migration)
 
 4. Secret & State Tracking Check
 Command: git ls-files "*.tfstate*" "*tfplan*" "*tfvars*" ".env*"
