@@ -882,6 +882,16 @@ describe('CoopPlans reviewer tools are not shown to students (#203)', () => {
     expect(screen.queryByText(/ขอบเขตของผู้ตรวจ/)).not.toBeInTheDocument();
   });
 
+  it('shows a neutral empty message when the role is still null', async () => {
+    signedIn(null);
+    getCoopPlansMock.mockResolvedValue([]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้')).toBeInTheDocument();
+    expect(screen.queryByText('คุณยังไม่มีแผนสหกิจศึกษา')).not.toBeInTheDocument();
+  });
+
   it.each(['ADVISOR', 'STAFF'])('still shows %s the search, filters and progress ring', async (role) => {
     signedIn(role);
 

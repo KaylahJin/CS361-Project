@@ -1095,7 +1095,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
                 : showReviewTools
                   ? 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'
-                  : 'คุณยังไม่มีแผนสหกิจศึกษา'}
+                  : role === 'STUDENT'
+                    ? 'คุณยังไม่มีแผนสหกิจศึกษา'
+                    : 'ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้'}
             </p>
             {(searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL') && (
               <button
