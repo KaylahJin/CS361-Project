@@ -15,7 +15,7 @@ import type {
   CreateCoopPlanInput,
   UpdateCoopPlanInput,
 } from '../types/coopPlan';
-import type { EndorseDecision } from '../types/planReview';
+import type { EndorseDecision, PlanEligibility, ScreenDecision, SelectDecision } from '../types/planReview';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -349,43 +349,6 @@ export async function submitCoopPlan(
 }
 
 /**
- * Reviews a coop plan (POST /coop-plans/{planId}/review).
- *
- * Only permitted for committee / advisor roles.
- * Resolves with the reviewed plan or throws 409 Conflict if already reviewed.
- */
-export async function reviewCoopPlan(
-  planId: number,
-  decision: 'APPROVED' | 'RETURNED' | 'REJECTED',
-  comment?: string,
-  idToken?: string | null
-): Promise<CoopPlan> {
-  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/review`;
-
-  try {
-    const res = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: jsonWriteHeaders(idToken),
-      body: JSON.stringify({ decision, comment: comment || '' }),
-    });
-
-    if (!res.ok) {
-      throw await writeError(res, `review coop plan ${planId}`);
-    }
-
-    return await res.json();
-  } catch (error) {
-    if (error instanceof CoopPlanApiError) {
-      throw error;
-    }
-
-    console.warn(`Coop Plan review API unreachable for plan ${planId}.`, error);
-
-    throw error;
-  }
-}
-
-/**
  * Advisor endorsement (POST /coop-plans/{planId}/endorse, #147). Resolves with
  * the plan as saved: ENDORSED, or RETURNED when not endorsed. 409 means the
  * plan was no longer SUBMITTED.
@@ -405,6 +368,68 @@ export async function endorseCoopPlan(
 
   if (!res.ok) {
     throw await writeError(res, `endorse coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Staff screening (POST /coop-plans/{planId}/screen, #148). Resolves with the
+ * plan as saved: ELIGIBLE, NOT_ELIGIBLE, or RETURNED when INCOMPLETE. 409
+ * means the plan was no longer ENDORSED.
+ */
+export async function screenCoopPlan(
+  planId: number,
+  decision: ScreenDecision,
+  comment: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/screen`;
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: jsonWriteHeaders(idToken),
+    body: JSON.stringify(comment ? { decision, comment } : { decision }),
+  });
+
+  if (!res.ok) {
+    throw await writeError(res, `screen coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Committee selection (POST /coop-plans/{planId}/select, #149). Resolves with
+ * the plan as saved. 409 carries CAPACITY_REACHED / CAPACITY_NOT_SET when no
+ * seat can be given, PLAN_NOT_SELECTABLE when the plan was no longer ELIGIBLE.
+ */
+export async function selectCoopPlan(
+  planId: number,
+  decision: SelectDecision,
+  comment: string,
+  idToken?: string | null
+): Promise<CoopPlan> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/select`;
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: jsonWriteHeaders(idToken),
+    body: JSON.stringify(comment ? { decision, comment } : { decision }),
+  });
+
+  if (!res.ok) {
+    throw await writeError(res, `select coop plan ${planId}`);
+  }
+  return await res.json();
+}
+
+/** The plan's student against its period's criteria (GET /coop-plans/{planId}/eligibility, #148). */
+export async function getPlanEligibility(
+  planId: number,
+  idToken?: string | null
+): Promise<PlanEligibility> {
+  const url = `${API_BASE}/coop-plans/${encodeURIComponent(planId)}/eligibility`;
+  const res = await fetchWithTimeout(url, authHeaders(idToken));
+
+  if (!res.ok) {
+    throw new CoopPlanApiError(`Failed to fetch eligibility for plan ${planId}: ${res.statusText}`, res.status);
   }
   return await res.json();
 }

@@ -1,16 +1,32 @@
 import React from 'react';
-import type { PlanReviewHistoryItem, ReviewDecision } from '../../types/planReview';
+import type { PlanReviewHistoryItem } from '../../types/planReview';
 
-const DECISION_LABEL: Record<ReviewDecision, string> = {
+type Decision = PlanReviewHistoryItem['decision'];
+
+const DECISION_LABEL: Record<Decision, string> = {
   APPROVED: 'อนุมัติ',
   RETURNED: 'ส่งกลับให้แก้ไข',
   REJECTED: 'ไม่อนุมัติ',
+  ENDORSED: 'อาจารย์รับรอง',
+  NOT_ENDORSED: 'อาจารย์ไม่รับรอง',
+  ELIGIBLE: 'ผ่านการตรวจ',
+  INCOMPLETE: 'เอกสารไม่ครบ',
+  NOT_ELIGIBLE: 'ไม่ผ่านคุณสมบัติ',
+  SELECTED: 'ได้รับการคัดเลือก',
+  NOT_SELECTED: 'ไม่ได้รับการคัดเลือก',
 };
 
-const DECISION_STYLE: Record<ReviewDecision, string> = {
+const DECISION_STYLE: Record<Decision, string> = {
   APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   RETURNED: 'bg-amber-50 text-amber-700 border-amber-200',
   REJECTED: 'bg-rose-50 text-rose-700 border-rose-200',
+  ENDORSED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  NOT_ENDORSED: 'bg-amber-50 text-amber-700 border-amber-200',
+  ELIGIBLE: 'bg-teal-50 text-teal-700 border-teal-200',
+  INCOMPLETE: 'bg-amber-50 text-amber-700 border-amber-200',
+  NOT_ELIGIBLE: 'bg-rose-50 text-rose-700 border-rose-200',
+  SELECTED: 'bg-violet-50 text-violet-700 border-violet-200',
+  NOT_SELECTED: 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
 function formatWhen(iso: string): string {

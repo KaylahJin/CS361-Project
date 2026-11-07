@@ -1,0 +1,24 @@
+﻿Evidence: 190-10-aws-route-tables.txt
+Title: AWS VPC Route Table Information
+Generated: 2026-11-02 16:38:06
+Region: us-east-1
+============================================================
+[
+    {
+        "RouteTableId": "rtb-00de1bd74c16637ec",
+        "Associations": [],
+        "Routes": [
+            {
+                "Destination": "172.31.0.0/16",
+                "Gateway": "local",
+                "State": "active"
+            },
+            {
+                "Destination": "0.0.0.0/0",
+                "Gateway": "igw-0fe10331caf9eef54",
+                "State": "active"
+            }
+        ]
+    }
+]
+

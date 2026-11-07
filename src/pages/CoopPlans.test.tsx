@@ -12,7 +12,7 @@ const getCoopPlanMock = vi.fn();
 const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
-const reviewCoopPlanMock = vi.fn();
+const screenCoopPlanMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
   const actual = await vi.importActual<typeof import('../data/coopPlanApi')>(
@@ -25,7 +25,14 @@ vi.mock('../data/coopPlanApi', async () => {
     createCoopPlan: createCoopPlanMock,
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
-    reviewCoopPlan: reviewCoopPlanMock,
+    screenCoopPlan: screenCoopPlanMock,
+    getPlanEligibility: vi.fn().mockResolvedValue({
+      plan_id: 1,
+      period_id: 'P2568-1',
+      criteria: { min_gpa: 2, min_group_gpa: 2 },
+      eligible: true,
+      failures: [],
+    }),
   };
 });
 
@@ -298,8 +305,10 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
   });
 
   it('opens the review dialog from the button on the plan page, not only from the list (F11)', async () => {
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+    // Signed in as STAFF, who screens once the advisor has endorsed (#176, #148).
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValue(endorsed);
 
     render(<CoopPlans />);
 
@@ -308,44 +317,47 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
 
     const modal = await screen.findByRole('dialog');
-    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+    expect(within(modal).getByText(/ตรวจเอกสารและคุณสมบัติ \(สำหรับเจ้าหน้าที่สหกิจ\)/)).toBeInTheDocument();
   });
 
-  it('after a review from the plan page, shows the new result and the new history entry', async () => {
-    const reviewed = {
+  it('after screening from the plan page, shows the new result and the new history entry', async () => {
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
+    const screened = {
       ...SUBMITTED_PLAN,
-      status: 'APPROVED',
+      status: 'ELIGIBLE',
       reviewer_name: 'staff1@example.com',
       reviewed_at: '2026-10-25T10:00:00Z',
       reviews: [
         {
           review_id: 9,
-          decision: 'APPROVED',
+          decision: 'ELIGIBLE',
           comment: null,
           reviewed_at: '2026-10-25T10:00:00Z',
           reviewer_name: 'staff1@example.com',
         },
       ],
     };
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValueOnce(SUBMITTED_PLAN).mockResolvedValue(reviewed);
-    reviewCoopPlanMock.mockResolvedValue(undefined);
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValueOnce(endorsed).mockResolvedValue(screened);
+    screenCoopPlanMock.mockResolvedValue({ ...endorsed, status: 'ELIGIBLE' });
 
     render(<CoopPlans />);
     fireEvent.click(await screen.findByText('6609600001'));
     fireEvent.click(await screen.findByRole('button', { name: 'ตรวจพิจารณาแผน' }));
     const modal = await screen.findByRole('dialog');
-    fireEvent.click(within(modal).getByRole('button', { name: 'บันทึกผลการพิจารณา' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'ผ่านการตรวจ' }));
 
-    await waitFor(() => expect(reviewCoopPlanMock).toHaveBeenCalledWith(SUBMITTED_PLAN.plan_id, 'APPROVED', '', 'a-token'));
+    await waitFor(() => expect(screenCoopPlanMock).toHaveBeenCalledWith(SUBMITTED_PLAN.plan_id, 'ELIGIBLE', '', 'a-token'));
     const history = await screen.findByRole('list', { name: 'ประวัติการพิจารณา' });
     expect(within(history).getByText('staff1@example.com')).toBeInTheDocument();
-    expect(within(history).getByText('อนุมัติ')).toBeInTheDocument();
+    expect(within(history).getByText('ผ่านการตรวจ')).toBeInTheDocument();
   });
 
   it('opens and closes plan detail modal when clicking a plan row', async () => {
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
-    getCoopPlanMock.mockResolvedValue(SUBMITTED_PLAN);
+    // Signed in as STAFF, who screens once the advisor has endorsed (#147, #148).
+    const endorsed = { ...SUBMITTED_PLAN, status: 'ENDORSED' };
+    getCoopPlansMock.mockResolvedValue([endorsed]);
+    getCoopPlanMock.mockResolvedValue(endorsed);
 
     render(<CoopPlans />);
 
@@ -361,7 +373,7 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     expect(within(modal).getByText(/ตรวจและพิจารณาแผนสหกิจศึกษา/i)).toBeInTheDocument();
     expect(within(modal).getByText('Software Engineer Intern')).toBeInTheDocument();
     expect(within(modal).getByText(/สนใจด้าน Backend และ Distributed Systems/)).toBeInTheDocument();
-    expect(within(modal).getByText(/บันทึกผลการพิจารณา \(สำหรับผู้ตรวจ\)/)).toBeInTheDocument();
+    expect(within(modal).getByText(/ตรวจเอกสารและคุณสมบัติ \(สำหรับเจ้าหน้าที่สหกิจ\)/)).toBeInTheDocument();
 
     // Close modal via Cancel button
     const cancelBtn = within(modal).getByRole('button', { name: /ยกเลิก/i });
@@ -389,13 +401,27 @@ describe('CoopPlans Reviewer Dashboard and Plan Detail Modal (Issue #107)', () =
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it.each([['ADVISOR'], ['STAFF']])('role %s: sees the review button', async (role) => {
+  it.each([
+    ['ADVISOR', 'SUBMITTED'],
+    ['STAFF', 'ENDORSED'],
+    ['COMMITTEE', 'ELIGIBLE'],
+  ])('role %s: sees the review button on a %s plan', async (role, status) => {
     signedIn(role);
-    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+    getCoopPlansMock.mockResolvedValue([{ ...SUBMITTED_PLAN, status }]);
 
     render(<CoopPlans />);
 
     expect(await screen.findByRole('button', { name: /ตรวจแผน/ })).toBeInTheDocument();
+  });
+
+  it('role STAFF: no review button before the advisor endorses', async () => {
+    signedIn('STAFF');
+    getCoopPlansMock.mockResolvedValue([SUBMITTED_PLAN]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6609600001')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ตรวจแผน/ })).not.toBeInTheDocument();
   });
 
   it('switches view mode between table and cards view', async () => {
@@ -914,5 +940,58 @@ describe('CoopPlans follows the plan named by the URL (#200)', () => {
         screen.queryByRole('heading', { name: 'รายละเอียดแผนสหกิจ' }),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('CoopPlans reviewer tools are not shown to students (#203)', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    getCoopPlansMock.mockReset();
+    getCoopPlanMock.mockReset();
+    getCoopPlansMock.mockResolvedValue([PLAN]);
+  });
+
+  it('shows a student only their plan, with no search, filters, tabs or progress ring', async () => {
+    signedIn('STUDENT');
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6600000001')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/ค้นหารหัสนักศึกษา/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /ทั้งหมด/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('ตรวจแล้ว')).not.toBeInTheDocument();
+  });
+
+  it('does not talk to a student about the reviewer scope when they have no plan', async () => {
+    signedIn('STUDENT');
+    getCoopPlansMock.mockResolvedValue([]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('คุณยังไม่มีแผนสหกิจศึกษา')).toBeInTheDocument();
+    expect(screen.queryByText(/ขอบเขตของผู้ตรวจ/)).not.toBeInTheDocument();
+  });
+
+  it('shows a neutral empty message when the role is still null', async () => {
+    signedIn(null);
+    getCoopPlansMock.mockResolvedValue([]);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้')).toBeInTheDocument();
+    expect(screen.queryByText('คุณยังไม่มีแผนสหกิจศึกษา')).not.toBeInTheDocument();
+  });
+
+  it.each(['ADVISOR', 'STAFF'])('still shows %s the search, filters and progress ring', async (role) => {
+    signedIn(role);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByText('6600000001')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ค้นหารหัสนักศึกษา/)).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /ทั้งหมด/ })).toBeInTheDocument();
+    expect(screen.getByText('ตรวจแล้ว')).toBeInTheDocument();
   });
 });

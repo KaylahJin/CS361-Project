@@ -23,7 +23,8 @@ import { presignDownload } from './s3.mjs';
 
 const LABEL = 'downloadAttachmentUrl';
 
-const SELECT_PLAN_OWNER = `SELECT plan_id, student_id FROM coop_plans WHERE plan_id = $1`;
+// status: the committee may only see plans that passed screening (assertCanViewPlan).
+const SELECT_PLAN_OWNER = `SELECT plan_id, student_id, status FROM coop_plans WHERE plan_id = $1`;
 
 const SELECT_ATTACHMENT = `SELECT attachment_id, s3_key, file_name
 FROM plan_attachments

@@ -45,4 +45,17 @@ describe('ReviewHistory', () => {
     expect(screen.getByText('ยังไม่มีประวัติการพิจารณา')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['ENDORSED', 'อาจารย์รับรอง'],
+    ['NOT_ENDORSED', 'อาจารย์ไม่รับรอง'],
+    ['ELIGIBLE', 'ผ่านการตรวจ'],
+    ['INCOMPLETE', 'เอกสารไม่ครบ'],
+    ['NOT_ELIGIBLE', 'ไม่ผ่านคุณสมบัติ'],
+    ['SELECTED', 'ได้รับการคัดเลือก'],
+    ['NOT_SELECTED', 'ไม่ได้รับการคัดเลือก'],
+  ] as const)('labels the step decision %s in Thai (#147–#149)', (decision, label) => {
+    render(<ReviewHistory reviews={[{ ...history[0], decision }]} />);
+    expect(screen.getByRole('listitem')).toHaveTextContent(label);
+  });
 });
