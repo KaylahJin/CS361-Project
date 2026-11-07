@@ -36,7 +36,6 @@ const STATUS_TABS: { id: string; label: string; badgeColor: string }[] = [
   { id: 'SUBMITTED', label: 'รอตรวจ', badgeColor: 'text-blue-600 font-bold' },
   { id: 'ENDORSED', label: 'อาจารย์รับรองแล้ว', badgeColor: 'text-indigo-600 font-semibold' },
   { id: 'ELIGIBLE', label: 'ผ่านคุณสมบัติ', badgeColor: 'text-teal-600 font-semibold' },
-  { id: 'INCOMPLETE', label: 'เอกสารไม่ครบ', badgeColor: 'text-amber-600 font-semibold' },
   { id: 'NOT_ELIGIBLE', label: 'ไม่ผ่านคุณสมบัติ', badgeColor: 'text-rose-600 font-semibold' },
   { id: 'SELECTED', label: 'ได้รับคัดเลือก', badgeColor: 'text-violet-600 font-semibold' },
   { id: 'RETURNED', label: 'ส่งกลับแก้ไข', badgeColor: 'text-zinc-500 font-medium' },

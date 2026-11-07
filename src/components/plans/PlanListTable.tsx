@@ -27,21 +27,22 @@ export const PlanDeadlineBadge: React.FC<{
   deadline?: string | null;
   status: string;
   compact?: boolean;
-}> = ({ deadline, status, compact = false }) => {
+  dateLabel?: string;
+}> = ({ deadline, status, compact = false, dateLabel = 'กำหนดส่ง' }) => {
   const info = classifyPlanDeadline(deadline, status);
 
   return (
     <div className="flex flex-col items-start gap-1">
       <span
         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${info.badgeClass}`}
-        title={`กำหนดเวลา: ${info.formattedDate} (${info.label})`}
+        title={`${dateLabel}: ${info.formattedDate} (${info.label})`}
       >
         <Clock className="h-3 w-3 shrink-0" />
         <span>{compact ? info.shortLabel : info.label}</span>
       </span>
       {info.category !== 'NO_DEADLINE' && (
         <span className="text-[11px] text-slate-400">
-          กำหนดส่ง: {info.formattedDate}
+          {dateLabel}: {info.formattedDate}
         </span>
       )}
     </div>
@@ -235,6 +236,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                       <PlanDeadlineBadge
                         deadline={effectiveDeadline}
                         status={plan.status}
+                        dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
                       />
                     </div>
                   </td>

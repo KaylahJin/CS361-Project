@@ -74,8 +74,9 @@ describe('deadline utilities (V4-03 / FR6)', () => {
     }
   });
 
-  it('classifies schedule deadlines on Periods page', () => {
-    expect(classifyScheduleDeadline('2025-06-01', false, NOW).category).toBe('OVERDUE');
+  it('classifies schedule deadlines on Periods page without marking past events as OVERDUE unless work is incomplete', () => {
+    expect(classifyScheduleDeadline('2025-06-01', false, NOW).category).toBe('COMPLETED');
+    expect(classifyScheduleDeadline('2025-06-01', true, NOW).category).toBe('OVERDUE');
     expect(classifyScheduleDeadline('2025-06-15', false, NOW).category).toBe('NEAR_DEADLINE');
     expect(classifyScheduleDeadline('2025-07-01', false, NOW).category).toBe('UPCOMING');
     expect(classifyScheduleDeadline(null, false, NOW).category).toBe('NO_DEADLINE');

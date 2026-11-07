@@ -103,6 +103,7 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
                 <PlanDeadlineBadge
                   deadline={effectiveDeadline}
                   status={plan.status}
+                  dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
                 />
               </div>
 

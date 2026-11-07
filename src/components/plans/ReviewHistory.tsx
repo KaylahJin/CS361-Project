@@ -157,8 +157,8 @@ export function buildPlanActivityEvents(plan: CoopPlan): ActivityTimelineEvent[]
           DECISION_STYLE[r.decision] || 'bg-amber-50 text-amber-700 border-amber-200',
       });
     }
-  } else if (plan.reviewed_at && plan.reviewer_name) {
-    const label = DECISION_LABEL[plan.status] || plan.status;
+  } else if (plan.reviewed_at && plan.reviewer_name && DECISION_LABEL[plan.status]) {
+    const label = DECISION_LABEL[plan.status];
     events.push({
       id: `latest-review-${plan.plan_id}`,
       title: `ผลการพิจารณาล่าสุด: ${label}`,

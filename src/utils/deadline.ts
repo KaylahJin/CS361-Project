@@ -182,12 +182,12 @@ export function classifyPlanDeadline(
  */
 export function classifyScheduleDeadline(
   endDateStr: string | null | undefined,
-  isCompleted = false,
+  hasIncompleteAction = false,
   now: Date = new Date()
 ): DeadlineInfo {
   return classifyPlanDeadline(
     endDateStr,
-    isCompleted ? 'APPROVED' : 'PREPARING',
+    hasIncompleteAction ? 'PREPARING' : 'APPROVED',
     now
   );
 }

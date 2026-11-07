@@ -52,6 +52,7 @@ import {
   canEndorsePlans,
   canManageOwnPlan,
   canReviewPlans,
+  canUsePlanReviewTools,
   canScreenPlans,
   canSelectPlans,
   reviewableStatusFor,
@@ -437,6 +438,7 @@ function PlanDetail({
               <PlanDeadlineBadge
                 deadline={plan.submission_deadline ?? plan.application_deadline ?? null}
                 status={plan.status}
+                dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
               />
             </div>
 
@@ -736,6 +738,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const canReview = canReviewPlans(role);
   const reviewableStatus = reviewableStatusFor(role);
   const canCreatePlan = canManageOwnPlan(role);
+  // A student sees only their own plans, so the reviewer's search and filters
+  // would be noise (#203).
+  const showReviewTools = canUsePlanReviewTools(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -934,6 +939,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const isUnauthenticated =
     error && error.title === 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ';
+  const showProgressChart = !isUnauthenticated && showReviewTools && total > 0;
 
   const companyOptions: CompanyFilterOption[] = Array.from(
     plans.reduce((map, p) => {
@@ -1075,7 +1081,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
       {/* Main Workspace Layout */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-4">
+          <div className={`${showProgressChart ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="font-heading text-lg font-bold text-slate-800 tracking-tight">
@@ -1115,7 +1121,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               </div>
             </div>
 
-            {!isUnauthenticated && (
+            {!isUnauthenticated && showReviewTools && (
               <PlanFilters
                 value={statusFilter}
                 onChange={setStatusFilter}
@@ -1135,7 +1141,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
             )}
           </div>
 
-          {!isUnauthenticated && total > 0 && (
+          {showProgressChart && (
             <div className="lg:sticky lg:top-20">
               <PlanProgressChart counts={counts} total={total} />
             </div>
@@ -1175,7 +1181,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               periodId ||
               companyId
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
-                : 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'}
+                : showReviewTools
+                  ? 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'
+                  : role === 'STUDENT'
+                    ? 'คุณยังไม่มีแผนสหกิจศึกษา'
+                    : 'ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้'}
             </p>
             {(searchQuery ||
               statusFilter !== 'ALL' ||

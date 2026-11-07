@@ -139,4 +139,38 @@ describe('PlanActivityTimeline', () => {
     expect(items[3]).toHaveTextContent('ยอมรับเงื่อนไขก่อนปฏิบัติสหกิจศึกษา');
     expect(items[4]).toHaveTextContent('สร้างแผนสหกิจศึกษา (ฉบับร่าง)');
   });
+
+  it('does not show a fallback review event when plan.status is not a review decision (e.g. SUBMITTED after resubmission)', () => {
+    render(
+      <PlanActivityTimeline
+        plan={{
+          plan_id: 2,
+          student_id: '6600000001',
+          period_id: 'P2568-1',
+          position_id: 'POS-01',
+          status: 'SUBMITTED',
+          acknowledged_pre_course: true,
+          terms_accepted_at: '2026-10-21T09:00:00Z',
+          student_note: null,
+          submitted_at: '2026-10-26T10:00:00Z',
+          reviewer_name: 'advisor1@example.com',
+          reviewed_at: '2026-10-24T09:00:00Z',
+          review_comment: 'กรุณาแนบเอกสารเพิ่ม',
+          created_at: '2026-10-20T08:00:00Z',
+          updated_at: '2026-10-26T10:00:00Z',
+          first_name: 'บีบี',
+          last_name: 'น้ำทิพย์',
+          curriculum: 'วิทยาการคอมพิวเตอร์',
+          position_title: 'Software Engineer',
+          company_id: 'C33',
+          company_name: 'SCB TechX',
+          company_short_name: 'SCB TechX',
+          period_name: '1/2568',
+          reviews: [],
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/ผลการพิจารณาล่าสุด/)).not.toBeInTheDocument();
+  });
 });
