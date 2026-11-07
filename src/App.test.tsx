@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const useAuthMock = vi.fn();
@@ -46,6 +46,7 @@ function signedOut() {
 
 describe('reaching the student page', () => {
   beforeEach(() => {
+    window.location.hash = '';
     useAuthMock.mockReset();
     getStudentsMock.mockReset();
     getStudentsMock.mockResolvedValue([]);
@@ -74,6 +75,71 @@ describe('reaching the student page', () => {
     rerender(<App />);
 
     expect(await screen.findByLabelText(/อีเมล/)).toBeInTheDocument();
+    expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
+  });
+});
+
+describe('keeping the page on refresh (#200)', () => {
+  beforeEach(() => {
+    window.location.hash = '';
+    useAuthMock.mockReset();
+    getStudentsMock.mockReset();
+    getStudentsMock.mockResolvedValue([]);
+  });
+
+  it('opens the page named by the URL hash instead of the home page', async () => {
+    // What F5 does: the app is built again from scratch, and the only thing
+    // left from before is the URL.
+    window.location.hash = '#students';
+    signedIn();
+
+    render(<App />);
+
+    expect(await screen.findByText(/ไม่พบข้อมูลนักศึกษา/)).toBeInTheDocument();
+  });
+
+  it('falls back to the home page for a hash it does not know', async () => {
+    window.location.hash = '#no-such-page';
+    signedIn();
+
+    render(<App />);
+
+    expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /นักศึกษา/ }).length).toBeGreaterThan(0);
+  });
+
+  it('writes the page into the URL hash when a tab is chosen', async () => {
+    signedIn();
+
+    render(<App />);
+    await userEvent.click(screen.getAllByRole('button', { name: /นักศึกษา/ })[0]);
+    await screen.findByText(/ไม่พบข้อมูลนักศึกษา/);
+
+    expect(window.location.hash).toBe('#students');
+  });
+
+  it('follows the browser Back and Forward buttons', async () => {
+    signedIn();
+
+    render(<App />);
+    await userEvent.click(screen.getAllByRole('button', { name: /นักศึกษา/ })[0]);
+    await screen.findByText(/ไม่พบข้อมูลนักศึกษา/);
+
+    // Browser history changes the hash without a navbar click.
+    act(() => {
+      window.location.hash = '#home';
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
+    });
+
+    act(() => window.history.back());
+    await screen.findByText(/ไม่พบข้อมูลนักศึกษา/);
+    expect(window.location.hash).toBe('#students');
+
+    act(() => window.history.forward());
+    await waitFor(() => expect(window.location.hash).toBe('#home'));
     expect(screen.queryByText(/ไม่พบข้อมูลนักศึกษา/)).not.toBeInTheDocument();
   });
 });

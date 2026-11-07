@@ -680,9 +680,21 @@ function PlanDetail({
 
 interface CoopPlansProps {
   onNavigateLogin?: () => void;
+  /**
+   * The plan detail the URL points at. Leave it out and the page keeps track of
+   * the open plan on its own; pass it (null for "none") together with
+   * onRoutePlanChange and the page follows the URL, so a refresh or the browser
+   * Back button lands on the same plan (#200).
+   */
+  routePlanId?: number | null;
+  onRoutePlanChange?: (planId: number | null) => void;
 }
 
-export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
+export default function CoopPlans({
+  onNavigateLogin,
+  routePlanId,
+  onRoutePlanChange,
+}: CoopPlansProps = {}) {
   const [plans, setPlans] = useState<PlanReviewItem[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(null);
   const [reviewPlan, setReviewPlan] = useState<CoopPlan | null>(null);
@@ -692,6 +704,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PlanError | null>(null);
+  const [routePlanError, setRoutePlanError] = useState<PlanError | null>(null);
 
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [curriculumFilter, setCurriculumFilter] = useState('ALL');
@@ -736,6 +749,46 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
+  const selectedPlanRef = useRef<CoopPlan | null>(null);
+  useEffect(() => {
+    selectedPlanRef.current = selectedPlan;
+  }, [selectedPlan]);
+
+  // Follow the URL: after a refresh, or Back/Forward, open the plan it names.
+  // Skipped when no router drives the page (routePlanId left out), and until
+  // the session is back, because the plan needs a token.
+  useEffect(() => {
+    if (routePlanId === undefined || authStatus !== 'authenticated') return;
+
+    if (routePlanId === null) {
+      setSelectedPlan(null);
+      return;
+    }
+
+    // Clicking a plan already set it; do not fetch it a second time.
+    if (selectedPlanRef.current?.plan_id === routePlanId) return;
+
+    let cancelled = false;
+    setRoutePlanError(null);
+    (async () => {
+      try {
+        const plan = await getCoopPlan(routePlanId, await getIdToken());
+        if (!cancelled) setSelectedPlan(plan);
+      } catch (err) {
+        // A plan that is gone, or not this account's, sends the user back to the list.
+        if (!cancelled) {
+          onRoutePlanChange?.(null);
+          setRoutePlanError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routePlanId, authStatus]);
+
   // Counted from the rows themselves, not from a fixed list of statuses: a
   // status this page has never heard of still lands in `counts` and gets its
   // own tab, so the numbers on the tabs always add up to the total (#142).
@@ -756,7 +809,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
+    setRoutePlanError(null);
     setSelectedPlan(plan);
+    onRoutePlanChange?.(plan.plan_id);
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
       if (fresh) setSelectedPlan(fresh);
@@ -785,6 +840,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     savedInEditor.current = null;
     setEditor(null);
     setSelectedPlan(back);
+    onRoutePlanChange?.(back?.plan_id ?? null);
     void loadPlans();
   };
 
@@ -864,8 +920,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     return (
       <>
         <PlanDetail
+          key={selectedPlan.plan_id}
           plan={selectedPlan}
-          onBack={() => setSelectedPlan(null)}
+          onBack={() => {
+            setSelectedPlan(null);
+            onRoutePlanChange?.(null);
+          }}
           isStudent={canCreatePlan}
           onEdit={() => openEditor(selectedPlan)}
           onSubmitted={(submitted) => {
@@ -1000,6 +1060,24 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
       {/* Main Workspace Layout */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+        {routePlanError && (
+          <section
+            role="alert"
+            className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <div>
+              <p className="font-semibold text-red-800">{routePlanError.title}</p>
+              <p className="mt-0.5 text-xs text-red-700">{routePlanError.detail}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRoutePlanError(null)}
+              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition cursor-pointer"
+            >
+              ปิดข้อความ
+            </button>
+          </section>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className={`${showProgressChart ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
