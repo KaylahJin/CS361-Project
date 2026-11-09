@@ -167,11 +167,11 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
 
                     {plan.gpa !== undefined && plan.gpa !== null && (
                       <div>
-                        <span className="text-xs text-slate-400">
-                          GPA
-                        </span>
+                        <span className="text-xs text-slate-400">GPA</span>
                         <p className="font-bold text-blue-600">
-                          {Number(plan.gpa).toFixed(2)}
+                          {plan.gpa !== undefined && plan.gpa !== null
+                            ? Number(plan.gpa).toFixed(2)
+                            : '-'}
                         </p>
                       </div>
                     )}
@@ -182,7 +182,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                           อาจารย์ที่ปรึกษา
                         </span>
                         <p className="font-medium text-slate-700">
-                          {plan.advisor_name}
+                          {plan.advisor_name || '-'}
                         </p>
                       </div>
                     )}

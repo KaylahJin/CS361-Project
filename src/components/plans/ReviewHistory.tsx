@@ -47,14 +47,14 @@ function getReviewerRole(decision: Decision): string {
   switch (decision) {
     case 'ENDORSED':
     case 'NOT_ENDORSED':
-      return 'Advisor';
+      return 'อาจารย์ที่ปรึกษา';
     case 'ELIGIBLE':
     case 'INCOMPLETE':
     case 'NOT_ELIGIBLE':
-      return 'Staff';
+      return 'เจ้าหน้าที่';
     case 'SELECTED':
     case 'NOT_SELECTED':
-      return 'Committee';
+      return 'คณะกรรมการ';
     default:
       return 'ผู้พิจารณา';
   }
@@ -64,17 +64,17 @@ function getPendingStep(status?: CoopPlanStatus) {
   switch (status) {
     case 'SUBMITTED':
       return {
-        role: 'Advisor',
+        role: 'อาจารย์ที่ปรึกษา',
         title: 'รอการรับรองจากอาจารย์ที่ปรึกษา',
       };
     case 'ENDORSED':
       return {
-        role: 'Staff',
+        role: 'เจ้าหน้าที่',
         title: 'รอเจ้าหน้าที่ตรวจสอบ',
       };
     case 'ELIGIBLE':
       return {
-        role: 'Committee',
+        role: 'คณะกรรมการ',
         title: 'รอพิจารณาจากคณะกรรมการ',
       };
     default:
