@@ -1,7 +1,7 @@
 import React from 'react';
 import { Building2, Calendar, ChevronRight } from 'lucide-react';
 import type { PlanReviewItem } from '../../types/planReview';
-import { PlanStatusBadge } from './PlanListTable';
+import { PlanStatusBadge, PlanDeadlineBadge } from './PlanListTable';
 
 interface PlanListCardsProps {
   plans: PlanReviewItem[];
@@ -38,6 +38,8 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
         // Only a viewer who was given onReview can review. Without it the plan is
         // read-only, so the button must not offer "ตรวจแผน" and look clickable.
         const canReview = isPending && Boolean(onReview);
+        const effectiveDeadline =
+          plan.submission_deadline ?? plan.application_deadline ?? null;
 
         return (
           <div
@@ -95,6 +97,14 @@ export const PlanListCards: React.FC<PlanListCardsProps> = ({
                   <Calendar className="h-3 w-3" />
                   {formatDate(plan.submitted_at)}
                 </span>
+              </div>
+
+              <div className="mt-2.5">
+                <PlanDeadlineBadge
+                  deadline={effectiveDeadline}
+                  status={plan.status}
+                  dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
+                />
               </div>
 
               {/* Review Comment Preview if exists */}

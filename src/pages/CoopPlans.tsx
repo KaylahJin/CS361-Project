@@ -57,9 +57,19 @@ import {
   canSelectPlans,
   reviewableStatusFor,
 } from '../auth/roles';
-import { PlanFilters } from '../components/plans/PlanFilters';
-import { ReviewHistory } from '../components/plans/ReviewHistory';
-import { PlanListTable } from '../components/plans/PlanListTable';
+import {
+  PlanFilters,
+  type CompanyFilterOption,
+  type PeriodFilterOption,
+} from '../components/plans/PlanFilters';
+import {
+  ReviewHistory,
+  PlanActivityTimeline,
+} from '../components/plans/ReviewHistory';
+import {
+  PlanListTable,
+  PlanDeadlineBadge,
+} from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
 import { PlanDetailModal } from '../components/plans/PlanDetailModal';
@@ -423,7 +433,14 @@ function PlanDetail({
           </div>
 
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <StatusBadge status={plan.status} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={plan.status} />
+              <PlanDeadlineBadge
+                deadline={plan.submission_deadline ?? plan.application_deadline ?? null}
+                status={plan.status}
+                dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
+              />
+            </div>
 
             {isStudent && isPlanEditable(plan.status) && (
               <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -602,6 +619,13 @@ function PlanDetail({
             <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
             <ReviewHistory reviews={plan.reviews} />
           </div>
+
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">
+              บันทึกกิจกรรมของแผน (Activity History)
+            </h3>
+            <PlanActivityTimeline plan={plan} />
+          </div>
         </section>
 
         <PlanAttachmentSummary
@@ -697,10 +721,12 @@ export default function CoopPlans({
 }: CoopPlansProps = {}) {
   const [plans, setPlans] = useState<PlanReviewItem[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(null);
+  const [detailError, setDetailError] = useState<PlanError | null>(null);
   const [reviewPlan, setReviewPlan] = useState<CoopPlan | null>(null);
 
   const [editor, setEditor] = useState<{ plan?: CoopPlan } | null>(null);
   const savedInEditor = useRef<CoopPlan | null>(null);
+  const detailRequestId = useRef(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PlanError | null>(null);
@@ -710,6 +736,7 @@ export default function CoopPlans({
   const [curriculumFilter, setCurriculumFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [periodId, setPeriodId] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const [toast, setToast] = useState<ToastState>({
@@ -809,14 +836,19 @@ export default function CoopPlans({
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
+    const reqId = ++detailRequestId.current;
     setRoutePlanError(null);
     setSelectedPlan(plan);
+    setDetailError(null);
     onRoutePlanChange?.(plan.plan_id);
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
-      if (fresh) setSelectedPlan(fresh);
-    } catch {
-      // keep existing
+      if (detailRequestId.current !== reqId) return;
+      if (!fresh) throw new Error('Plan detail is empty');
+      setSelectedPlan(fresh);
+    } catch (err) {
+      if (detailRequestId.current !== reqId) return;
+      setDetailError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     }
   };
 
@@ -825,8 +857,13 @@ export default function CoopPlans({
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
       if (fresh) setReviewPlan(fresh);
-    } catch {
-      // keep existing
+    } catch (err) {
+      setReviewPlan(null);
+      if (selectedPlan?.plan_id === plan.plan_id) {
+        setDetailError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+      } else {
+        setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+      }
     }
   };
 
@@ -837,10 +874,12 @@ export default function CoopPlans({
 
   const closeEditor = () => {
     const back = savedInEditor.current ?? editor?.plan ?? null;
+    const wasSaved = savedInEditor.current !== null;
     savedInEditor.current = null;
     setEditor(null);
     setSelectedPlan(back);
     onRoutePlanChange?.(back?.plan_id ?? null);
+    if (back && wasSaved) void handleSelectPlan(back);
     void loadPlans();
   };
 
@@ -851,14 +890,7 @@ export default function CoopPlans({
     // Decided from the plan page: show the new result and the new history
     // entry (#142), whichever step's form was used.
     if (selectedPlan?.plan_id === updatedPlan.plan_id) {
-      setSelectedPlan(updatedPlan);
-      void (async () => {
-        try {
-          setSelectedPlan(await getCoopPlan(updatedPlan.plan_id, await getIdToken()));
-        } catch {
-          // keep what is on screen
-        }
-      })();
+      void handleSelectPlan(updatedPlan);
     }
     setToast({
       show: true,
@@ -919,25 +951,55 @@ export default function CoopPlans({
   if (selectedPlan) {
     return (
       <>
-        <PlanDetail
+        {detailError ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                detailRequestId.current++;
+                setSelectedPlan(null);
+                setDetailError(null);
+                onRoutePlanChange?.(null);
+              }}
+            >
+              กลับรายการคำร้อง
+            </button>
+            <ErrorState
+              title={detailError.title}
+              message={detailError.detail}
+              onRetry={detailError.canRetry ? () => void handleSelectPlan(selectedPlan) : undefined}
+            />
+          </div>
+        ) : <PlanDetail
           key={selectedPlan.plan_id}
           plan={selectedPlan}
           onBack={() => {
+            detailRequestId.current++;
             setSelectedPlan(null);
+            setDetailError(null);
             onRoutePlanChange?.(null);
           }}
           isStudent={canCreatePlan}
           onEdit={() => openEditor(selectedPlan)}
           onSubmitted={(submitted) => {
+            detailRequestId.current++;
             setSelectedPlan(submitted);
+            setDetailError(null);
+            void (async () => {
+              try {
+                const fresh = await getCoopPlan(submitted.plan_id, await getIdToken());
+                if (fresh) setSelectedPlan(fresh);
+              } catch {
+                // keep submitted state so confirmation banner remains visible
+              }
+            })();
             void loadPlans();
           }}
           onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
           reviewableStatus={reviewableStatus}
-        />
+        />}
         {reviewDialog}
       </>
-
     );
   }
 
@@ -950,6 +1012,32 @@ export default function CoopPlans({
     error && error.title === 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ';
   const showProgressChart = !isUnauthenticated && showReviewTools && total > 0;
 
+  const companyOptions: CompanyFilterOption[] = Array.from(
+    plans.reduce((map, p) => {
+      if (p.company_id && !map.has(p.company_id)) {
+        const name = p.company_short_name || p.company_name || p.company_id;
+        map.set(p.company_id, {
+          company_id: p.company_id,
+          label: `${name} (${p.company_id})`,
+        });
+      }
+      return map;
+    }, new Map<string, CompanyFilterOption>()).values()
+  );
+
+  const periodOptions: PeriodFilterOption[] = (() => {
+    const map = new Map<string, PeriodFilterOption>();
+    for (const p of plans) {
+      if (p.period_id && !map.has(p.period_id)) {
+        map.set(p.period_id, {
+          period_id: p.period_id,
+          label: p.period_name || p.period_id,
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
+
   const displayedPlans = plans.filter((plan) => {
     if (statusFilter && statusFilter !== 'ALL') {
       if (plan.status !== statusFilter) return false;
@@ -959,6 +1047,9 @@ export default function CoopPlans({
     }
     if (periodId) {
       if (plan.period_id !== periodId) return false;
+    }
+    if (companyId) {
+      if (plan.company_id !== companyId) return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -1131,6 +1222,10 @@ export default function CoopPlans({
                 onCurriculumChange={setCurriculumFilter}
                 periodId={periodId}
                 onPeriodChange={setPeriodId}
+                companyId={companyId}
+                onCompanyChange={setCompanyId}
+                companyOptions={companyOptions}
+                periodOptions={periodOptions}
               />
             )}
           </div>
@@ -1169,7 +1264,11 @@ export default function CoopPlans({
               ไม่พบรายการแผนสหกิจศึกษา
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-sm">
-              {searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL'
+              {searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
                 : showReviewTools
                   ? 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'
@@ -1177,13 +1276,19 @@ export default function CoopPlans({
                     ? 'คุณยังไม่มีแผนสหกิจศึกษา'
                     : 'ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้'}
             </p>
-            {(searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL') && (
+            {(searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId) && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
                   setCurriculumFilter('ALL');
+                  setPeriodId('');
+                  setCompanyId('');
                 }}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
               >
