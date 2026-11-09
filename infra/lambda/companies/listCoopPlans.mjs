@@ -19,7 +19,7 @@ export const VALID_STATUSES = [
   'SELECTED',
   'NOT_SELECTED',
   'APPROVED',
-  'REJECTED'
+  'REJECTED',
 ];
 
 const SELECT_COLUMNS = `SELECT p.plan_id, p.student_id, p.period_id, p.position_id, p.status,
@@ -28,13 +28,21 @@ const SELECT_COLUMNS = `SELECT p.plan_id, p.student_id, p.period_id, p.position_
        p.created_at, p.updated_at,
        s.first_name, s.last_name, s.curriculum, s.gpa::float8 AS gpa,
        pos.title AS position_title, pos.company_id,
+       to_char(pos.application_deadline, 'YYYY-MM-DD') AS application_deadline,
        c.name AS company_name, c.short_name AS company_short_name,
-       per.name AS period_name
+       per.name AS period_name,
+       sch.submission_deadline
 FROM coop_plans p
 JOIN students s ON s.student_id = p.student_id
 LEFT JOIN positions pos ON pos.position_id = p.position_id
 LEFT JOIN companies c ON c.company_id = pos.company_id
-LEFT JOIN periods per ON per.period_id = p.period_id`;
+LEFT JOIN periods per ON per.period_id = p.period_id
+LEFT JOIN (
+  SELECT period_id, to_char(MAX(end_date), 'YYYY-MM-DD') AS submission_deadline
+  FROM coop_schedules
+  GROUP BY period_id, activity_type
+  HAVING activity_type = 'APPLICATION'
+) sch ON sch.period_id = p.period_id`;
 
 function isProvided(value) {
   return typeof value === 'string' && value.trim() !== '';

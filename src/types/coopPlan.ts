@@ -50,9 +50,11 @@ export interface CoopPlan {
   company_id: string | null;
   company_name: string | null;
   company_short_name: string | null;
+  application_deadline?: string | null;
 
   // Period
   period_name: string | null;
+  submission_deadline?: string | null;
 }
 
 export interface CoopPlanQueryParams {
