@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Navbar, { type TabType } from './components/Navbar';
 import Home from './pages/Home';
 import Requirements from './pages/Requirements';
@@ -14,11 +14,34 @@ import Footer from './components/Footer';
 import AuthProvider from './auth/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import type { Company } from './types/company';
+import { formatHash, parseHash, sameRoute, type HashRoute } from './utils/tabHash';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('home');
+  // The page lives in the URL hash, so a refresh (F5) stays on the same page
+  // instead of falling back to home (#200).
+  const [route, setRoute] = useState<HashRoute>(() => parseHash(window.location.hash));
+  const activeTab = route.tab;
   const [selectedCompany, setSelectedCompany] =
     useState<Company | null>(null);
+
+  const navigate = useCallback((next: HashRoute) => {
+    setRoute((prev) => (sameRoute(prev, next) ? prev : next));
+
+    const hash = formatHash(next);
+    if (window.location.hash !== hash) window.location.hash = hash;
+  }, []);
+
+  // Back/Forward and edits to the address bar change the hash without going
+  // through navigate(), so follow them here.
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = parseHash(window.location.hash);
+      setRoute((prev) => (sameRoute(prev, next) ? prev : next));
+    };
+
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   // เมื่อเลือกเมนูตำแหน่งงานตามปกติ ให้แสดงทุกบริษัท
   const handleTabChange = (tab: TabType) => {
@@ -26,13 +49,20 @@ function App() {
       setSelectedCompany(null);
     }
 
-    setActiveTab(tab);
+    navigate({ tab, planId: null });
   };
+
+  // The coop-plans page reports which plan detail is open so a refresh can
+  // reopen it.
+  const handlePlanChange = useCallback(
+    (planId: number | null) => navigate({ tab: 'coop-plans', planId }),
+    [navigate],
+  );
 
   // เปิดหน้าตำแหน่งงานโดยกรองบริษัทที่เลือกจากหน้าสถานประกอบการ
   const handleViewCompanyPositions = (company: Company) => {
     setSelectedCompany(company);
-    setActiveTab('positions');
+    navigate({ tab: 'positions', planId: null });
   };
 
   const renderContent = () => {
@@ -75,7 +105,11 @@ function App() {
       case 'coop-plans':
         return (
           <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('coop-plans')} />}>
-            <CoopPlans onNavigateLogin={() => handleTabChange('login')} />
+            <CoopPlans
+              onNavigateLogin={() => handleTabChange('login')}
+              routePlanId={route.planId}
+              onRoutePlanChange={handlePlanChange}
+            />
           </ProtectedRoute>
         );
 

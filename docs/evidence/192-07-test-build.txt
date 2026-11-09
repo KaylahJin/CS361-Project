@@ -1,7 +1,7 @@
-#192 — V4-03 verification after review fixes
+#192 — V4-03 verification after review fixes and main merge
 Date: 2026-11-09
 Branch: feat/192-deadline-filter-history
-Commit: 3a0d4d7a322b37f210586872e71ddf16ab8e4776
+Base review-fix commit: 3a0d4d7a322b37f210586872e71ddf16ab8e4776
 
 Commands:
   npm test
@@ -9,8 +9,8 @@ Commands:
 
 Results:
   - npm test: PASS
-    Test Files: 55 passed (55)
-    Tests: 1047 passed (1047)
+    Test Files: 56 passed (56)
+    Tests: 1064 passed (1064)
   - npm run build: PASS
     TypeScript build and Vite production build completed successfully.
 
