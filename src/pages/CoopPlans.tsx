@@ -28,7 +28,9 @@ import {
   getCoopPlan,
   getCoopPlans,
   submitCoopPlan,
-  reviewCoopPlan,
+  endorseCoopPlan,
+  screenCoopPlan,
+  selectCoopPlan,
   CoopPlanApiError,
 } from '../data/coopPlanApi';
 
@@ -46,9 +48,28 @@ import type {
 import CoopPlanForm from '../pages/CoopPlanForm';
 import { useAuth } from '../auth/AuthContext';
 import { submissionFailureLabel } from './submissionMessages';
-import { canReviewPlans } from '../auth/roles';
-import { PlanFilters } from '../components/plans/PlanFilters';
-import { PlanListTable } from '../components/plans/PlanListTable';
+import {
+  canEndorsePlans,
+  canManageOwnPlan,
+  canReviewPlans,
+  canUsePlanReviewTools,
+  canScreenPlans,
+  canSelectPlans,
+  reviewableStatusFor,
+} from '../auth/roles';
+import {
+  PlanFilters,
+  type CompanyFilterOption,
+  type PeriodFilterOption,
+} from '../components/plans/PlanFilters';
+import {
+  ReviewHistory,
+  PlanActivityTimeline,
+} from '../components/plans/ReviewHistory';
+import {
+  PlanListTable,
+  PlanDeadlineBadge,
+} from '../components/plans/PlanListTable';
 import { PlanListCards } from '../components/plans/PlanListCards';
 import { PlanProgressChart } from '../components/plans/PlanProgressChart';
 import { PlanDetailModal } from '../components/plans/PlanDetailModal';
@@ -69,6 +90,26 @@ function StatusBadge({ status }: { status: CoopPlanStatus }) {
     RETURNED: {
       label: 'ส่งกลับแก้ไข',
       className: 'bg-amber-50 text-amber-700 border-amber-200',
+    },
+    ENDORSED: {
+      label: 'อาจารย์รับรองแล้ว',
+      className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    },
+    ELIGIBLE: {
+      label: 'ผ่านการตรวจ รอคัดเลือก',
+      className: 'bg-teal-50 text-teal-700 border-teal-200',
+    },
+    NOT_ELIGIBLE: {
+      label: 'ไม่ผ่านการตรวจคุณสมบัติ',
+      className: 'bg-red-50 text-red-700 border-red-200',
+    },
+    SELECTED: {
+      label: 'ได้รับการคัดเลือก',
+      className: 'bg-violet-50 text-violet-700 border-violet-200',
+    },
+    NOT_SELECTED: {
+      label: 'ไม่ได้รับการคัดเลือก',
+      className: 'bg-slate-100 text-slate-700 border-slate-300',
     },
     APPROVED: {
       label: 'อนุมัติแล้ว',
@@ -248,6 +289,14 @@ function lockedReason(status: CoopPlanStatus): string | null {
       return 'แผนนี้ได้รับอนุมัติแล้ว แก้ไขไม่ได้';
     case 'REJECTED':
       return 'แผนนี้ไม่ได้รับอนุมัติ แก้ไขไม่ได้';
+    case 'ELIGIBLE':
+      return 'แผนนี้ผ่านการตรวจแล้ว รอคัดเลือก แก้ไขไม่ได้';
+    case 'NOT_ELIGIBLE':
+      return 'แผนนี้ไม่ผ่านการตรวจคุณสมบัติ แก้ไขไม่ได้';
+    case 'SELECTED':
+      return 'แผนนี้ได้รับการคัดเลือกแล้ว แก้ไขไม่ได้';
+    case 'NOT_SELECTED':
+      return 'แผนนี้ไม่ได้รับการคัดเลือก แก้ไขไม่ได้ และยื่นแผนใหม่ในรอบนี้ไม่ได้';
     default:
       return null;
   }
@@ -307,18 +356,22 @@ function describeSubmissionError(error: unknown): string[] {
 
 function PlanDetail({
   plan,
+  isStudent,
   onBack,
   onEdit,
   onSubmitted,
   onReview,
+  reviewableStatus,
 }: {
   plan: CoopPlan;
+  isStudent: boolean;
   onBack: () => void;
   onEdit: () => void;
   onSubmitted: (plan: CoopPlan) => void;
   onReview?: (plan: CoopPlan) => void;
+  reviewableStatus: CoopPlanStatus;
 }) {
-  const locked = lockedReason(plan.status);
+  const locked = isStudent ? lockedReason(plan.status) : null;
   const { getIdToken } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
@@ -327,7 +380,7 @@ function PlanDetail({
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const canSubmit =
-    plan.status === 'PREPARING' || plan.status === 'RETURNED';
+    isStudent && (plan.status === 'PREPARING' || plan.status === 'RETURNED');
 
   const handleSubmitPlan = async () => {
     if (!canSubmit || submitting) return;
@@ -380,9 +433,16 @@ function PlanDetail({
           </div>
 
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <StatusBadge status={plan.status} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={plan.status} />
+              <PlanDeadlineBadge
+                deadline={plan.submission_deadline ?? plan.application_deadline ?? null}
+                status={plan.status}
+                dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
+              />
+            </div>
 
-            {isPlanEditable(plan.status) && (
+            {isStudent && isPlanEditable(plan.status) && (
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <button
                   type="button"
@@ -414,7 +474,7 @@ function PlanDetail({
               </button>
             )}
 
-            {plan.status === 'SUBMITTED' && onReview && (
+            {plan.status === reviewableStatus && onReview && (
               <button
                 type="button"
                 onClick={() => onReview(plan)}
@@ -554,6 +614,18 @@ function PlanDetail({
           <InfoRow label="ผู้ตรวจสอบ" value={plan.reviewer_name} />
           <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
           <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
+
+          <div className="pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
+            <ReviewHistory reviews={plan.reviews} />
+          </div>
+
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <h3 className="mb-2 text-xs font-semibold text-slate-400">
+              บันทึกกิจกรรมของแผน (Activity History)
+            </h3>
+            <PlanActivityTimeline plan={plan} />
+          </div>
         </section>
 
         <PlanAttachmentSummary
@@ -632,23 +704,39 @@ function PlanDetail({
 
 interface CoopPlansProps {
   onNavigateLogin?: () => void;
+  /**
+   * The plan detail the URL points at. Leave it out and the page keeps track of
+   * the open plan on its own; pass it (null for "none") together with
+   * onRoutePlanChange and the page follows the URL, so a refresh or the browser
+   * Back button lands on the same plan (#200).
+   */
+  routePlanId?: number | null;
+  onRoutePlanChange?: (planId: number | null) => void;
 }
 
-export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
+export default function CoopPlans({
+  onNavigateLogin,
+  routePlanId,
+  onRoutePlanChange,
+}: CoopPlansProps = {}) {
   const [plans, setPlans] = useState<PlanReviewItem[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CoopPlan | null>(null);
+  const [detailError, setDetailError] = useState<PlanError | null>(null);
   const [reviewPlan, setReviewPlan] = useState<CoopPlan | null>(null);
 
   const [editor, setEditor] = useState<{ plan?: CoopPlan } | null>(null);
   const savedInEditor = useRef<CoopPlan | null>(null);
+  const detailRequestId = useRef(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PlanError | null>(null);
+  const [routePlanError, setRoutePlanError] = useState<PlanError | null>(null);
 
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [curriculumFilter, setCurriculumFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [periodId, setPeriodId] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const [toast, setToast] = useState<ToastState>({
@@ -661,6 +749,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   // Only reviewer roles get the review button and form. A student sees their
   // plans read-only. The API refuses a student's review call anyway (403).
   const canReview = canReviewPlans(role);
+  const reviewableStatus = reviewableStatusFor(role);
+  const canCreatePlan = canManageOwnPlan(role);
+  // A student sees only their own plans, so the reviewer's search and filters
+  // would be noise (#203).
+  const showReviewTools = canUsePlanReviewTools(role);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -683,6 +776,46 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     loadPlans();
   }, [authStatus]);
 
+  const selectedPlanRef = useRef<CoopPlan | null>(null);
+  useEffect(() => {
+    selectedPlanRef.current = selectedPlan;
+  }, [selectedPlan]);
+
+  // Follow the URL: after a refresh, or Back/Forward, open the plan it names.
+  // Skipped when no router drives the page (routePlanId left out), and until
+  // the session is back, because the plan needs a token.
+  useEffect(() => {
+    if (routePlanId === undefined || authStatus !== 'authenticated') return;
+
+    if (routePlanId === null) {
+      setSelectedPlan(null);
+      return;
+    }
+
+    // Clicking a plan already set it; do not fetch it a second time.
+    if (selectedPlanRef.current?.plan_id === routePlanId) return;
+
+    let cancelled = false;
+    setRoutePlanError(null);
+    (async () => {
+      try {
+        const plan = await getCoopPlan(routePlanId, await getIdToken());
+        if (!cancelled) setSelectedPlan(plan);
+      } catch (err) {
+        // A plan that is gone, or not this account's, sends the user back to the list.
+        if (!cancelled) {
+          onRoutePlanChange?.(null);
+          setRoutePlanError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routePlanId, authStatus]);
+
   // Counted from the rows themselves, not from a fixed list of statuses: a
   // status this page has never heard of still lands in `counts` and gets its
   // own tab, so the numbers on the tabs always add up to the total (#142).
@@ -703,12 +836,19 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
   const total = plans.length;
 
   const handleSelectPlan = async (plan: CoopPlan) => {
+    const reqId = ++detailRequestId.current;
+    setRoutePlanError(null);
     setSelectedPlan(plan);
+    setDetailError(null);
+    onRoutePlanChange?.(plan.plan_id);
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
-      if (fresh) setSelectedPlan(fresh);
-    } catch {
-      // keep existing
+      if (detailRequestId.current !== reqId) return;
+      if (!fresh) throw new Error('Plan detail is empty');
+      setSelectedPlan(fresh);
+    } catch (err) {
+      if (detailRequestId.current !== reqId) return;
+      setDetailError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
     }
   };
 
@@ -717,8 +857,13 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     try {
       const fresh = await getCoopPlan(plan.plan_id, await getIdToken());
       if (fresh) setReviewPlan(fresh);
-    } catch {
-      // keep existing
+    } catch (err) {
+      setReviewPlan(null);
+      if (selectedPlan?.plan_id === plan.plan_id) {
+        setDetailError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+      } else {
+        setError(describePlanError(err, 'ไม่พบคำร้องที่ขอ'));
+      }
     }
   };
 
@@ -729,9 +874,12 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
   const closeEditor = () => {
     const back = savedInEditor.current ?? editor?.plan ?? null;
+    const wasSaved = savedInEditor.current !== null;
     savedInEditor.current = null;
     setEditor(null);
     setSelectedPlan(back);
+    onRoutePlanChange?.(back?.plan_id ?? null);
+    if (back && wasSaved) void handleSelectPlan(back);
     void loadPlans();
   };
 
@@ -739,6 +887,11 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     setPlans((prev) =>
       prev.map((p) => (p.plan_id === updatedPlan.plan_id ? updatedPlan : p))
     );
+    // Decided from the plan page: show the new result and the new history
+    // entry (#142), whichever step's form was used.
+    if (selectedPlan?.plan_id === updatedPlan.plan_id) {
+      void handleSelectPlan(updatedPlan);
+    }
     setToast({
       show: true,
       title: 'บันทึกผลสำเร็จ',
@@ -762,27 +915,128 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     );
   }
 
+  // One dialog for both screens. It used to exist only below the list, so on the
+  // plan page "ตรวจพิจารณาแผน" set the plan to review and nothing opened (F11).
+  const reviewDialog = canReview && (
+    <PlanDetailModal
+      plan={reviewPlan}
+      open={Boolean(reviewPlan)}
+      onOpenChange={(open) => {
+        if (!open) setReviewPlan(null);
+      }}
+      reviewerName={user?.email || 'ผู้ตรวจสอบ'}
+      getIdToken={getIdToken}
+      onEndorse={
+        canEndorsePlans(role)
+          ? async ({ planId, decision, comment }) =>
+              endorseCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onScreen={
+        canScreenPlans(role)
+          ? async ({ planId, decision, comment }) =>
+              screenCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onSelect={
+        canSelectPlans(role)
+          ? async ({ planId, decision, comment }) =>
+              selectCoopPlan(planId, decision, comment, await getIdToken())
+          : undefined
+      }
+      onSaved={handleSavedReview}
+    />
+  );
+
   if (selectedPlan) {
     return (
-      <PlanDetail
-        plan={selectedPlan}
-        onBack={() => setSelectedPlan(null)}
-        onEdit={() => openEditor(selectedPlan)}
-        onSubmitted={(submitted) => {
-          setSelectedPlan(submitted);
-          void loadPlans();
-        }}
-        onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
-      />
+      <>
+        {detailError ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                detailRequestId.current++;
+                setSelectedPlan(null);
+                setDetailError(null);
+                onRoutePlanChange?.(null);
+              }}
+            >
+              กลับรายการคำร้อง
+            </button>
+            <ErrorState
+              title={detailError.title}
+              message={detailError.detail}
+              onRetry={detailError.canRetry ? () => void handleSelectPlan(selectedPlan) : undefined}
+            />
+          </div>
+        ) : <PlanDetail
+          key={selectedPlan.plan_id}
+          plan={selectedPlan}
+          onBack={() => {
+            detailRequestId.current++;
+            setSelectedPlan(null);
+            setDetailError(null);
+            onRoutePlanChange?.(null);
+          }}
+          isStudent={canCreatePlan}
+          onEdit={() => openEditor(selectedPlan)}
+          onSubmitted={(submitted) => {
+            detailRequestId.current++;
+            setSelectedPlan(submitted);
+            setDetailError(null);
+            void (async () => {
+              try {
+                const fresh = await getCoopPlan(submitted.plan_id, await getIdToken());
+                if (fresh) setSelectedPlan(fresh);
+              } catch {
+                // keep submitted state so confirmation banner remains visible
+              }
+            })();
+            void loadPlans();
+          }}
+          onReview={canReview ? (plan) => handleReviewPlan(plan) : undefined}
+          reviewableStatus={reviewableStatus}
+        />}
+        {reviewDialog}
+      </>
     );
   }
 
   const canCreate =
     authStatus === 'authenticated' &&
+    canCreatePlan &&
     !(error && (error.status === 401 || error.status === 403));
 
   const isUnauthenticated =
     error && error.title === 'ลงชื่อเข้าใช้เพื่อดูแผนสหกิจ';
+  const showProgressChart = !isUnauthenticated && showReviewTools && total > 0;
+
+  const companyOptions: CompanyFilterOption[] = Array.from(
+    plans.reduce((map, p) => {
+      if (p.company_id && !map.has(p.company_id)) {
+        const name = p.company_short_name || p.company_name || p.company_id;
+        map.set(p.company_id, {
+          company_id: p.company_id,
+          label: `${name} (${p.company_id})`,
+        });
+      }
+      return map;
+    }, new Map<string, CompanyFilterOption>()).values()
+  );
+
+  const periodOptions: PeriodFilterOption[] = (() => {
+    const map = new Map<string, PeriodFilterOption>();
+    for (const p of plans) {
+      if (p.period_id && !map.has(p.period_id)) {
+        map.set(p.period_id, {
+          period_id: p.period_id,
+          label: p.period_name || p.period_id,
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
 
   const displayedPlans = plans.filter((plan) => {
     if (statusFilter && statusFilter !== 'ALL') {
@@ -793,6 +1047,9 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
     }
     if (periodId) {
       if (plan.period_id !== periodId) return false;
+    }
+    if (companyId) {
+      if (plan.company_id !== companyId) return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -894,8 +1151,26 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
 
       {/* Main Workspace Layout */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+        {routePlanError && (
+          <section
+            role="alert"
+            className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <div>
+              <p className="font-semibold text-red-800">{routePlanError.title}</p>
+              <p className="mt-0.5 text-xs text-red-700">{routePlanError.detail}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRoutePlanError(null)}
+              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition cursor-pointer"
+            >
+              ปิดข้อความ
+            </button>
+          </section>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-4">
+          <div className={`${showProgressChart ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="font-heading text-lg font-bold text-slate-800 tracking-tight">
@@ -935,7 +1210,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               </div>
             </div>
 
-            {!isUnauthenticated && (
+            {!isUnauthenticated && showReviewTools && (
               <PlanFilters
                 value={statusFilter}
                 onChange={setStatusFilter}
@@ -947,11 +1222,15 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 onCurriculumChange={setCurriculumFilter}
                 periodId={periodId}
                 onPeriodChange={setPeriodId}
+                companyId={companyId}
+                onCompanyChange={setCompanyId}
+                companyOptions={companyOptions}
+                periodOptions={periodOptions}
               />
             )}
           </div>
 
-          {!isUnauthenticated && total > 0 && (
+          {showProgressChart && (
             <div className="lg:sticky lg:top-20">
               <PlanProgressChart counts={counts} total={total} />
             </div>
@@ -985,17 +1264,31 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
               ไม่พบรายการแผนสหกิจศึกษา
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-sm">
-              {searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL'
+              {searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId
                 ? 'ลองปรับเปลี่ยนเงื่อนไขการค้นหา หรือตัวกรองสถานะ'
-                : 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'}
+                : showReviewTools
+                  ? 'ยังไม่มีแผนที่อยู่ในขอบเขตของผู้ตรวจในขณะนี้'
+                  : role === 'STUDENT'
+                    ? 'คุณยังไม่มีแผนสหกิจศึกษา'
+                    : 'ยังไม่มีรายการแผนสหกิจศึกษาในขณะนี้'}
             </p>
-            {(searchQuery || statusFilter !== 'ALL' || curriculumFilter !== 'ALL') && (
+            {(searchQuery ||
+              statusFilter !== 'ALL' ||
+              curriculumFilter !== 'ALL' ||
+              periodId ||
+              companyId) && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
                   setCurriculumFilter('ALL');
+                  setPeriodId('');
+                  setCompanyId('');
                 }}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
               >
@@ -1010,12 +1303,14 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             ) : (
               <PlanListCards
                 plans={displayedPlans}
                 onOpen={handleSelectPlan}
                 onReview={canReview ? handleReviewPlan : undefined}
+                reviewableStatus={reviewableStatus}
               />
             )}
 
@@ -1039,24 +1334,7 @@ export default function CoopPlans({ onNavigateLogin }: CoopPlansProps = {}) {
         )}
       </main>
 
-      {/* Plan Detail & Consideration Modal (V3-05.2) */}
-      {canReview && (
-        <PlanDetailModal
-          plan={reviewPlan}
-          open={Boolean(reviewPlan)}
-          onOpenChange={(open) => {
-            if (!open) setReviewPlan(null);
-          }}
-          reviewerName={user?.email || 'ผู้ตรวจสอบ'}
-          getIdToken={getIdToken}
-          onSubmitReview={async ({ planId, decision, comment }) => {
-            const token = await getIdToken();
-            await reviewCoopPlan(planId, decision, comment, token);
-            await loadPlans();
-          }}
-          onSaved={handleSavedReview}
-        />
-      )}
+      {reviewDialog}
     </div>
   );
 }

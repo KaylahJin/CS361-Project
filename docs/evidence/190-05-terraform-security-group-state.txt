@@ -1,0 +1,155 @@
+﻿Evidence: 190-05-terraform-security-group-state.txt
+Title: Terraform State for Lambda and RDS Security Groups
+Generated: 2026-11-02 16:37:05
+Region: us-east-1
+============================================================
+# aws_security_group.lambda:
+resource "aws_security_group" "lambda" {
+    arn         = "arn:aws:ec2:us-east-1:608125137608:security-group/sg-0c01f1b0bc7c89661"
+    description = "Companies Lambda - outbound to RDS Proxy only"
+    egress      = [
+        {
+            cidr_blocks      = []
+            description      = "To RDS Proxy"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = [
+                "sg-02f416e975fa9b2c7",
+            ]
+            self             = false
+            to_port          = 5432
+        },
+        {
+            cidr_blocks      = []
+            description      = "To RDS"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = [
+                "sg-0c32d8d33a74425ae",
+            ]
+            self             = false
+            to_port          = 5432
+        },
+    ]
+    id          = "sg-0c01f1b0bc7c89661"
+    ingress     = []
+    name        = "****-companies-lambda-sg"
+    name_prefix = [90mnull[0m[0m
+    owner_id    = "608125137608"
+    tags        = {}
+    tags_all    = {}
+    vpc_id      = "vpc-0b53bc4c5d49d2127"
+}
+# aws_security_group.rds:
+resource "aws_security_group" "rds" {
+    arn         = "arn:aws:ec2:us-east-1:608125137608:security-group/sg-0c32d8d33a74425ae"
+    description = "coop-db-dev - inbound from RDS Proxy and dev IP"
+    egress      = []
+    id          = "sg-0c32d8d33a74425ae"
+    ingress     = [
+        {
+            cidr_blocks      = [
+                "0.0.0.0/0",
+            ]
+            description      = "Dev direct access"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = []
+            self             = false
+            to_port          = 5432
+        },
+        {
+            cidr_blocks      = [
+                "203.0.113.4/32",
+            ]
+            description      = "Dev direct access"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = []
+            self             = false
+            to_port          = 5432
+        },
+        {
+            cidr_blocks      = []
+            description      = "From Lambda"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = [
+                "sg-0c01f1b0bc7c89661",
+            ]
+            self             = false
+            to_port          = 5432
+        },
+        {
+            cidr_blocks      = []
+            description      = "From RDS Proxy"
+            from_port        = 5432
+            ipv6_cidr_blocks = []
+            prefix_list_ids  = []
+            protocol         = "tcp"
+            security_groups  = [
+                "sg-02f416e975fa9b2c7",
+            ]
+            self             = false
+            to_port          = 5432
+        },
+    ]
+    name        = "****-coop-db-sg"
+    name_prefix = [90mnull[0m[0m
+    owner_id    = "608125137608"
+    tags        = {}
+    tags_all    = {}
+    vpc_id      = "vpc-0b53bc4c5d49d2127"
+}
+# aws_security_group_rule.rds_ingress_from_lambda:
+resource "aws_security_group_rule" "rds_ingress_from_lambda" {
+    description              = "From Lambda"
+    from_port                = 5432
+    id                       = "sgrule-3431429790"
+    protocol                 = "tcp"
+    security_group_id        = "sg-0c32d8d33a74425ae"
+    security_group_rule_id   = "sgr-01b4c62f17b94dc47"
+    self                     = false
+    source_security_group_id = "sg-0c01f1b0bc7c89661"
+    to_port                  = 5432
+    type                     = "ingress"
+}
+# aws_security_group_rule.rds_ingress_from_dev_ip:
+resource "aws_security_group_rule" "rds_ingress_from_dev_ip" {
+    cidr_blocks            = [
+        "203.0.113.4/32",
+    ]
+    description            = "Dev direct access"
+    from_port              = 5432
+    id                     = "sgrule-1181177437"
+    protocol               = "tcp"
+    security_group_id      = "sg-0c32d8d33a74425ae"
+    security_group_rule_id = "sgr-07898ab4aa661f644"
+    self                   = false
+    to_port                = 5432
+    type                   = "ingress"
+}
+# aws_security_group_rule.lambda_egress_to_rds:
+resource "aws_security_group_rule" "lambda_egress_to_rds" {
+    description              = "To RDS"
+    from_port                = 5432
+    id                       = "sgrule-1817552471"
+    protocol                 = "tcp"
+    security_group_id        = "sg-0c01f1b0bc7c89661"
+    security_group_rule_id   = "sgr-054447f584f230bb2"
+    self                     = false
+    source_security_group_id = "sg-0c32d8d33a74425ae"
+    to_port                  = 5432
+    type                     = "egress"
+}
+

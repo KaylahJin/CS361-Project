@@ -14,14 +14,33 @@ const SELECT_BY_ID = `SELECT p.plan_id, p.student_id, p.period_id, p.position_id
        p.created_at, p.updated_at,
        s.first_name, s.last_name, s.curriculum, s.gpa::float8 AS gpa,
        pos.title AS position_title, pos.company_id,
+       to_char(pos.application_deadline, 'YYYY-MM-DD') AS application_deadline,
        c.name AS company_name, c.short_name AS company_short_name,
-       per.name AS period_name
+       per.name AS period_name,
+       sch.submission_deadline
 FROM coop_plans p
 JOIN students s ON s.student_id = p.student_id
 LEFT JOIN positions pos ON pos.position_id = p.position_id
 LEFT JOIN companies c ON c.company_id = pos.company_id
 LEFT JOIN periods per ON per.period_id = p.period_id
+LEFT JOIN (
+  SELECT period_id, to_char(MAX(end_date), 'YYYY-MM-DD') AS submission_deadline
+  FROM coop_schedules
+  GROUP BY period_id, activity_type
+  HAVING activity_type = 'APPLICATION'
+) sch ON sch.period_id = p.period_id
 WHERE p.plan_id = $1`;
+
+// Every decision on the plan, newest first. coop_plans keeps only the latest, so
+// a returned-then-resubmitted plan would otherwise lose what was said the first
+// time. The reviewer is shown the way coop_plans.reviewer_name already shows
+// them: by email.
+const SELECT_REVIEWS = `SELECT r.review_id, r.step, r.decision, r.comment, r.reviewed_at,
+       u.email AS reviewer_name
+FROM plan_reviews r
+LEFT JOIN app_users u ON u.cognito_sub = r.reviewer_sub
+WHERE r.plan_id = $1
+ORDER BY r.reviewed_at DESC, r.review_id DESC`;
 
 function isValidPlanId(value) {
   if (typeof value !== 'string' || !/^\d+$/.test(value.trim())) return false;
@@ -78,7 +97,11 @@ export async function getCoopPlanById(event) {
       throw err;
     }
 
-    return jsonResponse(200, plan);
+    // Whoever may read the plan may read its history; assertCanViewPlan above
+    // already decided that.
+    const history = await getPool().query(SELECT_REVIEWS, [plan.plan_id]);
+
+    return jsonResponse(200, { ...plan, reviews: history.rows });
   } catch (err) {
     console.error('getCoopPlanById failed', err);
     return jsonResponse(500, { error: 'Internal server error' });

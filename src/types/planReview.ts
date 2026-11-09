@@ -19,7 +19,43 @@ export interface Reviewer {
 
 export type ReviewDecision = 'APPROVED' | 'RETURNED' | 'REJECTED';
 
+/** The advisor's step (#147). NOT_ENDORSED returns the plan to the student. */
+export type EndorseDecision = 'ENDORSED' | 'NOT_ENDORSED';
+
+/** Staff's step (#148). INCOMPLETE returns the plan to the student. */
+export type ScreenDecision = 'ELIGIBLE' | 'INCOMPLETE' | 'NOT_ELIGIBLE';
+
+/** The committee's step (#149). SELECTED only within the period's capacity. */
+export type SelectDecision = 'SELECTED' | 'NOT_SELECTED';
+
+/** GET /coop-plans/{planId}/eligibility: the plan's student against its period's criteria. */
+export interface PlanEligibility {
+  plan_id: number;
+  period_id: string;
+  criteria: { min_gpa: number | null; min_group_gpa: number | null };
+  eligible: boolean;
+  failures: Array<{ code?: string; message?: string }>;
+}
+
 export type PlanReviewItem = CoopPlan;
+
+export type ReviewHistoryDecision =
+  | ReviewDecision
+  | EndorseDecision
+  | ScreenDecision
+  | SelectDecision
+  | (string & {});
+
+/** One decision from plan_reviews, as GET /coop-plans/{id} returns it. */
+export interface PlanReviewHistoryItem {
+  review_id: number;
+  step?: string | null;
+  /** Any step's decision: the old single review, endorse (#147), screen (#148) or select (#149). */
+  decision: ReviewDecision | EndorseDecision | ScreenDecision | SelectDecision;
+  comment: string | null;
+  reviewed_at: string;
+  reviewer_name: string | null;
+}
 
 export interface ReviewSubmitPayload {
   planId: number;

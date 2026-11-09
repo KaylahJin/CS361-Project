@@ -2,10 +2,17 @@
 // CS361 V2 — Coop Plan Types
 // ============================================================
 
+import type { PlanReviewHistoryItem } from './planReview';
+
 export type CoopPlanStatus =
   | 'PREPARING'
   | 'SUBMITTED'
   | 'RETURNED'
+  | 'ENDORSED'
+  | 'ELIGIBLE'
+  | 'NOT_ELIGIBLE'
+  | 'SELECTED'
+  | 'NOT_SELECTED'
   | 'APPROVED'
   | 'REJECTED';
 
@@ -25,6 +32,8 @@ export interface CoopPlan {
   reviewer_name: string | null;
   reviewed_at: string | null;
   review_comment: string | null;
+  /** Every decision, newest first. Only the detail route returns it. */
+  reviews?: PlanReviewHistoryItem[];
 
   created_at: string;
   updated_at: string;
@@ -41,9 +50,11 @@ export interface CoopPlan {
   company_id: string | null;
   company_name: string | null;
   company_short_name: string | null;
+  application_deadline?: string | null;
 
   // Period
   period_name: string | null;
+  submission_deadline?: string | null;
 }
 
 export interface CoopPlanQueryParams {

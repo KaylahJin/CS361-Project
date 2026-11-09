@@ -1,0 +1,26 @@
+﻿Evidence: 190-08-aws-lambda-vpc-config.txt
+Title: AWS Lambda VPC and Security Group Configuration
+Generated: 2026-11-02 16:37:58
+Region: us-east-1
+============================================================
+{
+    "FunctionName": "****-companies-lambda",
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "VpcConfig": {
+        "SubnetIds": [
+            "subnet-0ea9233be7199ab19",
+            "subnet-0177e17661f06c9f9",
+            "subnet-0d9d17f40337425c6",
+            "subnet-0c7cf779266719056",
+            "subnet-0749a7750020ad1d6",
+            "subnet-0d6775b2491ec7427"
+        ],
+        "SecurityGroupIds": [
+            "sg-0c01f1b0bc7c89661"
+        ],
+        "VpcId": "vpc-0b53bc4c5d49d2127",
+        "Ipv6AllowedForDualStack": false
+    }
+}
+

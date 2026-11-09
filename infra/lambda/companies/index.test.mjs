@@ -61,6 +61,26 @@ vi.mock('./submitCoopPlan.mjs', () => ({
   submitCoopPlan: submitCoopPlanMock,
 }));
 
+const endorseCoopPlanMock = vi.fn();
+vi.mock('./endorseCoopPlan.mjs', () => ({
+  endorseCoopPlan: endorseCoopPlanMock,
+}));
+
+const screenCoopPlanMock = vi.fn();
+vi.mock('./screenCoopPlan.mjs', () => ({
+  screenCoopPlan: screenCoopPlanMock,
+}));
+
+const selectCoopPlanMock = vi.fn();
+vi.mock('./selectCoopPlan.mjs', () => ({
+  selectCoopPlan: selectCoopPlanMock,
+}));
+
+const getPlanEligibilityMock = vi.fn();
+vi.mock('./getPlanEligibility.mjs', () => ({
+  getPlanEligibility: getPlanEligibilityMock,
+}));
+
 vi.mock('./requestAttachmentUpload.mjs', () => ({
   requestAttachmentUpload: requestAttachmentUploadMock,
 }));
@@ -249,6 +269,30 @@ describe('router (index.mjs handler)', () => {
     expect(updateCoopPlanMock).toHaveBeenCalledWith(event);
     expect(createCoopPlanMock).not.toHaveBeenCalled();
     expect(result).toBe(handlerResponse);
+  });
+
+  it('dispatches POST /coop-plans/{planId}/endorse to endorseCoopPlan', async () => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    endorseCoopPlanMock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey: 'POST /coop-plans/{planId}/endorse', pathParameters: { planId: '101' } };
+
+    expect(await handler(event)).toBe(handlerResponse);
+    expect(endorseCoopPlanMock).toHaveBeenCalledWith(event);
+  });
+
+  it.each([
+    ['POST /coop-plans/{planId}/screen', screenCoopPlanMock],
+    ['POST /coop-plans/{planId}/select', selectCoopPlanMock],
+    ['GET /coop-plans/{planId}/eligibility', getPlanEligibilityMock],
+  ])('dispatches %s', async (routeKey, mock) => {
+    const handlerResponse = { statusCode: 200, headers: {}, body: '{}' };
+    mock.mockResolvedValue(handlerResponse);
+
+    const event = { routeKey, pathParameters: { planId: '101' } };
+
+    expect(await handler(event)).toBe(handlerResponse);
+    expect(mock).toHaveBeenCalledWith(event);
   });
 
   it('dispatches POST /coop-plans/{planId}/submit to submitCoopPlan', async () => {

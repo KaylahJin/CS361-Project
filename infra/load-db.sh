@@ -137,9 +137,22 @@ apply_v3_migration() {
       return 1
     fi
 
-    echo "--- ${migration#"$REPO_ROOT/infra/"}"
-    run_sql "$migration" || return 1
-  done
+  if [ ! -f "$V3_ATTACHMENTS_MIGRATION" ]; then
+    echo "--- v3_02 attachments migration: NOT FOUND" >&2
+    return 1
+  fi
+  echo "--- migrate/migrations/v3_02_attachments_upgrade.sql"
+  run_sql "$V3_ATTACHMENTS_MIGRATION" || return 1
+  # Period criteria (#151). Without it a fresh load has no periods.min_gpa, and
+  # the eligibility query behind every submit answers 500.
+  echo "--- migrate/migrations/v3_03_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_03_upgrade.sql" || return 1
+  # Before the account seeding: the COMMITTEE role only exists from here on.
+  echo "--- migrate/migrations/v3_04_review_steps_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_04_review_steps_upgrade.sql" || return 1
+  # One plan per period counts SELECTED / NOT_SELECTED too (#149).
+  echo "--- migrate/migrations/v3_05_one_plan_per_period_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v3_05_one_plan_per_period_upgrade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no

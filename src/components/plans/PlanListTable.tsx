@@ -3,18 +3,51 @@ import {
   Building2,
   Calendar,
   ChevronRight,
+  Award,
+  ClipboardCheck,
+  Clock,
   FileText,
   RotateCcw,
+  UserCheck,
   XCircle,
 } from 'lucide-react';
 import type { PlanReviewItem } from '../../types/planReview';
 import { CircleCheckFill } from './CircleCheckFill';
+import { classifyPlanDeadline } from '../../utils/deadline';
 
 interface PlanListTableProps {
   plans: PlanReviewItem[];
   onOpen: (plan: PlanReviewItem) => void;
   onReview?: (plan: PlanReviewItem) => void;
+  /** The status this viewer acts on: SUBMITTED for an advisor, ENDORSED for staff, ELIGIBLE for the committee. */
+  reviewableStatus?: PlanReviewItem['status'];
 }
+
+export const PlanDeadlineBadge: React.FC<{
+  deadline?: string | null;
+  status: string;
+  compact?: boolean;
+  dateLabel?: string;
+}> = ({ deadline, status, compact = false, dateLabel = 'กำหนดส่ง' }) => {
+  const info = classifyPlanDeadline(deadline, status);
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${info.badgeClass}`}
+        title={`${dateLabel}: ${info.formattedDate} (${info.label})`}
+      >
+        <Clock className="h-3 w-3 shrink-0" />
+        <span>{compact ? info.shortLabel : info.label}</span>
+      </span>
+      {info.category !== 'NO_DEADLINE' && (
+        <span className="text-[11px] text-slate-400">
+          {dateLabel}: {info.formattedDate}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = ({
   status,
@@ -35,6 +68,41 @@ export const PlanStatusBadge: React.FC<{ status: PlanReviewItem['status'] }> = (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
           <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
           <span>ส่งกลับแก้ไข</span>
+        </span>
+      );
+    case 'ENDORSED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
+          <UserCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+          <span>อาจารย์รับรองแล้ว</span>
+        </span>
+      );
+    case 'ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600">
+          <ClipboardCheck className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+          <span>ผ่านการตรวจ รอคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_ELIGIBLE':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ผ่านการตรวจคุณสมบัติ</span>
+        </span>
+      );
+    case 'SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600">
+          <Award className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+          <span>ได้รับการคัดเลือก</span>
+        </span>
+      );
+    case 'NOT_SELECTED':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
+          <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+          <span>ไม่ได้รับการคัดเลือก</span>
         </span>
       );
     case 'APPROVED':
@@ -80,6 +148,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
   plans,
   onOpen,
   onReview,
+  reviewableStatus = 'SUBMITTED',
 }) => {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
@@ -90,7 +159,7 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
               <th className="py-3.5 px-4 pl-6">นักศึกษา</th>
               <th className="py-3.5 px-4">หลักสูตร</th>
               <th className="py-3.5 px-4">ตำแหน่ง / สถานประกอบการ</th>
-              <th className="py-3.5 px-4">วันที่ยื่น</th>
+              <th className="py-3.5 px-4">วันที่ยื่น / กำหนดส่ง</th>
               <th className="py-3.5 px-4">สถานะ</th>
               <th className="py-3.5 px-4">ผลการพิจารณา</th>
               <th className="py-3.5 px-4 pr-6 text-right">ดำเนินการ</th>
@@ -98,10 +167,12 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {plans.map((plan) => {
-              const isPending = plan.status === 'SUBMITTED';
+              const isPending = plan.status === reviewableStatus;
               // Only a viewer who was given onReview can review. Without it the plan
               // is read-only, so the button must not offer "ตรวจแผน".
               const canReview = isPending && Boolean(onReview);
+              const effectiveDeadline =
+                plan.submission_deadline ?? plan.application_deadline ?? null;
 
               return (
                 <tr
@@ -155,11 +226,18 @@ export const PlanListTable: React.FC<PlanListTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Submitted Date */}
+                  {/* Submitted Date & Deadline */}
                   <td className="py-4 px-4 text-xs text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{formatDate(plan.submitted_at)}</span>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{formatDate(plan.submitted_at)}</span>
+                      </div>
+                      <PlanDeadlineBadge
+                        deadline={effectiveDeadline}
+                        status={plan.status}
+                        dateLabel={plan.submission_deadline ? 'กำหนดส่ง' : 'วันปิดรับสมัคร'}
+                      />
                     </div>
                   </td>
 

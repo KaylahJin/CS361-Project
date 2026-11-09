@@ -138,9 +138,33 @@ resource "aws_apigatewayv2_route" "submit_coop_plan" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
-resource "aws_apigatewayv2_route" "review_coop_plan" {
+resource "aws_apigatewayv2_route" "endorse_coop_plan" {
   api_id             = aws_apigatewayv2_api.companies.id
-  route_key          = "POST /coop-plans/{planId}/review"
+  route_key          = "POST /coop-plans/{planId}/endorse"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "screen_coop_plan" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans/{planId}/screen"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "select_coop_plan" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "POST /coop-plans/{planId}/select"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
+resource "aws_apigatewayv2_route" "get_plan_eligibility" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/{planId}/eligibility"
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id

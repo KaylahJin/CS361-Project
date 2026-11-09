@@ -1,0 +1,20 @@
+#192 — V4-03 verification after review fixes and main merge
+Date: 2026-11-09
+Branch: feat/192-deadline-filter-history
+Base review-fix commit: 3a0d4d7a322b37f210586872e71ddf16ab8e4776
+
+Commands:
+  npm test
+  npm run build
+
+Results:
+  - npm test: PASS
+    Test Files: 56 passed (56)
+    Tests: 1064 passed (1064)
+  - npm run build: PASS
+    TypeScript build and Vite production build completed successfully.
+
+Notes:
+  - Test stderr includes expected logs from negative-path assertions. The test command exited successfully.
+  - Vite reported a JavaScript chunk larger than 500 kB after minification. This is a performance warning, not a build failure.
+  - No live AWS verification is claimed here. The local AWS CLI profile returned ExpiredToken on 2026-11-09.

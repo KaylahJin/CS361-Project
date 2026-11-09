@@ -54,7 +54,9 @@ fails with `ExpiredToken` once they do.
    disabled; an administrator must create accounts through Cognito admin
    operations. The test accounts are `student1@example.com`,
    `advisor1@example.com`, `staff1@example.com`, and
-   `admin1@example.com`.
+   `admin1@example.com`, plus `committee1@example.com` for the COMMITTEE
+   role (#147). The Self-test accounts map onto them: ADV-1 is
+   `advisor1`, COORD-1 is `staff1` (role `STAFF`), COM-1 is `committee1`.
 
    Create each account with `aws cognito-idp admin-create-user`, using
    `--message-action SUPPRESS` and setting `email_verified=true`. Then set
@@ -81,6 +83,7 @@ fails with `ExpiredToken` once they do.
    export COOP_APPROVED_ADVISOR_SUB='<advisor-cognito-sub>'
    export COOP_APPROVED_STAFF_SUB='<staff-cognito-sub>'
    export COOP_APPROVED_ADMIN_SUB='<admin-cognito-sub>'
+   export COOP_APPROVED_COMMITTEE_SUB='<committee-cognito-sub>'  # optional until #149
    npm run db:seed-users
    ```
 
