@@ -100,14 +100,27 @@ JSON
 
 # ---- build ----------------------------------------------------------------
 API_URL="$(read_output api_url)"
+USER_POOL_ID="$(read_output cognito_user_pool_id)"
+CLIENT_ID="$(read_output cognito_user_pool_client_id)"
 echo "api:     $API_URL"
+echo "cognito: $USER_POOL_ID / $CLIENT_ID"
 echo
 
 cd "$REPO_ROOT"
 echo "==> building (VITE_API_URL=$API_URL)"
 # Exported, not written to .env: a real env var beats .env in Vite, so this is
-# what lands in the bundle regardless of someone's local .env.
-VITE_API_URL="$API_URL" npm run build
+# what lands in the bundle regardless of someone's local .env. All three come
+# from Terraform — a stale Cognito ID from .env would break sign-in on S3.
+VITE_API_URL="$API_URL" \
+VITE_COGNITO_USER_POOL_ID="$USER_POOL_ID" \
+VITE_COGNITO_CLIENT_ID="$CLIENT_ID" \
+  npm run build
+
+# Proof the bundle points at this environment's API, not a stale one.
+grep -rqF "$API_URL" dist/assets/ || {
+  echo "error: built bundle does not contain $API_URL — refusing to upload." >&2
+  exit 1
+}
 
 echo
 echo "==> uploading hashed assets"
@@ -130,7 +143,7 @@ aws s3 cp dist/index.html "s3://$BUCKET/index.html" \
 # teammate's browser.
 echo
 echo "==> checking $WEB_URL"
-CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$WEB_URL" || echo 000)"
+CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$WEB_URL" || true)"
 case "$CODE" in
   200) echo "HTTP 200 — site is live" ;;
   403) echo "HTTP 403 — bucket policy is being overridden. Check account-level S3 Block Public Access." >&2; exit 1 ;;
