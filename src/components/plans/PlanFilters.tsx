@@ -85,9 +85,19 @@ export function buildStatusTabs(counts: PlanCounts, total: number) {
     ...PREPARING_IDS,
     ...STATUS_TABS.map((tab) => tab.id),
   ]);
+
+  // Statuses that should never appear as filter tabs.
+  const HIDDEN_STATUSES = new Set(['INCOMPLETE']);
+
   for (const [id, count] of Object.entries(counts)) {
-    if (known.has(id) || !count) continue;
-    tabs.push({ id, label: id, count, badgeColor: 'text-slate-600 font-semibold' });
+    if (known.has(id) || HIDDEN_STATUSES.has(id) || !count) continue;
+
+    tabs.push({
+      id,
+      label: id,
+      count,
+      badgeColor: 'text-slate-600 font-semibold',
+    });
   }
 
   return tabs;

@@ -98,8 +98,8 @@ describe('buildStatusTabs', () => {
 
   it('does not show INCOMPLETE as a plan status', () => {
     const tabs = byId(
-      { ...EMPTY, ALL: 1, RETURNED: 1 },
-      1
+      { ...EMPTY, ALL: 2, RETURNED: 1, INCOMPLETE: 1 },
+      2
     );
 
     expect(tabs.INCOMPLETE).toBeUndefined();
