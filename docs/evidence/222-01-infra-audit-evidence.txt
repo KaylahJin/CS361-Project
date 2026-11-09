@@ -12,7 +12,7 @@ Success! The configuration is valid.
   - resource "aws_apigatewayv2_api" "companies"
   - resource "aws_apigatewayv2_integration" "lambda"
   - resource "aws_apigatewayv2_stage" "default"
-  - resource "aws_apigatewayv2_route" (22 routes: 6 public + 16 JWT-protected)
+  - resource "aws_apigatewayv2_route" (23 routes: 6 public + 17 JWT-protected)
 - cognito.tf:
   - resource "aws_cognito_user_pool" "app"
   - resource "aws_cognito_user_pool_client" "spa"
@@ -33,16 +33,16 @@ Success! The configuration is valid.
   - resource "aws_vpc_endpoint" "s3"
   - resource "aws_security_group" "lambda"
   - resource "aws_security_group" "rds"
-  - resource "aws_security_group_rule" "lambda_egress_rds"
-  - resource "aws_security_group_rule" "lambda_egress_s3"
-  - resource "aws_security_group_rule" "rds_ingress_lambda"
-  - resource "aws_security_group_rule" "rds_ingress_my_ip"
+  - resource "aws_security_group_rule" "lambda_egress_to_rds"
+  - resource "aws_security_group_rule" "lambda_egress_to_s3"
+  - resource "aws_security_group_rule" "rds_ingress_from_lambda"
+  - resource "aws_security_group_rule" "rds_ingress_from_dev_ip"
 - s3_web.tf & s3_attachments.tf:
   - Locals & outputs only (no aws_s3_bucket resource in Terraform due to AWS Academy SCP denying s3:GetBucketObjectLockConfiguration; provisioned via infra/deploy-web.sh and infra/deploy-attachments-bucket.sh).
 
 3. Deployment & Operational Scripts Inventory
 - infra/deploy-web.sh                (npm run web:deploy -> missing Cognito env vars on build -> Gap #4)
-- infra/deploy-attachments-bucket.sh (missing "attachments:deploy" script in package.json -> Gap #2)
+- infra/deploy-attachments-bucket.sh (npm run attachments:deploy)
 - infra/sync-env.sh                  (npm run env:sync -> only syncs VITE_API_URL, missing Cognito vars -> Gap #5)
 - infra/load-db.sh                   (npm run db:load)
 - infra/seed-app-users.sh            (npm run db:seed-users)
