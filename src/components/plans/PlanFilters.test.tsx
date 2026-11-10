@@ -85,4 +85,24 @@ describe('buildStatusTabs', () => {
 
     expect(sum).toBe(7);
   });
+
+  it('shows NOT_SELECTED with a readable label', () => {
+    const tabs = byId(
+      { ...EMPTY, ALL: 1, NOT_SELECTED: 1 },
+      1
+    );
+
+    expect(tabs.NOT_SELECTED.label)
+      .toBe('ไม่ได้รับการคัดเลือก');
+  });
+
+  it('does not show INCOMPLETE as a plan status', () => {
+    const tabs = byId(
+      { ...EMPTY, ALL: 2, RETURNED: 1, INCOMPLETE: 1 },
+      2
+    );
+
+    expect(tabs.INCOMPLETE).toBeUndefined();
+    expect(tabs.RETURNED).toBeDefined();
+  });
 });

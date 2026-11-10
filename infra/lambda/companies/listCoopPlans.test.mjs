@@ -77,6 +77,31 @@ describe('listCoopPlans', () => {
     expect(values).toEqual(['APPROVED']);
   });
 
+  it.each([
+    'PREPARING',
+    'SUBMITTED',
+    'RETURNED',
+    'ENDORSED',
+    'ELIGIBLE',
+    'NOT_ELIGIBLE',
+    'SELECTED',
+    'NOT_SELECTED',
+    'APPROVED',
+    'REJECTED',
+  ])('accepts %s as a valid status', async (status) => {
+    queryMock.mockResolvedValue({ rows: [] });
+
+    const result = await listCoopPlans({
+      queryStringParameters: { status },
+    });
+
+    expect(result.statusCode).toBe(200);
+
+    const [text, values] = queryMock.mock.calls[0];
+    expect(text).toMatch(/p\.status\s*=\s*\$1/);
+    expect(values).toEqual([status]);
+  });
+
   it('returns 400 for an invalid status and never touches the DB', async () => {
     const result = await listCoopPlans({ queryStringParameters: { status: 'approved' } });
 

@@ -38,6 +38,7 @@ const STATUS_TABS: { id: string; label: string; badgeColor: string }[] = [
   { id: 'ELIGIBLE', label: 'ผ่านคุณสมบัติ', badgeColor: 'text-teal-600 font-semibold' },
   { id: 'NOT_ELIGIBLE', label: 'ไม่ผ่านคุณสมบัติ', badgeColor: 'text-rose-600 font-semibold' },
   { id: 'SELECTED', label: 'ได้รับคัดเลือก', badgeColor: 'text-violet-600 font-semibold' },
+  { id: 'NOT_SELECTED', label: 'ไม่ได้รับการคัดเลือก', badgeColor: 'text-slate-600 font-semibold' },
   { id: 'RETURNED', label: 'ส่งกลับแก้ไข', badgeColor: 'text-zinc-500 font-medium' },
   { id: 'APPROVED', label: 'อนุมัติแล้ว', badgeColor: 'text-emerald-600 font-semibold' },
   { id: 'REJECTED', label: 'ไม่อนุมัติ', badgeColor: 'text-zinc-700 font-semibold' },
@@ -84,9 +85,19 @@ export function buildStatusTabs(counts: PlanCounts, total: number) {
     ...PREPARING_IDS,
     ...STATUS_TABS.map((tab) => tab.id),
   ]);
+
+  // Statuses that should never appear as filter tabs.
+  const HIDDEN_STATUSES = new Set(['INCOMPLETE']);
+
   for (const [id, count] of Object.entries(counts)) {
-    if (known.has(id) || !count) continue;
-    tabs.push({ id, label: id, count, badgeColor: 'text-slate-600 font-semibold' });
+    if (known.has(id) || HIDDEN_STATUSES.has(id) || !count) continue;
+
+    tabs.push({
+      id,
+      label: id,
+      count,
+      badgeColor: 'text-slate-600 font-semibold',
+    });
   }
 
   return tabs;
