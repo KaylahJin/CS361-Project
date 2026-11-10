@@ -170,6 +170,54 @@ if [ "$PAB" != "True True True True" ]; then
   exit 1
 fi
 
+# Verify encryption at rest.
+ENCRYPTION="$("${AWS[@]}" s3api get-bucket-encryption --bucket "$BUCKET" \
+  --query 'ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm' \
+  --output text)"
+echo "encryption: $ENCRYPTION"
+
+if [ "$ENCRYPTION" != "AES256" ]; then
+  echo "error: expected AES256 encryption." >&2
+  exit 1
+fi
+
+# Verify bucket ownership controls.
+OWNERSHIP="$("${AWS[@]}" s3api get-bucket-ownership-controls --bucket "$BUCKET" \
+  --query 'OwnershipControls.Rules[0].ObjectOwnership' --output text)"
+echo "ownership: $OWNERSHIP"
+
+if [ "$OWNERSHIP" != "BucketOwnerEnforced" ]; then
+  echo "error: expected BucketOwnerEnforced ownership." >&2
+  exit 1
+fi
+
+# Verify CORS configuration.
+CORS_ORIGINS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedOrigins' --output text | xargs)"
+CORS_METHODS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedMethods' --output text | xargs)"
+CORS_HEADERS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedHeaders' --output text | xargs)"
+CORS_EXPOSE="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].ExposeHeaders' --output text | xargs)"
+CORS_MAX_AGE="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].MaxAgeSeconds' --output text)"
+
+echo "CORS origins: $CORS_ORIGINS"
+echo "CORS methods: $CORS_METHODS"
+echo "CORS headers: $CORS_HEADERS"
+echo "CORS expose: $CORS_EXPOSE"
+echo "CORS max age: $CORS_MAX_AGE"
+
+if [ "$CORS_ORIGINS" != "$DEV_ORIGIN $WEB_URL" ] ||
+   [ "$CORS_METHODS" != "GET POST PUT" ] ||
+   [ "$CORS_HEADERS" != "*" ] ||
+   [ "$CORS_EXPOSE" != "ETag" ] ||
+   [ "$CORS_MAX_AGE" != "3000" ]; then
+  echo "error: bucket CORS configuration does not match expected values." >&2
+  exit 1
+fi
+
 # An anonymous request must be refused (403), never served.
 CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
   "https://$BUCKET.s3.$REGION.amazonaws.com/" || true)"
@@ -179,7 +227,8 @@ case "$CODE" in
     echo "anonymous GET: HTTP 403 — bucket is private"
     ;;
   000)
-    echo "no response — DNS for a new bucket can take a minute; re-run to verify." >&2
+    echo "error: anonymous GET received no HTTP response (000); verification failed." >&2
+    exit 1
     ;;
   *)
     echo "error: anonymous GET returned HTTP $CODE, expected 403." >&2
