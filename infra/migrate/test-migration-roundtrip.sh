@@ -19,6 +19,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPO="$REPO_ROOT"
 TEST_DB="${MIGRATION_TEST_DB:-coop_db_migration_test}"
 
+# Only allow safe PostgreSQL identifiers for the scratch database name.
+if [[ ! "$TEST_DB" =~ ^[A-Za-z_][A-Za-z0-9_]{0,62}$ ]]; then
+  echo "error: invalid scratch database name: $TEST_DB" >&2
+  echo "Use letters, numbers, and underscores only (maximum 63 characters)." >&2
+  exit 1
+fi
+
 for cmd in psql terraform; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: '$cmd' not found on PATH" >&2; exit 1; }
 done
@@ -35,15 +42,66 @@ fi
 export PGPASSWORD
 export PGCLIENTENCODING=UTF8
 ADMIN_DB="$(terraform output -raw db_name)"
+
+# This script may drop only a scratch database that it created itself.
+SCRATCH_DB_CREATED=0
+
+if [ "$TEST_DB" = "$ADMIN_DB" ]; then
+  echo "error: scratch database must not be the main database ($ADMIN_DB)." >&2
+  exit 1
+fi
+
+cleanup_scratch_db() {
+  if [ "$SCRATCH_DB_CREATED" = "1" ]; then
+    echo
+    echo "### cleanup scratch database"
+
+    if psql -h "$PGHOST" -U "$PGUSER" -d "$ADMIN_DB" \
+      -v ON_ERROR_STOP=1 -q \
+      -c "DROP DATABASE \"$TEST_DB\";"; then
+      echo "dropped scratch database: $TEST_DB"
+      SCRATCH_DB_CREATED=0
+    else
+      echo "warning: could not drop scratch database '$TEST_DB'." >&2
+      echo "Please inspect and remove it manually if appropriate." >&2
+    fi
+  fi
+}
+
+trap cleanup_scratch_db EXIT
+
 cd "$REPO"
 
 q() { psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -v ON_ERROR_STOP=1 -tAc "$1"; }
 runfile() { psql -h "$PGHOST" -U "$PGUSER" -d "$TEST_DB" -v ON_ERROR_STOP=1 --quiet -f "$1"; }
 
 echo "### 0. scratch database"
-psql -h "$PGHOST" -U "$PGUSER" -d "$ADMIN_DB" -v ON_ERROR_STOP=1 -q \
-  -c "DROP DATABASE IF EXISTS $TEST_DB;" -c "CREATE DATABASE $TEST_DB;"
-echo "created $TEST_DB on $PGHOST (coop_db untouched)"
+
+# Refuse to reuse or overwrite an existing database.
+EXISTS="$(psql -h "$PGHOST" -U "$PGUSER" -d "$ADMIN_DB" \
+  -v ON_ERROR_STOP=1 \
+  -v test_db="$TEST_DB" \
+  -tA -c "SELECT EXISTS (
+    SELECT 1 FROM pg_database WHERE datname = :'test_db'
+  );")"
+
+if [ "$EXISTS" = "t" ]; then
+  echo "error: scratch database '$TEST_DB' already exists." >&2
+  echo "No existing database was changed or deleted." >&2
+  echo "Choose another name using MIGRATION_TEST_DB." >&2
+  exit 1
+fi
+
+# Create a fresh scratch database.
+psql -h "$PGHOST" -U "$PGUSER" -d "$ADMIN_DB" \
+  -v ON_ERROR_STOP=1 -q \
+  -c "CREATE DATABASE \"$TEST_DB\";"
+
+# Mark ownership only after CREATE DATABASE succeeds.
+SCRATCH_DB_CREATED=1
+
+echo "created scratch database: $TEST_DB"
+echo "main database '$ADMIN_DB' will not be modified."
 echo
 
 echo "### 1. load the V2 schema and seed data"
@@ -250,6 +308,5 @@ echo "restored constraint: $(q "SELECT pg_get_constraintdef(oid) FROM pg_constra
 echo "V2 data intact: $(q 'SELECT count(*) FROM companies;') companies, $(q 'SELECT count(*) FROM coop_plans;') plans, $(q 'SELECT count(*) FROM students;') students"
 echo
 
-echo "### 8. drop the scratch database"
-psql -h "$PGHOST" -U "$PGUSER" -d "$ADMIN_DB" -v ON_ERROR_STOP=1 -q -c "DROP DATABASE $TEST_DB;"
-echo "dropped $TEST_DB"
+echo "### 8. scratch database cleanup"
+cleanup_scratch_db
