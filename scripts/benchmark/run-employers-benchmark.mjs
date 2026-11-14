@@ -1,16 +1,68 @@
 
 import { chromium } from 'playwright';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
+const commitArg = process.argv.find((arg) =>
+  arg.startsWith('--commit='),
+);
+
+const COMMIT_SHA = (
+  commitArg?.slice('--commit='.length) ||
+  process.env.BENCHMARK_COMMIT_SHA ||
+  execFileSync('git', ['rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  }).trim()
+).trim();
+
+if (!COMMIT_SHA) {
+  throw new Error('Commit SHA cannot be empty.');
+}
+
+const urlArg = process.argv.find((arg) =>
+  arg.startsWith('--url='),
+);
+
+const BENCHMARK_URL = (
+  urlArg?.slice('--url='.length) ||
+  process.env.BENCHMARK_URL ||
+  ''
+).trim();
+
+if (!BENCHMARK_URL) {
+  throw new Error(
+    'Benchmark URL is required. Use --url= or BENCHMARK_URL.',
+  );
+}
+
+try {
+  const parsedUrl = new URL(BENCHMARK_URL);
+
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new Error('Unsupported protocol.');
+  }
+} catch {
+  throw new Error(
+    `Invalid benchmark URL: ${BENCHMARK_URL}. Use HTTP or HTTPS.`,
+  );
+}
+
+const networkArg = process.argv.find((arg) =>
+  arg.startsWith('--network='),
+);
+
+const BENCHMARK_NETWORK = (
+  networkArg?.slice('--network='.length) ||
+  process.env.BENCHMARK_NETWORK ||
+  'Unknown'
+).trim();
+
 const CONFIG = {
-  url: 'http://aa-coop-web-617500348719.s3-website-us-east-1.amazonaws.com/#employers',
-  commitSha: '0ae16a57576f065b89f016bc179bd366b019110f',
   region: 'us-east-1',
   environment: 'Cloud/Dev',
   client: 'Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)',
-  network: 'Mobile Hotspot',
   expectedRows: {
     S1: 103,
     S2: 1,
@@ -415,10 +467,10 @@ async function recordRun(page, scenario, runType, runNumber) {
       index + 1,
       item.timestamp,
       CONFIG.environment,
-      CONFIG.commitSha,
+      COMMIT_SHA,
       CONFIG.region,
       CONFIG.client,
-      CONFIG.network,
+      BENCHMARK_NETWORK,
       item.search,
       item.province,
       item.status,
@@ -448,10 +500,10 @@ async function recordRun(page, scenario, runType, runNumber) {
     runNumber,
     new Date().toISOString(),
     CONFIG.environment,
-    CONFIG.commitSha,
+    COMMIT_SHA,
     CONFIG.region,
     CONFIG.client,
-    CONFIG.network,
+    BENCHMARK_NETWORK,
     expectedRequestCount,
     scenarioE2e.toFixed(2),
     'Automated Playwright run',
@@ -483,7 +535,9 @@ async function main() {
       cacheDisabled: true,
     });
 
-    await page.goto(CONFIG.url, { waitUntil: 'domcontentloaded' });
+    await page.goto(BENCHMARK_URL, {
+      waitUntil: 'domcontentloaded',
+    });
     await page.getByRole(searchInput.role, {
       name: searchInput.name,
     }).waitFor();
