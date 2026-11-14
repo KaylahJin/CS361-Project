@@ -1,3 +1,4 @@
+scenario,run_type,run_number,timestamp,environment,commit_sha,region,client,network,request_count,e2e_duration_ms,note
 "S1","warmup","1","2026-11-13T21:53:28.983Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","2","3890.44","Automated Playwright run"
 "S1","warmup","2","2026-11-13T21:53:32.766Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","2","3765.92","Automated Playwright run"
 "S1","warmup","3","2026-11-13T21:53:36.531Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","2","3758.75","Automated Playwright run"

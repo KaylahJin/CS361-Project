@@ -1,3 +1,4 @@
+scenario,run_type,run_number,response_number,timestamp,environment,commit_sha,region,client,network,search,province,http_status,api_duration_ms,response_bytes,response_rows,note
 "S1","warmup","1","1","2026-11-13T21:53:28.903Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","","","200","470.876","55160","103","Automated Playwright run"
 "S1","warmup","1","2","2026-11-13T21:53:28.904Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","","","200","473.275","55160","103","Automated Playwright run"
 "S1","warmup","2","1","2026-11-13T21:53:32.513Z","Cloud/Dev","0ae16a57576f065b89f016bc179bd366b019110f","us-east-1","Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)","Mobile Hotspot","","","200","565.62","55160","103","Automated Playwright run"
