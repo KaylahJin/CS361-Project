@@ -106,10 +106,15 @@ function csv(value) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-function appendCsv(file, values) {
+function appendCsv(file, headers, values) {
+  const isNewFile = !fs.existsSync(file) || fs.statSync(file).size === 0;
+
+  if (isNewFile) {
+    fs.appendFileSync(file, `${headers.map(csv).join(',')}\n`);
+  }
+
   fs.appendFileSync(file, `${values.map(csv).join(',')}\n`);
 }
-
 
 function hasMeasurementRun(scenario, runNumber) {
   const summaryFile = OUTPUT_FILES.measurement.summary;
@@ -386,6 +391,24 @@ async function recordRun(page, scenario, runType, runNumber) {
     const item = details[index];
 
     appendCsv(outputFiles.raw, [
+      'scenario',
+      'run_type',
+      'run_number',
+      'response_number',
+      'timestamp',
+      'environment',
+      'commit_sha',
+      'region',
+      'client',
+      'network',
+      'search',
+      'province',
+      'http_status',
+      'api_duration_ms',
+      'response_bytes',
+      'response_rows',
+      'note',
+    ], [
       scenario,
       runType,
       runNumber,
@@ -407,6 +430,19 @@ async function recordRun(page, scenario, runType, runNumber) {
   }
 
   appendCsv(outputFiles.summary, [
+    'scenario',
+    'run_type',
+    'run_number',
+    'timestamp',
+    'environment',
+    'commit_sha',
+    'region',
+    'client',
+    'network',
+    'request_count',
+    'e2e_duration_ms',
+    'note',
+  ], [
     scenario,
     runType,
     runNumber,
