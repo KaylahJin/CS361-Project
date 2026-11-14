@@ -468,9 +468,8 @@ async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const browser = await chromium.launch({
+    channel: 'msedge',
     headless: true,
-    executablePath:
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   });
 
   try {
