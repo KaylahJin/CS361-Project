@@ -6,13 +6,6 @@
 #   npm run attachments:deploy -- --destroy # delete the bucket and all files
 #
 # Every step is idempotent: re-running repairs a hand-edited bucket.
-#
-# The opposite of deploy-web.sh: that script REMOVES Block Public Access so the
-# site can be read by anyone. This bucket holds students' transcripts, so
-# every public-access control is switched ON and nothing is ever readable
-# without a presigned URL.
-#
-# Needs 'terraform apply' to have run once (it computes the bucket name).
 
 set -euo pipefail
 
@@ -20,7 +13,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="$REPO_ROOT/infra/terraform"
 
 for cmd in terraform aws; do
-  command -v "$cmd" >/dev/null 2>&1 || { echo "error: '$cmd' not found on PATH" >&2; exit 1; }
+  command -v "$cmd" >/dev/null 2>&1 || {
+    echo "error: '$cmd' not found on PATH" >&2
+    exit 1
+  }
 done
 
 cd "$TF_DIR"
@@ -38,53 +34,80 @@ WEB_URL="$(read_output web_url)"
 DEV_ORIGIN="$(read_output cors_allow_origin)"
 REGION="$(terraform output -raw aws_region 2>/dev/null || echo us-east-1)"
 
+# Always use the Terraform region, not the AWS CLI default region.
+AWS=(aws --region "$REGION")
+
+# Check bucket ownership using the current AWS account.
+# If permission is denied, set -e stops the script safely.
+bucket_status() {
+  local existing
+  existing="$("${AWS[@]}" s3api list-buckets \
+    --query "Buckets[?Name=='$BUCKET'].Name | [0]" \
+    --output text)" || {
+      echo "error: cannot list S3 buckets; refusing to continue." >&2
+      return 1
+    }
+
+  if [ "$existing" = "$BUCKET" ]; then
+    echo "exists"
+  else
+    echo "missing"
+  fi
+}
+
+BUCKET_STATUS="$(bucket_status)"
+
 # ---- teardown -------------------------------------------------------------
 if [ "${1:-}" = "--destroy" ]; then
-  if ! aws s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1; then
+  if [ "$BUCKET_STATUS" = "missing" ]; then
     echo "bucket $BUCKET does not exist. Nothing to do."
     exit 0
   fi
+
   echo "This permanently deletes s3://$BUCKET and every attachment in it."
   printf 'Type the bucket name to confirm: '
   read -r CONFIRM
-  [ "$CONFIRM" = "$BUCKET" ] || { echo "aborted."; exit 1; }
-  aws s3 rb "s3://$BUCKET" --force
+  [ "$CONFIRM" = "$BUCKET" ] || {
+    echo "aborted."
+    exit 1
+  }
+
+  "${AWS[@]}" s3 rb "s3://$BUCKET" --force
   echo "deleted s3://$BUCKET"
   exit 0
 fi
 
 # ---- bucket ---------------------------------------------------------------
-if aws s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1; then
+if [ "$BUCKET_STATUS" = "exists" ]; then
   echo "bucket:  $BUCKET (exists)"
 else
   echo "bucket:  $BUCKET (creating)"
-  # us-east-1 rejects a LocationConstraint; every other region requires one.
+
+  # us-east-1 rejects a LocationConstraint; other regions require one.
   if [ "$REGION" = "us-east-1" ]; then
-    aws s3api create-bucket --bucket "$BUCKET" >/dev/null
+    "${AWS[@]}" s3api create-bucket --bucket "$BUCKET" >/dev/null
   else
-    aws s3api create-bucket --bucket "$BUCKET" \
+    "${AWS[@]}" s3api create-bucket --bucket "$BUCKET" \
       --create-bucket-configuration "LocationConstraint=$REGION" >/dev/null
   fi
 fi
 
 # Private: all four Block Public Access switches on.
-aws s3api put-public-access-block --bucket "$BUCKET" \
+"${AWS[@]}" s3api put-public-access-block --bucket "$BUCKET" \
   --public-access-block-configuration \
   "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 
-# ACLs disabled: the bucket owner owns every object, access is by policy only.
-aws s3api put-bucket-ownership-controls --bucket "$BUCKET" \
+# ACLs disabled: bucket owner owns every object.
+"${AWS[@]}" s3api put-bucket-ownership-controls --bucket "$BUCKET" \
   --ownership-controls 'Rules=[{ObjectOwnership=BucketOwnerEnforced}]'
 
 # Encrypt at rest.
-aws s3api put-bucket-encryption --bucket "$BUCKET" \
+"${AWS[@]}" s3api put-bucket-encryption --bucket "$BUCKET" \
   --server-side-encryption-configuration \
   '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
-# Refuse plain-HTTP access. Presigned URLs are HTTPS anyway; this closes the
-# door on anything else. No Principal "*" Allow statement: nothing is granted
-# here, access comes from LabRole's own IAM permissions.
-aws s3api put-bucket-policy --bucket "$BUCKET" --policy "$(cat <<JSON
+# Refuse plain-HTTP access.
+"${AWS[@]}" s3api put-bucket-policy --bucket "$BUCKET" --policy "$(cat <<JSON
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -101,10 +124,8 @@ aws s3api put-bucket-policy --bucket "$BUCKET" --policy "$(cat <<JSON
 JSON
 )"
 
-# The browser uploads straight to S3 with a presigned POST and downloads with a
-# presigned GET, so the bucket needs its own CORS (separate from API Gateway's).
-# Browsers match Origin exactly: both the dev server and the deployed site.
-aws s3api put-bucket-cors --bucket "$BUCKET" --cors-configuration "$(cat <<JSON
+# CORS for the dev server and deployed site.
+"${AWS[@]}" s3api put-bucket-cors --bucket "$BUCKET" --cors-configuration "$(cat <<JSON
 {
   "CORSRules": [
     {
@@ -119,8 +140,8 @@ aws s3api put-bucket-cors --bucket "$BUCKET" --cors-configuration "$(cat <<JSON
 JSON
 )"
 
-# Abandoned uploads (browser closed mid-transfer) should not sit there forever.
-aws s3api put-bucket-lifecycle-configuration --bucket "$BUCKET" \
+# Abort incomplete multipart uploads after one day.
+"${AWS[@]}" s3api put-bucket-lifecycle-configuration --bucket "$BUCKET" \
   --lifecycle-configuration '{
     "Rules": [
       {
@@ -135,22 +156,84 @@ aws s3api put-bucket-lifecycle-configuration --bucket "$BUCKET" \
 # ---- verify ---------------------------------------------------------------
 echo
 echo "==> verifying"
-PAB="$(aws s3api get-public-access-block --bucket "$BUCKET" \
+
+PAB="$("${AWS[@]}" s3api get-public-access-block --bucket "$BUCKET" \
   --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' \
   --output text)"
+
+# Normalize whitespace before comparison.
+PAB="$(echo "$PAB" | xargs)"
 echo "public access block: $PAB"
-if [ "$PAB" != "True	True	True	True" ]; then
+
+if [ "$PAB" != "True True True True" ]; then
   echo "error: Block Public Access is not fully on." >&2
+  exit 1
+fi
+
+# Verify encryption at rest.
+ENCRYPTION="$("${AWS[@]}" s3api get-bucket-encryption --bucket "$BUCKET" \
+  --query 'ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm' \
+  --output text)"
+echo "encryption: $ENCRYPTION"
+
+if [ "$ENCRYPTION" != "AES256" ]; then
+  echo "error: expected AES256 encryption." >&2
+  exit 1
+fi
+
+# Verify bucket ownership controls.
+OWNERSHIP="$("${AWS[@]}" s3api get-bucket-ownership-controls --bucket "$BUCKET" \
+  --query 'OwnershipControls.Rules[0].ObjectOwnership' --output text)"
+echo "ownership: $OWNERSHIP"
+
+if [ "$OWNERSHIP" != "BucketOwnerEnforced" ]; then
+  echo "error: expected BucketOwnerEnforced ownership." >&2
+  exit 1
+fi
+
+# Verify CORS configuration.
+CORS_ORIGINS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedOrigins' --output text | xargs)"
+CORS_METHODS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedMethods' --output text | xargs)"
+CORS_HEADERS="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].AllowedHeaders' --output text | xargs)"
+CORS_EXPOSE="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].ExposeHeaders' --output text | xargs)"
+CORS_MAX_AGE="$("${AWS[@]}" s3api get-bucket-cors --bucket "$BUCKET" \
+  --query 'CORSRules[0].MaxAgeSeconds' --output text)"
+
+echo "CORS origins: $CORS_ORIGINS"
+echo "CORS methods: $CORS_METHODS"
+echo "CORS headers: $CORS_HEADERS"
+echo "CORS expose: $CORS_EXPOSE"
+echo "CORS max age: $CORS_MAX_AGE"
+
+if [ "$CORS_ORIGINS" != "$DEV_ORIGIN $WEB_URL" ] ||
+   [ "$CORS_METHODS" != "GET POST PUT" ] ||
+   [ "$CORS_HEADERS" != "*" ] ||
+   [ "$CORS_EXPOSE" != "ETag" ] ||
+   [ "$CORS_MAX_AGE" != "3000" ]; then
+  echo "error: bucket CORS configuration does not match expected values." >&2
   exit 1
 fi
 
 # An anonymous request must be refused (403), never served.
 CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
   "https://$BUCKET.s3.$REGION.amazonaws.com/" || true)"
+
 case "$CODE" in
-  403) echo "anonymous GET: HTTP 403 — bucket is private" ;;
-  000) echo "no response — DNS for a new bucket can take a minute; re-run to verify." >&2 ;;
-  *)   echo "error: anonymous GET returned HTTP $CODE, expected 403." >&2; exit 1 ;;
+  403)
+    echo "anonymous GET: HTTP 403 — bucket is private"
+    ;;
+  000)
+    echo "error: anonymous GET received no HTTP response (000); verification failed." >&2
+    exit 1
+    ;;
+  *)
+    echo "error: anonymous GET returned HTTP $CODE, expected 403." >&2
+    exit 1
+    ;;
 esac
 
 echo
