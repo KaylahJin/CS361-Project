@@ -20,8 +20,27 @@ const CONFIG = {
 };
 
 const OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
-const RAW_FILE = path.join(OUTPUT_DIR, 'measurement-raw-results.csv');
-const SUMMARY_FILE = path.join(OUTPUT_DIR, 'measurement-run-summary.csv');
+
+const OUTPUT_FILES = {
+  warmup: {
+    raw: path.join(OUTPUT_DIR, 'warmup-raw-results.csv'),
+    summary: path.join(OUTPUT_DIR, 'warmup-run-summary.csv'),
+  },
+  measurement: {
+    raw: path.join(OUTPUT_DIR, 'measurement-raw-results.csv'),
+    summary: path.join(OUTPUT_DIR, 'measurement-run-summary.csv'),
+  },
+};
+
+function getOutputFiles(runType) {
+  const files = OUTPUT_FILES[runType];
+
+  if (!files) {
+    throw new Error(`Invalid run type: ${runType}`);
+  }
+
+  return files;
+}
 
 const warmupRuns = Number(
   process.argv.find((arg) => arg.startsWith('--warmup='))?.split('=')[1] ?? 0
@@ -83,7 +102,9 @@ function appendCsv(file, values) {
 
 
 function hasMeasurementRun(scenario, runNumber) {
-  if (!fs.existsSync(SUMMARY_FILE)) return false;
+  const summaryFile = OUTPUT_FILES.measurement.summary;
+
+  if (!fs.existsSync(summaryFile)) return false;
 
   const prefix = [
     csv(scenario),
@@ -92,7 +113,7 @@ function hasMeasurementRun(scenario, runNumber) {
   ].join(',');
 
   return fs
-    .readFileSync(SUMMARY_FILE, 'utf8')
+    .readFileSync(summaryFile, 'utf8')
     .split(/\r?\n/)
     .some((line) => line.startsWith(`${prefix},`));
 }
@@ -257,6 +278,7 @@ async function resetPage(page) {
 }
 
 async function recordRun(page, scenario, runType, runNumber) {
+  const outputFiles = getOutputFiles(runType);
   let result;
   let expectedRequestCount;
 
@@ -353,7 +375,7 @@ async function recordRun(page, scenario, runType, runNumber) {
   for (let index = 0; index < details.length; index += 1) {
     const item = details[index];
 
-    appendCsv(RAW_FILE, [
+    appendCsv(outputFiles.raw, [
       scenario,
       runType,
       runNumber,
@@ -374,7 +396,7 @@ async function recordRun(page, scenario, runType, runNumber) {
     ]);
   }
 
-  appendCsv(SUMMARY_FILE, [
+  appendCsv(outputFiles.summary, [
     scenario,
     runType,
     runNumber,
