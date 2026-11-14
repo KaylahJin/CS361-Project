@@ -127,6 +127,7 @@ For S4, selecting the province is a precondition. The measured action is enterin
 - Environment: Cloud / Dev only.
 - Concurrency: 1 (sequential execution).
 - Warm-up: 3 runs per scenario.
+- Total warm-up runs: 12 scenario runs.
 - Measurement: 30 runs per scenario after warm-up.
 - Total measured runs: 120 scenario runs.
 - Cold Start: Record separately only when verifiable through AWS logs or other reliable AWS metrics.
@@ -139,6 +140,70 @@ For S4, selecting the province is a precondition. The measured action is enterin
 - Do not run other load tests against the environment during measurement.
 - Execute all runs sequentially. Do not increase concurrency during baseline collection.
 
+### Reproduction Commands
+
+Run the following commands from the repository root.
+
+**1. Install dependencies**
+
+```bash
+npm ci
+```
+
+**2. Verify the Employers page and browser automation**
+
+```bash
+node scripts/benchmark/check-employers.mjs
+```
+
+The check should confirm that Microsoft Edge launches, the Employers page loads, and 103 company cards are displayed. The Cloud/Dev API must return valid data before proceeding.
+
+This check currently expects Microsoft Edge at the configured Windows executable path. Update the path in the script if Edge is installed elsewhere.
+
+**3. Run warm-up and measurement**
+
+The benchmark script supports separate warm-up and measurement output files. It runs the selected scenarios sequentially and records the results automatically.
+
+For the original baseline configuration:
+
+```bash
+BENCHMARK_URL="http://aa-coop-web-617500348719.s3-website-us-east-1.amazonaws.com/#employers" \
+BENCHMARK_COMMIT_SHA="0ae16a57576f065b89f016bc179bd366b019110f" \
+BENCHMARK_NETWORK="Mobile Hotspot" \
+node scripts/benchmark/run-employers-benchmark.mjs \
+  --warmup=3 \
+  --runs=30 \
+  --scenarios=S1,S2,S3,S4 \
+  --start-run=1 \
+  --out=docs/evidence/v6-01-employers-baseline
+```
+
+The command performs 3 warm-up runs and 30 measurement runs for each selected scenario.
+
+Output files are separated automatically:
+
+- `warmup-raw-results.csv`
+- `warmup-run-summary.csv`
+- `measurement-raw-results.csv`
+- `measurement-run-summary.csv`
+
+**4. Summarize measurement results**
+
+```bash
+node scripts/benchmark/summarize-employers-benchmark.mjs
+```
+
+The summary script reads the measurement CSV files and calculates p50, p95, minimum, and maximum values using linear interpolation (`PERCENTILE.INC`).
+
+**Important Notes**
+
+- Run the benchmark only against the Cloud/Dev environment.
+- The benchmark output directory must be empty before collecting a new baseline. The summary script reads CSV files from the fixed directory `docs/evidence/v6-01-employers-baseline`, so keep the output directory unchanged when using the provided summarize command. Do not rerun the original baseline command against existing evidence files because the script may append duplicate warm-up records before detecting an existing measurement run.
+- `--start-run` allows measurement runs to start from a specified run number when continuing a measurement session.
+- Keep the same browser, network, environment, and test inputs throughout a measurement session.
+- Stop the benchmark if the API returns an unexpected status or the expected number of company rows cannot be verified.
+- Do not include warm-up results in the measurement statistics.
+
 ### Warm-up Rules
 
 - Perform 3 warm-up runs for each scenario.
@@ -150,9 +215,10 @@ For S4, selecting the province is a precondition. The measured action is enterin
 ### Measurement Rules
 
 - Perform 30 measured runs for each scenario.
-- Three automated warm-up runs per scenario were completed before the measurement session.
-- Warm-up and measurement data were collected in separate script executions.
-- The separate warm-up execution does not guarantee reuse of the same Lambda execution environment.
+- The benchmark script executes warm-up runs before measurement runs for each scenario.
+- Warm-up and measurement results are written to separate CSV files.
+- Warm-up runs do not guarantee reuse of the same Lambda execution environment.
+
 
 ## 6. Measurement Rules
 
@@ -179,6 +245,8 @@ Response size must be measured consistently using the response body size in byte
 
 ### Scenario-Level Metrics
 
+For S1, the end-to-end duration includes the full page reload, initial data loading, and rendering of all 103 company cards. It should not be compared directly with API response duration because the two metrics measure different scopes.
+
 For each scenario run, record:
 
 - Number of HTTP requests
@@ -202,8 +270,8 @@ The search debounce time is included in the interaction end-to-end duration.
 
 The initial Employers page load triggers two `GET /companies` requests.
 
-- Record both requests as separate rows in `raw-results.csv`.
-- Count them as one scenario run in `run-summary.csv`.
+- Record both requests as separate rows in `measurement-raw-results.csv`.
+- Count them as one scenario run in `measurement-run-summary.csv`.
 - Do not add the two request durations together and report the sum as page end-to-end duration.
 
 ## 7. Statistics

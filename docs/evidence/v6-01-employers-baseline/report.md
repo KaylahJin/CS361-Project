@@ -124,22 +124,52 @@ The observed row counts and response sizes were consistent across the measured r
 - S4: 30 successful scenario runs.
 - Total: 120 successful scenario runs.
 - Failed runs in the final measurement dataset: 0.
+- Excluded runs from the final measurement dataset: Preliminary trial runs and failed trial attempts were excluded because they were not part of the finalized 30-run measurement configuration.
+- No failed runs were excluded from the final 120 measured scenario runs.
 
 S1 generated two API responses per scenario run, resulting in 60 API response records. S2, S3, and S4 generated 30 API response records each.
 
-Preliminary trial runs and failed trial attempts were not included in the final measurement statistics.
+## 9. Execution Batches and Measurement Gaps
 
-## 9. Cold Start and Warm Invocation
+The benchmark measurements were collected in separate execution batches rather than one uninterrupted session.
 
-This benchmark does not directly measure or isolate AWS Lambda Cold Start and Warm Invocation durations.
+S3 measurement runs 28–30 were separated from the preceding runs by an approximately 18-minute gap.
+
+This gap indicates that these measurements were not collected continuously under identical timing conditions. The approximately 18-minute gap represents a discontinuity in the measurement timeline. Its impact on network conditions, service activity, or Lambda execution environments cannot be determined from the available evidence.
+
+The original recorded measurements were retained. No additional benchmark runs were performed to replace these results.
+
+The gap should be considered when interpreting the S3 latency distribution.
+
+## 10. Cold Start and Warm Invocation
+
+The browser benchmark does not directly measure or isolate AWS Lambda Cold Start and Warm Invocation durations.
 
 The three warm-up runs per scenario were used to exercise the browser workflow and API endpoints before measurement. However, they do not guarantee that subsequent requests use the same Lambda execution environment.
 
 The recorded API response duration must not be interpreted as Lambda execution duration.
 
-A separate measurement using Lambda logs or other AWS telemetry would be required to distinguish Cold Start from Warm Invocation reliably.
+Separate CloudWatch Lambda REPORT records were inspected to identify cold-start evidence during the benchmark observation window. These observations are reported separately and cannot be mapped reliably to individual benchmark scenario runs.
 
-## 10. Limitations
+### Lambda Cold Start and Invocation Evidence
+
+CloudWatch Logs for the Lambda function `/aws/lambda/aa-companies-lambda` were inspected for the period **2026-11-13 21:53–22:33 UTC (2026-11-14 04:53–05:33 Thailand time)**.
+
+The Logs Insights queries identified the following results:
+
+| Metric | Result |
+|---|---:|
+| Total Lambda REPORT records | 406 |
+| REPORT records containing `Init Duration` (cold starts) | 2 |
+| REPORT records without `Init Duration` | 404 |
+
+The two cold-start records were found in separate Lambda execution log streams. The remaining 404 REPORT records did not contain an `Init Duration` field.
+
+The observation window contained two REPORT records with Init Duration and 404 REPORT records without this field. The latter records cannot be conclusively classified as warm invocations based on this field alone. However, the absence of `Init Duration` in a REPORT record is not, by itself, definitive proof of a warm invocation.
+
+Individual Lambda REPORT records could not be reliably mapped to specific benchmark scenario runs because the benchmark CSV files do not contain matching Lambda request IDs. Therefore, these CloudWatch observations are reported separately from the browser E2E and API response-time measurements.
+
+## 11. Limitations
 
 - This report covers Cloud/Dev only. Local environment measurements are not included.
 - Network throughput was not reliably measured.
@@ -148,7 +178,7 @@ A separate measurement using Lambda logs or other AWS telemetry would be require
 - Results represent a single-client, concurrency-1 workload and should not be interpreted as a load or stress test.
 - No production environment was used.
 
-## 11. Evidence Files
+## 12. Evidence Files
 
 The final benchmark evidence is stored under `docs/evidence/v6-01-employers-baseline/`.
 
@@ -168,5 +198,3 @@ Automation scripts:
 Preliminary trial datasets are excluded from the final percentile calculations.
 
 No credentials, secrets, or personal information are included in the final benchmark evidence.
-
-No credentials, secrets, or personal information are included in the benchmark results.
