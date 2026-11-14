@@ -23,6 +23,14 @@ out in bold are things that silently broke a working-looking setup before.
 - **Windows users**: do the Lambda zip packaging (step 6) from Git Bash, not PowerShell — see the warning in that step.
 - Terraform >= 1.5 if you are deploying rather than reading — `winget install -e --id Hashicorp.Terraform`
 
+> **Important: This guide contains manual setup instructions from an earlier architecture version.**
+>
+> The current system uses Terraform as the primary method for provisioning and managing AWS infrastructure. The Lambda function connects directly to the Amazon RDS PostgreSQL instance through its RDS endpoint.
+>
+> The current architecture does not use RDS Proxy or AWS Secrets Manager.
+>
+> For new deployments, refer to the [Terraform Setup Guide](terraform-setup-guide.md) and [Environment Configuration](environment-configuration.md) as the primary setup references instead of following the outdated manual steps in this document.
+
 ## 1. Naming
 
 These are the hand-built console names. Terraform instead prefixes every
@@ -34,12 +42,9 @@ collide.
 | Resource | Name |
 |---|---|
 | RDS instance | `coop-db-dev` |
-| RDS Proxy | `cs361-rds-proxy` |
-| Secrets Manager secret | `cs361-coop-db-credentials` |
 | Lambda | `cs361-companies-lambda` |
 | API Gateway | `cs361-companies-api` |
 | Lambda security group | `cs361-companies-lambda-sg` |
-| RDS Proxy security group | `cs361-rds-proxy-sg` |
 
 ## 2. Clone + run locally
 
@@ -73,6 +78,16 @@ npm run dev        # http://localhost:5173
 | VPC security group | Create new → `coop-db-dev-sg` |
 | DB name | `coop_db` |
 
+> **Database Credentials**
+> 
+> For the current Terraform-based deployment, database credentials are configured through Terraform variables.
+>
+> The `db_password` variable is passed to the Lambda function as the `DB_PASSWORD` environment variable, as defined in `infra/terraform/lambda.tf`.
+>
+> The Lambda function connects directly to the RDS instance using the RDS endpoint. No RDS Proxy or Secrets Manager configuration is required for the current deployment.
+> 
+> For detailed instructions on configuring database credentials and other environment variables, refer to the [Environment Configuration](environment-configuration.md) guide.
+
 Create → wait for "Available" (5-10 min).
 
 **Go to: RDS console → Databases → `coop-db-dev` → Connectivity & security tab → click the security group link → Edit inbound rules.**
@@ -105,7 +120,13 @@ Save credentials in `CS361-Project/.env` (gitignored): `PGHOST`, `PGPORT=5432`, 
 
 **Never commit a real password anywhere** — not in this file, not in a commit message, not pasted into chat/Slack/Discord. Treat any password that *has* been exposed that way as compromised and rotate it.
 
-## 4. RDS Proxy
+## 4. RDS Proxy (Legacy Architecture)
+
+>**This section describes the previous architecture and is not required for the current deployment.**
+>
+> The steps for creating a Secrets Manager secret, configuring RDS Proxy, and registering proxy targets belong to the previous architecture.
+>
+> The current Lambda function connects directly to the RDS instance using its RDS endpoint. Therefore, these steps should be skipped when deploying the current system.
 
 ### 4a. Create the secret first
 
@@ -161,6 +182,14 @@ aws rds describe-db-proxy-targets --db-proxy-name cs361-rds-proxy --query "Targe
 Expect `{"State": "REGISTERING"}` → `{"State": "UNAVAILABLE", "Reason": "PENDING_PROXY_CAPACITY"}` → `{"State": "AVAILABLE"}`. The middle state can last **several minutes** (observed ~4 min) while the proxy scales capacity — this is normal, not a failure. Don't move on to testing the Lambda until it reaches `AVAILABLE`.
 
 ## 5. Security groups
+
+> **Current Architecture**
+>
+> The current architecture allows the Lambda function to connect directly to the RDS instance without going through RDS Proxy.
+> 
+> The security group configuration should follow the current Terraform definitions in `infra/terraform/security_groups.tf`.
+>
+> The previous Lambda → RDS Proxy → RDS security group arrangement is no longer used.
 
 **Go to: EC2 console → Security Groups.** Create in this exact order — later rules reference earlier SGs.
 

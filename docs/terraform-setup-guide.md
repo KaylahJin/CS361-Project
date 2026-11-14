@@ -11,12 +11,15 @@ resource is for, or if Terraform is unavailable to you.
 
 | Resource | Purpose |
 |---|---|
-| RDS PostgreSQL 16.15, `db.t4g.micro` | the `coop_db` database |
-| Secrets Manager secret | the credentials the proxy authenticates against |
-| RDS Proxy + registered target | connection pooling in front of RDS |
-| 3 security groups | Lambda → Proxy → RDS, each allowing only port 5432 |
-| Lambda (Node.js 22.x), 10s timeout | `GET /companies`, `GET /companies/{id}` |
+| RDS PostgreSQL 16 | the `coop_db` database |
+| 2 security groups | Lambda → RDS, allowing database traffic on port 5432 |
+| S3 Gateway VPC Endpoint | private connectivity from Lambda to S3 without a NAT Gateway |
+| Lambda (Node.js 22.x), 10s timeout | backend API |
 | API Gateway HTTP API + CORS | public HTTPS endpoint |
+| Cognito User Pool and App Client | user authentication and identity management |
+
+The frontend website bucket and private attachments bucket are managed
+separately by AWS CLI deployment scripts because of AWS Academy restrictions.
 
 Nothing here creates an IAM role — the existing `LabRole` is reused, because
 Learner Lab accounts block `iam:CreateRole`.
@@ -101,14 +104,12 @@ terraform plan     # review what will be created; changes nothing
 terraform apply    # type: yes
 ```
 
-**Expect 12-18 minutes.** Most of it is two unavoidable waits: RDS instance
-creation (5-10 min), then a deliberate 5-minute pause while the proxy target
-scales from `REGISTERING` to `AVAILABLE`. A proxy whose target is not yet
-`AVAILABLE` accepts TCP connections and drops them instantly, so the wait is
-built into the config rather than left to you to remember.
+**Deployment time depends on AWS resource provisioning.**
+The RDS instance may take several minutes to become available.
+Terraform will wait for the resources it manages to finish provisioning.
 
-Don't interrupt it. If you do, re-run `terraform apply` — it picks up where it
-left off.
+Don't interrupt the deployment. If it is interrupted, review the Terraform
+state and run `terraform plan` before retrying `terraform apply`.
 
 ### Updating the Lambda later
 
@@ -262,12 +263,6 @@ curl -sD - -o /dev/null -H 'Origin: http://localhost:5173' "$API/companies" \
   | grep -i access-control-allow-origin         # must echo your origin back
 ```
 
-Terraform's own health check, if the API misbehaves:
-
-```bash
-eval "$(terraform output -raw proxy_target_health_check_command)"   # want AVAILABLE
-```
-
 ---
 
 ## 8. Tear down
@@ -291,11 +286,6 @@ regenerates the data, so nothing is permanently lost. Learner Lab accounts also
 wipe resources when the lab session ends — so after a lab reset, expect to
 start from step 3 again with a fresh `terraform apply`.
 
-`destroy` then `apply` works as many times as you like: the Secrets Manager
-secret is set to delete immediately rather than sit in a 30-day recovery window
-holding its name hostage. Remember step 4 again each time — a rebuilt database
-is an empty one.
-
 ---
 
 ## 9. If something breaks
@@ -309,13 +299,11 @@ is an empty one.
 | `{"message":"Internal Server Error"}` (`message` key) | The Lambda invocation itself crashed or timed out, before your code ran | CloudWatch → `/aws/lambda/<prefix>-companies-lambda`. In Git Bash, prefix the `aws logs` command with `MSYS_NO_PATHCONV=1` or the leading `/` gets mangled |
 | `{"error":"..."}` (`error` key) | Your handler ran and failed — usually the DB connection | Same logs, but look at the SQL/connection error |
 | `Cannot find package 'pg'` | Lambda zip has no dependencies | `npm run lambda:deploy` — it installs them before packaging |
-| `Connection terminated unexpectedly` | Proxy target not `AVAILABLE` yet | Run the health check in step 7, wait, retry |
 | CORS error in the browser, `curl` works | Vite is on a different port than `cors_allow_origin` | See the note in step 5 |
 | `psql` connection timeout | Your public IP changed | Re-run the `checkip` command, update `my_ip_cidr`, `terraform apply` |
 | Thai text garbled in the terminal | Cosmetic only, data is correct | `chcp 65001`, or ignore |
 | Changed Lambda code, `apply` says no changes | — | It re-zips and redeploys on any file change in `infra/lambda/companies/`; if truly unchanged there is nothing to deploy |
 | `apply` wants to destroy and recreate everything | You changed `name_prefix` | Change it back, or accept the rebuild and re-run step 4 |
-| `apply` fails: *a secret with this name is already scheduled for deletion* | A secret destroyed by an older version of this config is still inside its 30-day recovery window | `aws secretsmanager delete-secret --secret-id <prefix>-coop-db-credentials --force-delete-without-recovery`, then `apply`. The config now sets `recovery_window_in_days = 0`, so new teardowns don't do this |
 | Site URL returns `403 AccessDenied` for every file | Block Public Access got re-enabled on the bucket | `npm run web:deploy` again — it clears the block and re-puts the policy every run |
 | `apply` fails: `GetObjectLockConfiguration` AccessDenied / explicit deny | You added an `aws_s3_bucket` resource back to the config | The account's SCP blocks that read. Keep the bucket in `deploy-web.sh`; see step 6 |
 | Site loads, company list empty, console shows a CORS error | `name_prefix` changed after the API was created, so the allowed origin no longer matches the bucket | `terraform apply` — the origin is recomputed from `name_prefix` |
@@ -339,14 +327,16 @@ In `infra/terraform/`:
 | `variables.tf` | Every input, with validation rules |
 | `terraform.tfvars.example` | Template to copy; the real one is gitignored |
 | `data.tf` | Default VPC/subnets, `LabRole` lookup |
-| `security_groups.tf` | The Lambda → Proxy → RDS chain |
+| `security_groups.tf` | Lambda → RDS |
 | `rds.tf` | Postgres instance |
-| `secrets.tf` | Secret the proxy authenticates clients against |
-| `proxy.tf` | RDS Proxy, target group, target, and the 5-minute wait |
 | `lambda.tf` | Zips `infra/lambda/companies/`, Lambda function, API permission |
 | `apigateway.tf` | HTTP API, CORS, the two routes, `$default` stage |
 | `s3_web.tf` | Bucket name + site URL as locals. No resources — explains the SCP that blocks managing the bucket |
 | `outputs.tf` | `api_url` and the values the helper scripts read |
+
+For details about environment variables, database credentials, and
+local configuration, see the
+[Environment Configuration](environment-configuration.md) guide.
 
 Elsewhere in the repo:
 

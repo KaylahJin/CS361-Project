@@ -73,10 +73,9 @@ function mapStatus(currentStatus, openNow) {
   return 'unknown';
 }
 
-export function generatePositionsSql() {
-  const raw = readFileSync(POSITIONS_JSON, 'utf-8');
-  const data = JSON.parse(raw);
-  const positions = data.positions || [];
+export function generatePositionsSql(inputPositions) {
+  const positions = inputPositions ??
+    JSON.parse(readFileSync(POSITIONS_JSON, 'utf-8')).positions ?? [];
 
   const validRows = [];
   const skipped = [];
@@ -121,18 +120,7 @@ export function generatePositionsSql() {
     .map((r) => `  (${sqlStr(r.position_id)}, ${sqlStr(r.company_id)}, ${sqlStr(r.title)}, ${sqlStr(r.category)}, ${sqlStr(r.description)}, ${sqlStr(r.qualification)}, ${sqlStr(r.location)}, ${sqlStr(r.work_mode)}, ${sqlDate(r.application_deadline)}, ${sqlStr(r.application_url)}, ${sqlStr(r.status)}, ${sqlStr(r.source_url)})`)
     .join(',\n');
 
-  const upsert = `\nON CONFLICT (position_id) DO UPDATE SET\n` +
-    `  company_id = EXCLUDED.company_id,\n` +
-    `  title = EXCLUDED.title,\n` +
-    `  category = EXCLUDED.category,\n` +
-    `  description = EXCLUDED.description,\n` +
-    `  qualification = EXCLUDED.qualification,\n` +
-    `  location = EXCLUDED.location,\n` +
-    `  work_mode = EXCLUDED.work_mode,\n` +
-    `  application_deadline = EXCLUDED.application_deadline,\n` +
-    `  application_url = EXCLUDED.application_url,\n` +
-    `  status = EXCLUDED.status,\n` +
-    `  source_url = EXCLUDED.source_url;\n`;
+  const upsert = '\nON CONFLICT (position_id) DO NOTHING;\n';
 
   return {
     sql: header + values + upsert,
