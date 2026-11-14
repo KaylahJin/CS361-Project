@@ -12,7 +12,7 @@ resource "aws_db_instance" "coop_db" {
   password = var.db_password
 
   vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = true # dev only, matches project-setup-guide.md step 3
+  publicly_accessible    = true
 
   skip_final_snapshot = true # dev convenience — seed.sql regenerates the data anyway
 
