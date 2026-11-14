@@ -105,6 +105,9 @@ CREATE TABLE periods (
     academic_year INT NOT NULL,
     semester      VARCHAR(5) NOT NULL DEFAULT '1',
     is_active     BOOLEAN NOT NULL DEFAULT FALSE,
+    min_gpa       NUMERIC(3,2),
+    min_group_gpa NUMERIC(3,2),
+    capacity      INTEGER,
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 

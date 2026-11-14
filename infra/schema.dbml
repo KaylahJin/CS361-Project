@@ -62,6 +62,9 @@ Table periods {
   academic_year integer     [not null]
   semester      varchar(5)  [not null, default: '1']
   is_active     boolean     [not null, default: false]
+  min_gpa       decimal(3,2)
+  min_group_gpa decimal(3,2)
+  capacity      integer
   created_at    timestamptz [default: `now()`]
 
   indexes {
