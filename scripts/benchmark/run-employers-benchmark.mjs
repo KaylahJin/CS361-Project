@@ -19,7 +19,17 @@ const CONFIG = {
   },
 };
 
-const OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
+const DEFAULT_OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
+
+const outputDirArg = process.argv.find((arg) => arg.startsWith('--out='));
+
+const OUTPUT_DIR = outputDirArg
+  ? outputDirArg.slice('--out='.length).trim()
+  : DEFAULT_OUTPUT_DIR;
+
+if (!OUTPUT_DIR) {
+  throw new Error('Output directory cannot be empty.');
+}
 
 const OUTPUT_FILES = {
   warmup: {
