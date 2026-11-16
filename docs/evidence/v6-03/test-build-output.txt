@@ -1,0 +1,33 @@
+Captured at: 2026-11-16T10:44:59.564Z
+
+=== 1. Vitest (Employers Critical Path + Lambda listCompanies) ===
+$ npx vitest run src/pages/Employers.test.tsx infra/lambda/companies/listCompanies.test.mjs
+RUN  v3.2.7 G:/ObsidianCS/CS/CloudCS/CS361-Project
+
+ ✓  backend  infra/lambda/companies/listCompanies.test.mjs (4 tests) 12ms
+ ✓  frontend  src/pages/Employers.test.tsx (6 tests) 814ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  17:44:41
+   Duration  4.11s (transform 217ms, setup 383ms, collect 334ms, tests 826ms, environment 2.04s, prepare 479ms)
+
+=== 2. ESLint (Changed Files) ===
+$ npx eslint src/pages/Employers.tsx src/pages/Employers.test.tsx src/data/companyApi.ts
+0 errors, 0 warnings (exit code 0)
+
+=== 3. TypeScript & Production Build ===
+$ npm run build
+> cs361-project@0.0.0 build
+> tsc -b && vite build
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 1891 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.86 kB │ gzip:   0.48 kB
+dist/assets/index-Dx7Y-836.css   88.75 kB │ gzip:  14.63 kB
+dist/assets/index-D9LEMa4l.js   559.89 kB │ gzip: 143.08 kB
+
+✓ built in 651ms
