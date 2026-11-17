@@ -40,7 +40,6 @@ resource "aws_lambda_function" "companies" {
       ATTACHMENTS_BUCKET = local.attachments_bucket
     }
   }
-}
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -11,12 +11,15 @@ resource is for, or if Terraform is unavailable to you.
 
 | Resource | Purpose |
 |---|---|
-| RDS PostgreSQL 16.15, `db.t4g.micro` | the `coop_db` database |
-| Secrets Manager secret | the credentials the proxy authenticates against |
-| RDS Proxy + registered target | connection pooling in front of RDS |
-| 3 security groups | Lambda → Proxy → RDS, each allowing only port 5432 |
-| Lambda (Node.js 22.x), 10s timeout | `GET /companies`, `GET /companies/{id}` |
+| RDS PostgreSQL 16 | the `coop_db` database |
+| 2 security groups | Lambda → RDS, allowing database traffic on port 5432 |
+| S3 Gateway VPC Endpoint | private connectivity from Lambda to S3 without a NAT Gateway |
+| Lambda (Node.js 22.x), 10s timeout | backend API |
 | API Gateway HTTP API + CORS | public HTTPS endpoint |
+| Cognito User Pool and App Client | user authentication and identity management |
+
+The frontend website bucket and private attachments bucket are managed
+separately by AWS CLI deployment scripts because of AWS Academy restrictions.
 
 Nothing here creates an IAM role — the existing `LabRole` is reused, because
 Learner Lab accounts block `iam:CreateRole`.
@@ -42,7 +45,9 @@ npm install --omit=dev --prefix infra/lambda/companies
 ```
 
 Skipping the second one deploys a Lambda without the `pg` driver, and every
-request fails with `Cannot find package 'pg'`.
+request fails with `Cannot find package 'pg'`. `npm run lambda:deploy` (step 3)
+runs it for you on every deploy, so after the first setup you never need to
+remember it.
 
 ### AWS credentials
 
@@ -99,14 +104,28 @@ terraform plan     # review what will be created; changes nothing
 terraform apply    # type: yes
 ```
 
-**Expect 12-18 minutes.** Most of it is two unavoidable waits: RDS instance
-creation (5-10 min), then a deliberate 5-minute pause while the proxy target
-scales from `REGISTERING` to `AVAILABLE`. A proxy whose target is not yet
-`AVAILABLE` accepts TCP connections and drops them instantly, so the wait is
-built into the config rather than left to you to remember.
+**Deployment time depends on AWS resource provisioning.**
+The RDS instance may take several minutes to become available.
+Terraform will wait for the resources it manages to finish provisioning.
 
-Don't interrupt it. If you do, re-run `terraform apply` — it picks up where it
-left off.
+Don't interrupt the deployment. If it is interrupted, review the Terraform
+state and run `terraform plan` before retrying `terraform apply`.
+
+### Updating the Lambda later
+
+After the first apply, deploy Lambda code changes with:
+
+```bash
+npm run lambda:deploy                    # answer yes at the terraform prompt
+npm run lambda:deploy -- -auto-approve   # extra args go to terraform apply
+```
+
+It runs `npm ci --omit=dev` in `infra/lambda/companies/` (exact versions from
+its `package-lock.json`), checks `pg` is there, runs `terraform apply` — which
+re-zips the folder into `infra/terraform/.build/function.zip` and updates the
+function only if the zip changed — then calls `GET /companies` and fails
+unless it gets HTTP 200. Re-running with no code change is safe: Terraform
+reports no changes and the check runs again.
 
 ---
 
@@ -131,13 +150,16 @@ database and does nothing. Use `npm run db:load -- --reset` to wipe and reload.
 ## 5. Point the frontend at it
 
 ```bash
-npm run env:sync   # writes VITE_API_URL into .env
+npm run env:sync   # writes VITE_API_URL + both VITE_COGNITO_* into .env
 npm run dev
 ```
 
-Re-run `env:sync` after any `terraform apply` that recreated the API — the API
-Gateway ID changes, and a stale URL gives the browser a bare network error with
-no status code.
+It copies `api_url`, `cognito_user_pool_id` and `cognito_user_pool_client_id`
+from `terraform output` into `.env`, rewriting only those three lines. Re-run
+`env:sync` after any `terraform apply` that recreated the API or the user pool
+— the IDs change, a stale API URL gives the browser a bare network error with
+no status code, and a stale pool ID breaks sign-in. Running it again when
+nothing changed just prints `already current`.
 
 **Check the port Vite prints.** `cors_allow_origin` defaults to
 `http://localhost:5173`. If 5173 is already in use, Vite silently starts on
@@ -160,8 +182,10 @@ npm run web:deploy
 
 It reads the bucket name and API URL from Terraform, creates the bucket if it
 does not exist, configures it for public website hosting, runs `npm run build`
-with `VITE_API_URL` set to the live API, uploads `dist/`, checks the site
-returns HTTP 200, and prints the URL:
+with `VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID` and `VITE_COGNITO_CLIENT_ID`
+taken from `terraform output` (your `.env` is ignored), refuses to upload if the
+bundle does not contain that API URL, uploads `dist/`, checks the site returns
+HTTP 200, and prints the URL:
 
 ```
 deployed: http://<prefix>-coop-web-<account-id>.s3-website-us-east-1.amazonaws.com
@@ -201,6 +225,18 @@ Four things worth knowing:
   S3 **write** the site needs is allowed, so the CLI does the whole job
   instead, idempotently, on every deploy.
 
+### Deploy everything again
+
+After the first setup (steps 1-6b), one command redeploys the backend and the
+site in order, each with its own post-deploy check:
+
+```bash
+npm run deploy     # = npm run lambda:deploy && npm run web:deploy
+```
+
+It stops at the first failure, so a broken API never gets a new site pointed
+at it.
+
 ---
 
 ## 6b. Create the private attachments bucket
@@ -227,12 +263,6 @@ curl -sD - -o /dev/null -H 'Origin: http://localhost:5173' "$API/companies" \
   | grep -i access-control-allow-origin         # must echo your origin back
 ```
 
-Terraform's own health check, if the API misbehaves:
-
-```bash
-eval "$(terraform output -raw proxy_target_health_check_command)"   # want AVAILABLE
-```
-
 ---
 
 ## 8. Tear down
@@ -256,11 +286,6 @@ regenerates the data, so nothing is permanently lost. Learner Lab accounts also
 wipe resources when the lab session ends — so after a lab reset, expect to
 start from step 3 again with a fresh `terraform apply`.
 
-`destroy` then `apply` works as many times as you like: the Secrets Manager
-secret is set to delete immediately rather than sit in a 30-day recovery window
-holding its name hostage. Remember step 4 again each time — a rebuilt database
-is an empty one.
-
 ---
 
 ## 9. If something breaks
@@ -273,14 +298,12 @@ is an empty one.
 | `GET /companies` returns `[]` | Database is empty | You skipped step 4 — `npm run db:load` |
 | `{"message":"Internal Server Error"}` (`message` key) | The Lambda invocation itself crashed or timed out, before your code ran | CloudWatch → `/aws/lambda/<prefix>-companies-lambda`. In Git Bash, prefix the `aws logs` command with `MSYS_NO_PATHCONV=1` or the leading `/` gets mangled |
 | `{"error":"..."}` (`error` key) | Your handler ran and failed — usually the DB connection | Same logs, but look at the SQL/connection error |
-| `Cannot find package 'pg'` | Lambda zip has no dependencies | `npm install --omit=dev --prefix infra/lambda/companies`, then `terraform apply` |
-| `Connection terminated unexpectedly` | Proxy target not `AVAILABLE` yet | Run the health check in step 7, wait, retry |
+| `Cannot find package 'pg'` | Lambda zip has no dependencies | `npm run lambda:deploy` — it installs them before packaging |
 | CORS error in the browser, `curl` works | Vite is on a different port than `cors_allow_origin` | See the note in step 5 |
 | `psql` connection timeout | Your public IP changed | Re-run the `checkip` command, update `my_ip_cidr`, `terraform apply` |
 | Thai text garbled in the terminal | Cosmetic only, data is correct | `chcp 65001`, or ignore |
 | Changed Lambda code, `apply` says no changes | — | It re-zips and redeploys on any file change in `infra/lambda/companies/`; if truly unchanged there is nothing to deploy |
 | `apply` wants to destroy and recreate everything | You changed `name_prefix` | Change it back, or accept the rebuild and re-run step 4 |
-| `apply` fails: *a secret with this name is already scheduled for deletion* | A secret destroyed by an older version of this config is still inside its 30-day recovery window | `aws secretsmanager delete-secret --secret-id <prefix>-coop-db-credentials --force-delete-without-recovery`, then `apply`. The config now sets `recovery_window_in_days = 0`, so new teardowns don't do this |
 | Site URL returns `403 AccessDenied` for every file | Block Public Access got re-enabled on the bucket | `npm run web:deploy` again — it clears the block and re-puts the policy every run |
 | `apply` fails: `GetObjectLockConfiguration` AccessDenied / explicit deny | You added an `aws_s3_bucket` resource back to the config | The account's SCP blocks that read. Keep the bucket in `deploy-web.sh`; see step 6 |
 | Site loads, company list empty, console shows a CORS error | `name_prefix` changed after the API was created, so the allowed origin no longer matches the bucket | `terraform apply` — the origin is recomputed from `name_prefix` |
@@ -304,14 +327,16 @@ In `infra/terraform/`:
 | `variables.tf` | Every input, with validation rules |
 | `terraform.tfvars.example` | Template to copy; the real one is gitignored |
 | `data.tf` | Default VPC/subnets, `LabRole` lookup |
-| `security_groups.tf` | The Lambda → Proxy → RDS chain |
+| `security_groups.tf` | Lambda → RDS |
 | `rds.tf` | Postgres instance |
-| `secrets.tf` | Secret the proxy authenticates clients against |
-| `proxy.tf` | RDS Proxy, target group, target, and the 5-minute wait |
 | `lambda.tf` | Zips `infra/lambda/companies/`, Lambda function, API permission |
 | `apigateway.tf` | HTTP API, CORS, the two routes, `$default` stage |
 | `s3_web.tf` | Bucket name + site URL as locals. No resources — explains the SCP that blocks managing the bucket |
 | `outputs.tf` | `api_url` and the values the helper scripts read |
+
+For details about environment variables, database credentials, and
+local configuration, see the
+[Environment Configuration](environment-configuration.md) guide.
 
 Elsewhere in the repo:
 
@@ -320,6 +345,7 @@ Elsewhere in the repo:
 | `infra/schema.sql` | Tables and indexes |
 | `infra/seed.sql` | The 103 companies. Generated — re-run `npm run migrate:build-seed` instead of hand-editing |
 | `infra/load-db.sh` | `npm run db:load` (step 4) |
+| `infra/deploy-lambda.sh` | `npm run lambda:deploy` (step 3) — installs Lambda deps, `terraform apply`, checks `GET /companies` |
 | `infra/sync-env.sh` | `npm run env:sync` (step 5) |
 | `infra/deploy-web.sh` | `npm run web:deploy` (step 6) — creates/configures the bucket, builds, uploads, verifies |
 | `infra/lambda/companies/` | Handler source; `npm test` covers it with no AWS needed |

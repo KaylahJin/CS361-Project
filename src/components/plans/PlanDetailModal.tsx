@@ -90,8 +90,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
       />
 
       {/* Modal Dialog Content */}
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl border border-slate-200/90 bg-white shadow-2xl overflow-hidden">
-        {/* Header */}
+      <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col rounded-3xl border border-slate-200/90 bg-white shadow-2xl overflow-hidden">        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 font-bold text-sm">
@@ -126,149 +125,180 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
         {/* Scrollable Body */}
         <div className="overflow-y-auto p-6 space-y-6">
           {/* Section 1: ข้อมูลนักศึกษาและสถานประกอบการ */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Student Info Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <GraduationCap className="h-4 w-4 text-blue-600" />
-                <span>ข้อมูลนักศึกษา</span>
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                <div>
-                  <span className="text-xs text-slate-400">ชื่อ-นามสกุล:</span>
-                  <p className="font-semibold text-slate-900">
-                    {plan.first_name} {plan.last_name}
-                  </p>
+          {/* Two-column detail layout */}
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {/* Left Column */}
+            <div className="flex min-w-0 flex-col gap-4">
+              {/* Student Info Card */}
+              <section className="rounded-2xl border border-slate-200/80 bg-white p-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <GraduationCap className="h-4 w-4 text-blue-600" />
+                  <span>ข้อมูลนักศึกษา</span>
                 </div>
-                <div className="flex gap-4">
-                  <div>
-                    <span className="text-xs text-slate-400">รหัสนักศึกษา:</span>
-                    <p className="font-mono font-medium text-slate-800">
-                      {plan.student_id}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400">หลักสูตร:</span>
-                    <p className="font-medium text-slate-800">
-                      หลักสูตร {plan.curriculum}
-                    </p>
-                  </div>
-                  {plan.gpa !== undefined && plan.gpa !== null && (
-                    <div>
-                      <span className="text-xs text-slate-400">GPA:</span>
-                      <p className="font-bold text-blue-600">
-                        {Number(plan.gpa).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                {plan.advisor_name && (
+
+                <div className="mt-3 space-y-3 text-sm">
                   <div>
                     <span className="text-xs text-slate-400">
-                      อาจารย์ที่ปรึกษา:
+                      ชื่อ-นามสกุล
                     </span>
-                    <p className="text-xs font-medium text-slate-700">
-                      {plan.advisor_name}
+                    <p className="font-semibold text-slate-900">
+                      {plan.first_name} {plan.last_name}
                     </p>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-xs text-slate-400">
+                        รหัสนักศึกษา
+                      </span>
+                      <p className="font-mono font-medium text-slate-800">
+                        {plan.student_id}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-xs text-slate-400">
+                        หลักสูตร
+                      </span>
+                      <p className="font-medium text-slate-800">
+                        หลักสูตร {plan.curriculum}
+                      </p>
+                    </div>
+
+                    {plan.gpa !== undefined && plan.gpa !== null && (
+                      <div>
+                        <span className="text-xs text-slate-400">GPA</span>
+                        <p className="font-bold text-blue-600">
+                          {plan.gpa !== undefined && plan.gpa !== null
+                            ? Number(plan.gpa).toFixed(2)
+                            : '-'}
+                        </p>
+                      </div>
+                    )}
+
+                    {plan.advisor_name && (
+                      <div className="col-span-2">
+                        <span className="text-xs text-slate-400">
+                          อาจารย์ที่ปรึกษา
+                        </span>
+                        <p className="font-medium text-slate-700">
+                          {plan.advisor_name || '-'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Company and Position Card */}
+              <section className="rounded-2xl border border-slate-200/80 bg-white p-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <Building2 className="h-4 w-4 text-indigo-600" />
+                  <span>สถานประกอบการและตำแหน่งงาน</span>
+                </div>
+
+                <div className="mt-3 space-y-3 text-sm">
+                  <div>
+                    <span className="text-xs text-slate-400">
+                      ตำแหน่ง
+                    </span>
+                    <p className="font-semibold text-slate-900">
+                      {plan.position_title || 'ยังไม่ระบุตำแหน่ง'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-xs text-slate-400">
+                      สถานประกอบการ
+                    </span>
+                    <p className="font-medium text-slate-800">
+                      {plan.company_name || 'ยังไม่ระบุ'}
+                      {plan.company_short_name
+                        ? ` (${plan.company_short_name})`
+                        : ''}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-xs text-slate-400">
+                      รอบสหกิจ
+                    </span>
+                    <p className="text-sm text-slate-700">
+                      {plan.period_name || plan.period_id}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Attachments */}
+              <PlanAttachmentSummary
+                planId={plan.plan_id}
+                getIdToken={getIdToken}
+                showEditHint={false}
+              />
+            </div>
+
+            {/* Right Column */}
+            <div className="flex min-w-0 flex-col gap-4">
+              {/* Terms and Student Note */}
+              <section className="self-start w-full rounded-2xl border border-slate-200/80 bg-white p-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>การยอมรับเงื่อนไข</span>
+                </div>
+
+                <div className="mt-3 rounded-xl bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-slate-700">
+                      ยอมรับเงื่อนไขการเตรียมความพร้อมก่อนสหกิจ
+                    </span>
+
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        plan.acknowledged_pre_course
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {plan.acknowledged_pre_course
+                        ? 'ยอมรับแล้ว'
+                        : 'ยังไม่ยอมรับ'}
+                    </span>
+                  </div>
+
+                  {plan.terms_accepted_at && (
+                    <p className="mt-2 text-xs text-slate-400">
+                      ยอมรับเมื่อ {formatDate(plan.terms_accepted_at)}
+                    </p>
+                  )}
+                </div>
+
+                {plan.student_note && (
+                  <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs leading-relaxed text-slate-700">
+                    <span className="font-semibold text-slate-500">
+                      หมายเหตุของนักศึกษา:{' '}
+                    </span>
+                    {plan.student_note}
+                  </div>
                 )}
-              </div>
-            </div>
+              </section>
 
-            {/* Position and Company Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <Building2 className="h-4 w-4 text-indigo-600" />
-                <span>สถานประกอบการและตำแหน่งงาน</span>
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                <div>
-                  <span className="text-xs text-slate-400">ตำแหน่ง:</span>
-                  <p className="font-semibold text-slate-900">
-                    {plan.position_title || 'ยังไม่ระบุตำแหน่ง'}
-                  </p>
+              {/* Review History */}
+              <section className="self-start w-full rounded-2xl border border-slate-200/80 bg-white p-4">
+                <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <Calendar className="h-4 w-4 text-amber-600" />
+                  <span>ผลการพิจารณา</span>
                 </div>
-                <div>
-                  <span className="text-xs text-slate-400">
-                    สถานประกอบการ:
-                  </span>
-                  <p className="font-medium text-slate-800">
-                    {plan.company_name || 'ยังไม่ระบุ'}
-                    {plan.company_short_name
-                      ? ` (${plan.company_short_name})`
-                      : ''}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400">รอบสหกิจ:</span>
-                  <p className="text-xs text-slate-700">
-                    {plan.period_name || plan.period_id}
-                  </p>
-                </div>
-              </div>
+
+                <ReviewHistory
+                  reviews={plan.reviews}
+                  planStatus={plan.status}
+                />
+              </section>
             </div>
           </div>
 
-          {/* Student Notes & Conditions */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              เงื่อนไขและข้อความจากนักศึกษา
-            </h4>
-            <div className="mt-2.5 flex items-center justify-between rounded-xl bg-slate-50 p-3 text-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <span className="text-slate-700 font-medium">
-                  ยอมรับเงื่อนไขการเตรียมความพร้อมก่อนสหกิจ
-                </span>
-              </div>
-              <span className="text-slate-400">
-                {plan.terms_accepted_at
-                  ? formatDate(plan.terms_accepted_at)
-                  : plan.acknowledged_pre_course
-                  ? 'ยอมรับแล้ว'
-                  : 'ยังไม่ยอมรับ'}
-              </span>
-            </div>
-            {plan.student_note && (
-              <div className="mt-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-700">
-                <span className="font-semibold text-slate-500">
-                  หมายเหตุของนักศึกษา:{' '}
-                </span>
-                <span>"{plan.student_note}"</span>
-              </div>
-            )}
-          </div>
-          {/* Plan Attachments — Read Only for Reviewers */}
-          <PlanAttachmentSummary
-            planId={plan.plan_id}
-            getIdToken={getIdToken}
-            showEditHint={false}
-          />
-          {/* Review History / Current Review */}
-          {plan.reviewed_at && (
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <Calendar className="h-4 w-4 text-amber-600" />
-                <span>ประวัติการพิจารณา</span>
-              </div>
-              <div className="text-xs text-slate-600 space-y-1">
-                <div>
-                  <span className="text-slate-400">ผู้ตรวจ:</span>{' '}
-                  <span className="font-semibold text-slate-700">
-                    {plan.reviewer_name || '-'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400">เมื่อ:</span>{' '}
-                  <span>{formatDate(plan.reviewed_at)}</span>
-                </div>
-              </div>
-              <div className="pt-1">
-                <ReviewHistory reviews={plan.reviews} />
-              </div>
-            </div>
-          )}
-
+          {/* Review Form */}
           {/* Section 2: the form of the viewer's step: endorse (#147), screen (#148) or select (#149). */}
           {onEndorse ? (
             <EndorseForm

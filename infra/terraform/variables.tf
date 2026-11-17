@@ -110,3 +110,19 @@ variable "db_instance_class" {
   type        = string
   default     = "db.t4g.micro"
 }
+
+variable "app_db_password" {
+  description = "Password for the Lambda application database role; set locally and never commit it."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.app_db_password) >= 8 && !can(regex("[/@\" ]", var.app_db_password))
+    error_message = "Application DB password must be 8+ chars and must not contain / @ double quotes or spaces."
+  }
+
+  validation {
+    condition     = !can(regex("(?i)change.?me|replace-with-a-unique-password", var.app_db_password))
+    error_message = "Set a real app_db_password; do not use a placeholder."
+  }
+}

@@ -1,0 +1,150 @@
+# #224 [V5-03] Repeatable deployment — local dry run (2026-11-09)
+#
+# What this is: the three deploy scripts run end to end on Windows/Git Bash
+# with `terraform` and `aws` replaced by stubs on PATH (this machine has
+# neither, nor the team's Terraform state). The stubs return fixed
+# `terraform output` values and log every `aws` call; a local Node server
+# on 127.0.0.1:8787 stands in for API Gateway and the S3 website.
+#
+# What it proves: dependency install, packaging inputs, the order of steps,
+# which Terraform outputs reach the build, the post-deploy checks (pass AND
+# fail), and that every script can be re-run without changing anything.
+# What it does NOT prove: a real deploy on AWS — that evidence is added to
+# the issue separately, from a machine holding the Terraform state.
+
+======================================================================
+## 1. npm run lambda:deploy  (run twice)
+======================================================================
+### run 1
+==> installing Lambda dependencies (npm ci --omit=dev)
+
+added 42 packages in 8s
+
+==> terraform apply (packages infra/lambda/companies -> .build/function.zip)
+[stub terraform] apply -auto-approve
+
+==> checking http://127.0.0.1:8787/companies
+HTTP 200 — API is live
+
+deployed: stub-companies-lambda
+api:      http://127.0.0.1:8787
+exit=0
+### run 2 (re-run)
+==> installing Lambda dependencies (npm ci --omit=dev)
+
+added 42 packages in 10s
+
+==> terraform apply (packages infra/lambda/companies -> .build/function.zip)
+[stub terraform] apply -auto-approve
+
+==> checking http://127.0.0.1:8787/companies
+HTTP 200 — API is live
+
+deployed: stub-companies-lambda
+api:      http://127.0.0.1:8787
+exit=0
+
+# Lambda zip contents come from node_modules installed above:
+$ ls infra/lambda/companies/node_modules
+@aws @aws-sdk @smithy bowser pg pg-cloudflare pg-connection-string pg-int8 pg-pool pg-protocol pg-types pgpass postgres-array postgres-bytea postgres-date postgres-interval split2 tslib xtend 
+
+# Failure path — API not answering, script must exit non-zero:
+### API down -> must fail (re-run after the fix below)
+==> checking http://127.0.0.1:8787/companies
+HTTP 000 — API check failed. Logs: CloudWatch /aws/lambda/stub-companies-lambda
+exit=1
+# (before the fix this printed "HTTP 000000": curl already prints 000 on a
+#  connection failure and `|| echo 000` appended another. Same bug existed in
+#  deploy-web.sh, where it meant the `000)` case could never match.)
+
+======================================================================
+## 2. npm run env:sync  (stale .env -> sync -> re-run -> pool recreated)
+======================================================================
+### env:sync run 1 (.env has stale API URL, no trailing newline)
+VITE_API_URL was: https://old.example
+VITE_API_URL now: http://127.0.0.1:8787
+wrote VITE_COGNITO_USER_POOL_ID=us-east-1_STUBPOOL
+wrote VITE_COGNITO_CLIENT_ID=stubclient123
+
+Vite only reads .env at startup — restart 'npm run dev' to pick this up.
+### env:sync run 2 (nothing changed)
+VITE_API_URL already current: http://127.0.0.1:8787
+VITE_COGNITO_USER_POOL_ID already current: us-east-1_STUBPOOL
+VITE_COGNITO_CLIENT_ID already current: stubclient123
+### env:sync run 3 (Cognito pool recreated)
+VITE_API_URL already current: http://127.0.0.1:8787
+VITE_COGNITO_USER_POOL_ID was: us-east-1_STUBPOOL
+VITE_COGNITO_USER_POOL_ID now: us-east-1_NEWPOOL
+VITE_COGNITO_CLIENT_ID already current: stubclient123
+
+Vite only reads .env at startup — restart 'npm run dev' to pick this up.
+### resulting .env
+OTHER_VAR=keep
+VITE_API_URL=http://127.0.0.1:8787
+VITE_COGNITO_USER_POOL_ID=us-east-1_NEWPOOL
+VITE_COGNITO_CLIENT_ID=stubclient123
+
+======================================================================
+## 3. npm run web:deploy  (run twice; [stub aws] lines = calls that would hit AWS)
+======================================================================
+### web:deploy run 1
+bucket:  stub-coop-web-000 (exists)
+[stub aws] s3api delete-public-access-block --bucket stub-coop-web-000
+[stub aws] s3api put-bucket-ownership-controls --bucket stub-coop-web-000 --ownership-controls Rules=[{ObjectOwnership=BucketOwnerEnforced}]
+[stub aws] s3api put-bucket-website --bucket stub-coop-web-000 --website-configuration {"IndexDocument":{"Suffix":"index.html"},"ErrorDocument":{"Key":"index.html"}}
+[stub aws] s3api put-bucket-policy --bucket stub-coop-web-000 --policy {
+api:     http://127.0.0.1:8787
+cognito: us-east-1_STUBPOOL / stubclient123
+
+==> building (VITE_API_URL=http://127.0.0.1:8787)
+
+> cs361-project@0.0.0 build
+> tsc -b && vite build
+
+vite v8.2.2 building client environment for production...
+✓ 1890 modules transformed.
+dist/index.html                   0.86 kB │ gzip:   0.48 kB
+dist/assets/index-BvubY9X8.css   81.45 kB │ gzip:  13.51 kB
+dist/assets/index-KwF1nYFC.js   545.10 kB │ gzip: 139.43 kB
+
+✓ built in 1.64s
+
+==> uploading hashed assets
+[stub aws] s3 sync dist/ s3://stub-coop-web-000/ --delete --exclude index.html --cache-control public, max-age=31536000, immutable
+
+==> uploading index.html (no-cache)
+[stub aws] s3 cp dist/index.html s3://stub-coop-web-000/index.html --cache-control no-cache, must-revalidate --content-type text/html; charset=utf-8
+
+==> checking http://127.0.0.1:8787/
+HTTP 200 — site is live
+
+deployed: http://127.0.0.1:8787/
+
+The site is HTTP — S3 website endpoints do not serve TLS.
+If the company list is empty, check the browser console: a CORS error
+there means the API's allowed origins don't include this bucket.
+Fix with 'terraform apply' in infra/terraform.
+exit=0
+### web:deploy run 2 (re-run)
+HTTP 200 — site is live
+
+deployed: http://127.0.0.1:8787/
+
+The site is HTTP — S3 website endpoints do not serve TLS.
+If the company list is empty, check the browser console: a CORS error
+there means the API's allowed origins don't include this bucket.
+Fix with 'terraform apply' in infra/terraform.
+exit=0
+
+# Cognito values in the built bundle came from `terraform output`, not .env
+# (no .env existed in the worktree):
+$ grep -o "us-east-1_STUBPOOL\|stubclient123" dist/assets/*.js | sort -u
+stubclient123
+us-east-1_STUBPOOL
+
+======================================================================
+## 4. npm test / npm run build
+======================================================================
+Test Files  55 passed (55)
+     Tests  1050 passed (1050)
+vite build  ✓ built
