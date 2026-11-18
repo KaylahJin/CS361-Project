@@ -62,7 +62,7 @@ Indexes verified in the database:
 
 The search input uses a 300 ms debounce.
 
-Opening the Employers page triggers two unfiltered `GET /companies` requests. Therefore, S1 records two API responses per scenario run.
+In the collected baseline dataset, opening the Employers page produced two unfiltered `GET /companies` responses per S1 run. Therefore, the baseline contains 60 API response records across 30 S1 runs.
 
 ## 5. Measurement Procedure
 
@@ -124,8 +124,7 @@ The observed row counts and response sizes were consistent across the measured r
 - S4: 30 successful scenario runs.
 - Total: 120 successful scenario runs.
 - Failed runs in the final measurement dataset: 0.
-- Excluded runs from the final measurement dataset: Preliminary trial runs and failed trial attempts were excluded because they were not part of the finalized 30-run measurement configuration.
-- No failed runs were excluded from the final 120 measured scenario runs.
+- Preliminary trial runs and failed trial attempts are not included in the final measurement CSV files. Their total count cannot be verified from the final evidence.
 
 S1 generated two API responses per scenario run, resulting in 60 API response records. S2, S3, and S4 generated 30 API response records each.
 
@@ -145,36 +144,57 @@ The gap should be considered when interpreting the S3 latency distribution.
 
 The browser benchmark does not directly measure or isolate AWS Lambda Cold Start and Warm Invocation durations.
 
-The three warm-up runs per scenario were used to exercise the browser workflow and API endpoints before measurement. However, they do not guarantee that subsequent requests use the same Lambda execution environment.
+The three warm-up runs per scenario were used to exercise the browser workflow and API endpoints before measurement. However, browser warm-up does not guarantee that subsequent requests use the same Lambda execution environment.
 
-The recorded API response duration must not be interpreted as Lambda execution duration.
+Browser-observed API response duration includes network and backend response time. It must not be interpreted as Lambda execution duration.
 
-Separate CloudWatch Lambda REPORT records were inspected to identify cold-start evidence during the benchmark observation window. These observations are reported separately and cannot be mapped reliably to individual benchmark scenario runs.
+### Lambda CloudWatch Evidence
 
-### Lambda Cold Start and Invocation Evidence
+CloudWatch Logs for `/aws/lambda/aa-companies-lambda` were inspected for the period **2026-11-13 21:53–22:33 UTC (2026-11-14 04:53–05:33 Thailand time)**.
 
-CloudWatch Logs for the Lambda function `/aws/lambda/aa-companies-lambda` were inspected for the period **2026-11-13 21:53–22:33 UTC (2026-11-14 04:53–05:33 Thailand time)**.
+The Logs Insights query identified 406 Lambda REPORT records:
 
-The Logs Insights queries identified the following results:
-
-| Metric | Result |
+| Record Classification | Invocations |
 |---|---:|
-| Total Lambda REPORT records | 406 |
-| REPORT records containing `Init Duration` (cold starts) | 2 |
-| REPORT records without `Init Duration` | 404 |
+| Records containing `Init Duration` | 2 |
+| Records without `Init Duration` | 404 |
+| **Total** | **406** |
 
-The two cold-start records were found in separate Lambda execution log streams. The remaining 404 REPORT records did not contain an `Init Duration` field.
+Records containing `Init Duration` provide explicit evidence of Lambda cold starts. The two records appeared in separate Lambda execution log streams.
 
-The observation window contained two REPORT records with Init Duration and 404 REPORT records without this field. The latter records cannot be conclusively classified as warm invocations based on this field alone. However, the absence of `Init Duration` in a REPORT record is not, by itself, definitive proof of a warm invocation.
+### Invocation Duration Statistics
 
-Individual Lambda REPORT records could not be reliably mapped to specific benchmark scenario runs because the benchmark CSV files do not contain matching Lambda request IDs. Therefore, these CloudWatch observations are reported separately from the browser E2E and API response-time measurements.
+The following statistics were calculated from CloudWatch REPORT records using Logs Insights percentiles.
+
+| Metric | No `Init Duration` reported (n=404) | `Init Duration` reported (n=2) |
+|---|---:|---:|
+| Duration p50 | 120.8564 ms | 815.60 ms |
+| Duration p95 | 244.5087 ms | 854.71 ms |
+| Duration min | 3.52 ms | 815.60 ms |
+| Duration max | 1,060.16 ms | 854.71 ms |
+| Billed Duration p50 | 120.9773 ms | 1,249 ms |
+| Billed Duration p95 | 244.9979 ms | 1,258 ms |
+
+The two cold-start records reported the following initialization durations:
+
+| Cold Start Record | Init Duration | Duration | Billed Duration |
+|---|---:|---:|---:|
+| 1 | 393.95 ms | 854.71 ms | 1,249 ms |
+| 2 | 441.94 ms | 815.60 ms | 1,258 ms |
+
+The two cold-start observations represent a very small sample and should be treated as descriptive evidence, not as a statistically reliable cold-start baseline.
+
+The 404 records without `Init Duration` are classified as **records without explicit cold-start evidence**. They must not be treated as definitively warm invocations based on the absence of this field alone.
+
+Individual Lambda REPORT records could not be reliably mapped to specific benchmark scenario runs because the benchmark CSV files do not contain matching Lambda request IDs. Therefore, CloudWatch Lambda statistics are reported separately from browser E2E and API response-time measurements.
 
 ## 11. Limitations
 
 - This report covers Cloud/Dev only. Local environment measurements are not included.
 - Network throughput was not reliably measured.
 - Browser-observed API duration includes network and backend response time.
-- Lambda Cold Start and Warm Invocation were not independently measured.
+- CloudWatch Lambda REPORT records were analyzed separately, but individual invocations could not be mapped to benchmark scenario runs. Records without `Init Duration` cannot be conclusively classified as warm invocations.
+- The cold-start statistics are based on only two observed invocations and are not a statistically reliable baseline.
 - Results represent a single-client, concurrency-1 workload and should not be interpreted as a load or stress test.
 - No production environment was used.
 

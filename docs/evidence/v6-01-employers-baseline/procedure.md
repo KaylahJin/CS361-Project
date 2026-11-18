@@ -48,11 +48,10 @@ The baseline will be used to evaluate future performance improvements.
 
 ### Browser Compatibility Note
 
-- Initial manual smoke tests and preliminary warm-up samples were collected using Chrome DevTools.
-- Automated benchmark measurements will use Microsoft Edge through Playwright.
-- Windows Application Control blocks the Chromium executable downloaded by Playwright.
-- Microsoft Edge was verified to launch successfully through Playwright.
-- Manual preliminary results and automated measurements must be treated as separate measurement sets because they use different browser environments.
+- Automated benchmark measurements use Microsoft Edge through Playwright.
+- The benchmark launches Edge using Playwright's `channel: 'msedge'` configuration.
+- The benchmark does not require a hardcoded Windows Edge executable path.
+- Manual preliminary results and automated measurements must be treated as separate measurement sets because they may use different browser environments.
 
 ## 3. Dataset and Indexes
 
@@ -90,7 +89,7 @@ Endpoint: `GET /companies`
 3. Verify that 103 company cards are displayed.
 4. Record all initial `GET /companies` requests.
 
-The current implementation triggers two initial requests when the page loads. Both requests must be recorded separately.
+The baseline dataset contains two initial `GET /companies` responses per S1 run. The benchmark script captures matching responses dynamically rather than assuming a fixed request count. Each observed response is recorded separately.
 
 ### S2: Search Company
 
@@ -153,24 +152,33 @@ npm ci
 **2. Verify the Employers page and browser automation**
 
 ```bash
-node scripts/benchmark/check-employers.mjs
+node scripts/benchmark/check-employers.mjs --url="https://your-cloud-dev-url/#employers"
 ```
 
-The check should confirm that Microsoft Edge launches, the Employers page loads, and 103 company cards are displayed. The Cloud/Dev API must return valid data before proceeding.
+The check should confirm that Microsoft Edge launches, the Employers page loads, and the expected company data is displayed.
 
-This check currently expects Microsoft Edge at the configured Windows executable path. Update the path in the script if Edge is installed elsewhere.
+The URL can also be supplied through the `BENCHMARK_URL` environment variable.
 
 **3. Run warm-up and measurement**
 
-The benchmark script supports separate warm-up and measurement output files. It runs the selected scenarios sequentially and records the results automatically.
+The benchmark script supports the following configuration options:
 
-For the original baseline configuration:
+- `--url=` or `BENCHMARK_URL`: Employers page URL.
+- `--commit=` or `BENCHMARK_COMMIT_SHA`: commit SHA recorded in the output. Git HEAD is used when no value is supplied.
+- `--network=` or `BENCHMARK_NETWORK`: network description recorded in the output.
+- `--out=`: output directory.
+- `--warmup=`: warm-up runs per scenario.
+- `--runs=`: measurement runs per scenario.
+- `--scenarios=`: selected scenarios.
+- `--start-run=`: starting measurement run number.
+
+Example:
 
 ```bash
-BENCHMARK_URL="http://aa-coop-web-617500348719.s3-website-us-east-1.amazonaws.com/#employers" \
-BENCHMARK_COMMIT_SHA="0ae16a57576f065b89f016bc179bd366b019110f" \
-BENCHMARK_NETWORK="Mobile Hotspot" \
 node scripts/benchmark/run-employers-benchmark.mjs \
+  --url="https://your-cloud-dev-url/#employers" \
+  --commit="YOUR_BASELINE_COMMIT_SHA" \
+  --network="Mobile Hotspot" \
   --warmup=3 \
   --runs=30 \
   --scenarios=S1,S2,S3,S4 \
@@ -178,9 +186,7 @@ node scripts/benchmark/run-employers-benchmark.mjs \
   --out=docs/evidence/v6-01-employers-baseline
 ```
 
-The command performs 3 warm-up runs and 30 measurement runs for each selected scenario.
-
-Output files are separated automatically:
+The script writes warm-up and measurement results to separate files:
 
 - `warmup-raw-results.csv`
 - `warmup-run-summary.csv`
@@ -190,19 +196,23 @@ Output files are separated automatically:
 **4. Summarize measurement results**
 
 ```bash
-node scripts/benchmark/summarize-employers-benchmark.mjs
+node scripts/benchmark/summarize-employers-benchmark.mjs \
+  --out=docs/evidence/v6-01-employers-baseline
 ```
 
-The summary script reads the measurement CSV files and calculates p50, p95, minimum, and maximum values using linear interpolation (`PERCENTILE.INC`).
+The summary script also supports `BENCHMARK_OUTPUT_DIR` for configuring the output directory.
+
+The summary calculates p50, p95, minimum, and maximum values from the measurement CSV data using linear interpolation.
 
 **Important Notes**
 
 - Run the benchmark only against the Cloud/Dev environment.
-- The benchmark output directory must be empty before collecting a new baseline. The summary script reads CSV files from the fixed directory `docs/evidence/v6-01-employers-baseline`, so keep the output directory unchanged when using the provided summarize command. Do not rerun the original baseline command against existing evidence files because the script may append duplicate warm-up records before detecting an existing measurement run.
+- Use a fresh output directory for a new evidence collection. Do not rerun into an existing evidence directory because warm-up records may be appended before duplicate measurement runs are detected.
 - `--start-run` allows measurement runs to start from a specified run number when continuing a measurement session.
 - Keep the same browser, network, environment, and test inputs throughout a measurement session.
-- Stop the benchmark if the API returns an unexpected status or the expected number of company rows cannot be verified.
-- Do not include warm-up results in the measurement statistics.
+- Stop the benchmark if the API returns an unexpected status or the expected company rows cannot be verified.
+- Do not include warm-up results in measurement statistics.
+- The script captures matching `/companies` responses dynamically. Do not assume that every future S1 run will produce exactly two API responses.
 
 ### Warm-up Rules
 
@@ -268,11 +278,11 @@ The search debounce time is included in the interaction end-to-end duration.
 
 ### S1 Request Handling
 
-The initial Employers page load triggers two `GET /companies` requests.
-
-- Record both requests as separate rows in `measurement-raw-results.csv`.
-- Count them as one scenario run in `measurement-run-summary.csv`.
-- Do not add the two request durations together and report the sum as page end-to-end duration.
+- Capture all observed `GET /companies` responses during the page-load scenario.
+- Record each API response as a separate row in `measurement-raw-results.csv`.
+- Count each page-load execution as one scenario run in `measurement-run-summary.csv`.
+- The baseline dataset contains two API responses per S1 run, resulting in 60 responses across 30 runs. Future runs may differ if application behavior changes.
+- Do not add API request durations together and report the sum as page end-to-end duration.
 
 ## 7. Statistics
 
