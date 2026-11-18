@@ -1,10 +1,24 @@
 
 import fs from 'node:fs';
 
-const DIR = 'docs/evidence/v6-01-employers-baseline';
+const DEFAULT_OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
 
-const SUMMARY_FILE = `${DIR}/measurement-run-summary.csv`;
-const RAW_FILE = `${DIR}/measurement-raw-results.csv`;
+const outputDirArg = process.argv.find((arg) =>
+  arg.startsWith('--out=')
+);
+
+const OUTPUT_DIR = (
+  outputDirArg !== undefined
+    ? outputDirArg.slice('--out='.length)
+    : process.env.BENCHMARK_OUTPUT_DIR || DEFAULT_OUTPUT_DIR
+).trim();
+
+if (!OUTPUT_DIR) {
+  throw new Error('Output directory cannot be empty.');
+}
+
+const SUMMARY_FILE = `${OUTPUT_DIR}/measurement-run-summary.csv`;
+const RAW_FILE = `${OUTPUT_DIR}/measurement-raw-results.csv`;
 
 function parseCsvLine(line) {
   return [...line.matchAll(/("(?:[^"]|"")*"|[^,]*)(?:,|$)/g)]
