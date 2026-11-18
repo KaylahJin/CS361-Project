@@ -62,7 +62,6 @@ const BENCHMARK_NETWORK = (
 const CONFIG = {
   region: 'us-east-1',
   environment: 'Cloud/Dev',
-  client: 'Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)',
   expectedRows: {
     S1: 103,
     S2: 1,
@@ -550,6 +549,7 @@ async function main() {
     channel: 'msedge',
     headless: true,
   });
+  CONFIG.client = `Microsoft Edge ${browser.version()}`;
 
   try {
     const context = await browser.newContext();
