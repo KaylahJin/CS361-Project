@@ -206,17 +206,18 @@ function extractRows(data) {
   return '';
 }
 
-
 async function collectResponses(
   page,
   action,
-  expectedCount,
   predicate = () => true
 ) {
   const responses = [];
 
   let resolveResponses;
   let rejectResponses;
+  let quietTimer;
+  let actionCompleted = false;
+  let settled = false;
 
   const responsePromise = new Promise((resolve, reject) => {
     resolveResponses = resolve;
@@ -224,31 +225,42 @@ async function collectResponses(
   });
 
   const timeout = setTimeout(() => {
+    if (settled) return;
+    settled = true;
     rejectResponses(
-      new Error(`Timed out waiting for ${expectedCount} companies response(s).`)
+      new Error('Timed out waiting for companies responses.')
     );
   }, 30000);
 
+  function scheduleQuietPeriod() {
+    if (!actionCompleted || responses.length === 0 || settled) {
+      return;
+    }
+
+    clearTimeout(quietTimer);
+
+    quietTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolveResponses(responses);
+    }, 500);
+  }
+
   const listener = (response) => {
-    if (!isCompaniesResponse(response)) return;
+    if (settled || !isCompaniesResponse(response)) return;
 
     const url = new URL(response.url());
 
-    // Collect only responses that match the supplied condition.
     if (!predicate(url)) return;
 
-    // Start reading the response body immediately.
     const detailsPromise = getResponseDetails(response).then(
       (details) => ({ details }),
       (error) => ({ error })
     );
 
     responses.push(detailsPromise);
-
-    if (responses.length === expectedCount) {
-      clearTimeout(timeout);
-      resolveResponses(responses);
-    }
+    scheduleQuietPeriod();
   };
 
   page.on('response', listener);
@@ -257,6 +269,11 @@ async function collectResponses(
 
   try {
     await action();
+
+    const actionEndTime = performance.now();
+
+    actionCompleted = true;
+    scheduleQuietPeriod();
 
     const collected = await responsePromise;
     const results = await Promise.all(collected);
@@ -270,9 +287,12 @@ async function collectResponses(
     return {
       responses: results.map((result) => result.details),
       startTime,
+      actionEndTime,
     };
   } finally {
+    settled = true;
     clearTimeout(timeout);
+    clearTimeout(quietTimer);
     page.off('response', listener);
   }
 }
@@ -316,30 +336,30 @@ async function waitForCards(page, expectedRows) {
   );
 }
 
-
 async function resetPage(page) {
   const initial = await collectResponses(
     page,
-    () => page.reload({ waitUntil: 'domcontentloaded' }),
-    2,
+    async () => {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByRole(searchInput.role, {
+        name: searchInput.name,
+      }).waitFor();
+      await waitForCards(page, 103);
+    },
     (url) =>
       !url.searchParams.has('search') &&
       !url.searchParams.has('province')
   );
 
-  await page.getByRole(searchInput.role, {
-    name: searchInput.name,
-  }).waitFor();
-
-  await waitForCards(page, 103);
-
-  const invalidResponse = initial.responses.some(
-    (response) => response.status !== 200 || response.rows !== 103
-  );
+  const invalidResponse =
+    initial.responses.length === 0 ||
+    initial.responses.some(
+      (response) => response.status !== 200 || response.rows !== 103
+    );
 
   if (invalidResponse) {
     throw new Error(
-      'Page reset failed: expected two successful unfiltered responses with 103 rows.'
+      'Page reset failed: expected successful unfiltered responses with 103 rows.'
     );
   }
 }
@@ -347,17 +367,15 @@ async function resetPage(page) {
 async function recordRun(page, scenario, runType, runNumber) {
   const outputFiles = getOutputFiles(runType);
   let result;
-  let expectedRequestCount;
 
   if (scenario === 'S1') {
     result = await collectResponses(
       page,
-      () => page.reload({ waitUntil: 'domcontentloaded' }),
-      2
+      async () => {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitForCards(page, CONFIG.expectedRows.S1);
+      }
     );
-
-    await waitForCards(page, CONFIG.expectedRows.S1);
-    expectedRequestCount = 2;
   }
 
   if (scenario === 'S2') {
@@ -365,14 +383,14 @@ async function recordRun(page, scenario, runType, runNumber) {
 
     result = await collectResponses(
       page,
-      () => page.getByRole(searchInput.role, {
-        name: searchInput.name,
-      }).fill('CDG'),
-      1
-    );
+      async () => {
+        await page.getByRole(searchInput.role, {
+          name: searchInput.name,
+        }).fill('CDG');
 
-    await waitForCards(page, CONFIG.expectedRows.S2);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S2);
+      }
+    );
   }
 
   if (scenario === 'S3') {
@@ -380,14 +398,14 @@ async function recordRun(page, scenario, runType, runNumber) {
 
     result = await collectResponses(
       page,
-      () => page.getByRole(provinceSelect.role, {
-        name: provinceSelect.name,
-      }).selectOption({ value: 'กรุงเทพมหานคร' }),
-      1
-    );
+      async () => {
+        await page.getByRole(provinceSelect.role, {
+          name: provinceSelect.name,
+        }).selectOption({ value: 'กรุงเทพมหานคร' });
 
-    await waitForCards(page, CONFIG.expectedRows.S3);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S3);
+      }
+    );
   }
 
   if (scenario === 'S4') {
@@ -396,37 +414,46 @@ async function recordRun(page, scenario, runType, runNumber) {
     // Set the province as a precondition, not part of the measured action.
     const setup = await collectResponses(
       page,
-      () => page.getByRole(provinceSelect.role, {
-        name: provinceSelect.name,
-      }).selectOption({ value: 'กรุงเทพมหานคร' }),
-      1
+      async () => {
+        await page.getByRole(provinceSelect.role, {
+          name: provinceSelect.name,
+        }).selectOption({ value: 'กรุงเทพมหานคร' });
+
+        await waitForCards(page, 79);
+      }
     );
 
-    await waitForCards(page, 79);
+    const invalidSetup =
+      setup.responses.length === 0 ||
+      setup.responses.some(
+        (response) => response.status !== 200 || response.rows !== 79
+      );
 
-    const setupDetails = setup.responses[0];
-
-    if (setupDetails.status !== 200 || setupDetails.rows !== 79) {
-    throw new Error('S4 province setup failed. Expected HTTP 200 and 79 rows.');
+    if (invalidSetup) {
+      throw new Error(
+        'S4 province setup failed. Expected successful responses with 79 rows.'
+      );
     }
 
     result = await collectResponses(
       page,
-      () => page.getByRole(searchInput.role, {
-        name: searchInput.name,
-      }).fill('CDG'),
-      1
-    );
+      async () => {
+        await page.getByRole(searchInput.role, {
+          name: searchInput.name,
+        }).fill('CDG');
 
-    await waitForCards(page, CONFIG.expectedRows.S4);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S4);
+      }
+    );
   }
 
-  const scenarioE2e = performance.now() - result.startTime;
+  const scenarioE2e = result.actionEndTime - result.startTime;
 
   const details = result.responses;
 
-  const allSuccessful = details.every((item) => item.status === 200);
+  const allSuccessful =
+    details.length > 0 &&
+    details.every((item) => item.status === 200);
   const allExpectedRows = details.every(
     (item) => item.rows === CONFIG.expectedRows[scenario]
   );
@@ -504,14 +531,14 @@ async function recordRun(page, scenario, runType, runNumber) {
     CONFIG.region,
     CONFIG.client,
     BENCHMARK_NETWORK,
-    expectedRequestCount,
+    details.length,
     scenarioE2e.toFixed(2),
     'Automated Playwright run',
   ]);
 
   console.log(
     `${scenario} ${runType} ${runNumber}: PASS | ` +
-    `Requests: ${expectedRequestCount} | ` +
+    `Requests: ${details.length} | ` +
     `E2E: ${scenarioE2e.toFixed(2)} ms`
   );
 }
