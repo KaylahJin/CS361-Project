@@ -138,15 +138,22 @@ describe('#189 the plan page shows the status and comments the API returned', ()
 
     expect(await screen.findByRole('heading', { name: 'รายละเอียดแผนสหกิจ' })).toBeInTheDocument();
     expect(screen.getByText('รอตรวจ')).toBeInTheDocument();
-    expect(screen.getByText('ความคิดเห็น').nextElementSibling).toHaveTextContent(
-      'กรุณาแนบใบรับรองผลการเรียน',
-    );
 
+    // Since #228 (#227) the page has no separate "ความคิดเห็น" row: the reason
+    // is read in the review history, which also shows the step still waiting
+    // (the advisor, for a SUBMITTED plan) above the decisions already made.
     const history = screen.getByRole('list', { name: 'ประวัติการพิจารณา' });
-    expect(within(history).getAllByRole('listitem')).toHaveLength(1);
-    expect(within(history).getByText('อาจารย์ไม่รับรอง')).toBeInTheDocument();
-    expect(within(history).getByText('advisor1@example.com')).toBeInTheDocument();
-    expect(within(history).getByText('กรุณาแนบใบรับรองผลการเรียน')).toBeInTheDocument();
+    const [waiting, earlier, ...rest] = within(history).getAllByRole('listitem');
+    expect(rest).toHaveLength(0);
+    expect(waiting).toHaveTextContent('รอการรับรองจากอาจารย์ที่ปรึกษา');
+    expect(waiting).toHaveTextContent('รอดำเนินการ');
+    expect(within(earlier).getByText('อาจารย์ไม่รับรอง')).toBeInTheDocument();
+    expect(within(earlier).getByText('advisor1@example.com')).toBeInTheDocument();
+    expect(within(earlier).getByText('กรุณาแนบใบรับรองผลการเรียน')).toBeInTheDocument();
+
+    // The activity log of the plan keeps the same reason next to the decision.
+    const activity = screen.getByRole('list', { name: 'ประวัติกิจกรรมของแผน' });
+    expect(activity).toHaveTextContent('กรุณาแนบใบรับรองผลการเรียน');
   });
 
   it('offers no decision on the page of a plan that is not waiting for the advisor', async () => {
