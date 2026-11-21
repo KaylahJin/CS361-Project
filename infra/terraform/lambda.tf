@@ -35,12 +35,12 @@ resource "aws_lambda_function" "companies" {
       DB_HOST     = aws_db_instance.coop_db.address
       DB_PORT     = "5432"
       DB_NAME     = var.db_name
-      DB_USER     = var.db_username
-      DB_PASSWORD = var.db_password
+      DB_USER     = "coop_app"
+      DB_PASSWORD = var.app_db_password
+
       ATTACHMENTS_BUCKET = local.attachments_bucket
     }
   }
-}
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

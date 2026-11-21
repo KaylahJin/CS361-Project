@@ -5,6 +5,7 @@ import {
   resolveProvince,
   toSeedRows,
   sqlStr,
+  buildCompanySeedSql,
 } from './build-seed.mjs';
 
 describe('extractProvince', () => {
@@ -186,5 +187,53 @@ describe('parseRegistryCodes', () => {
   it('handles a quoted field containing a comma without splitting the row', () => {
     // C88's address has a comma inside quotes; split(',') would lose the company.
     expect(parseRegistryCodes(csv).has('C88')).toBe(true);
+  });
+});
+
+describe('buildCompanySeedSql', () => {
+  const rows = [
+    {
+      company_id: 'C01',
+      name: 'บริษัท ทดสอบ จำกัด',
+      short_name: 'Test Company',
+      province: 'กรุงเทพมหานคร',
+      location: 'กรุงเทพมหานคร',
+      logo_filename: null,
+      url: 'https://example.com',
+    },
+  ];
+
+  it('generates an INSERT statement for new companies', () => {
+    const sql = buildCompanySeedSql(rows);
+
+    expect(sql).toContain("'C01'");
+    expect(sql).toContain("'บริษัท ทดสอบ จำกัด'");
+  });
+
+  it('does not overwrite existing companies when seed runs again', () => {
+    const sql = buildCompanySeedSql(rows);
+
+    expect(sql).toContain('ON CONFLICT (company_id) DO NOTHING');
+    expect(sql).not.toContain('DO UPDATE SET');
+  });
+
+  it('keeps nullable company fields as SQL NULL', () => {
+    const sql = buildCompanySeedSql(rows);
+
+    expect(sql).toContain('NULL');
+  });
+
+  it('generates multiple company rows', () => {
+    const sql = buildCompanySeedSql([
+      ...rows,
+      {
+        ...rows[0],
+        company_id: 'C02',
+        name: 'บริษัท ตัวอย่าง จำกัด',
+      },
+    ]);
+
+    expect(sql).toContain("'C01'");
+    expect(sql).toContain("'C02'");
   });
 });
