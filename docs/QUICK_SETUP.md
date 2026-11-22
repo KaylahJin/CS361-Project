@@ -184,8 +184,9 @@ outputs และขอ DB password ระหว่างทำงาน
 ทำตามคู่มือ [Cognito Setup](cognito-setup.md) เพื่อดำเนินการขั้นตอนที่ต้องทำ
 หลัง Terraform apply:
 
-1. ตั้งค่า Cognito User Pool ID และ Client ID ในไฟล์ `.env`
-   โดยใช้ output จาก Terraform ตามคู่มือ Cognito
+1. ซิงก์ค่า Cognito User Pool ID, Client ID และ API URL
+   จาก Terraform Outputs ลงใน `.env` ด้วยคำสั่ง
+   `npm run env:sync` ตามคู่มือ Environment Configuration
 2. สร้างบัญชีทดสอบผ่านขั้นตอนที่กำหนดในคู่มือ
 3. ตรวจสอบ identity ของแต่ละบัญชี และกำหนด role ผ่าน approved Cognito
    `sub` values ตามขั้นตอนที่ระบุไว้
@@ -330,3 +331,4 @@ npm run web:deploy
 - [Cognito Setup](cognito-setup.md)
 - [V3 Authentication](v3-02-auth.md)
 - [Permission Matrix](permission-matrix.md)
+- [Environment Configuration](environment-configuration.md)

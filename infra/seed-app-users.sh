@@ -156,14 +156,9 @@ while IFS= read -r account; do
   echo "upserted approved role: $ROLE"
 done < "$TMP"
 
-# Deactivate by immutable identity, never by mutable email.
-psql_var "
-  UPDATE app_users SET is_active=FALSE
-  WHERE cognito_sub NOT IN (:'student_sub',:'advisor_sub',:'staff_sub',:'admin_sub',:'committee_sub')
-    AND is_active=TRUE;
-" -v student_sub="$STUDENT_SUB" -v advisor_sub="$ADVISOR_SUB" \
-  -v staff_sub="$STAFF_SUB" -v admin_sub="$ADMIN_SUB" \
-  -v committee_sub="$COMMITTEE_SUB" >/dev/null
+# Do not deactivate users outside the approved test accounts.
+# This script only manages explicitly approved test identities.
+echo "Skipped deactivation of users outside the approved test accounts."
 
 psql -X -h "$PGHOST" -p 5432 -U "$PGUSER" -d "$PGDATABASE" \
   -v ON_ERROR_STOP=1 \

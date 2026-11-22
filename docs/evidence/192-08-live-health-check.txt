@@ -1,0 +1,23 @@
+#192 — Read-only live AWS health check
+Date: 2026-11-09
+AWS account: 672037322614
+Region: us-east-1
+
+Read-only checks:
+  - Lambda `coop-portal-companies-lambda`
+    State: Active
+    Runtime: nodejs22.x
+    LastModified: 2026-11-02T21:57:04.88+07:00
+  - API Gateway `coop-portal-companies-api`
+    GET /companies: HTTP 200
+  - S3 static website
+    GET /: HTTP 200
+  - RDS `coop-portal-coop-db-dev`
+    Status: available
+    Engine: postgres
+    Instance class: db.t4g.micro
+    PubliclyAccessible: true
+
+Scope:
+  - No AWS resources, database records, deployed code, or configuration were changed.
+  - PR #197 remains unmerged and was not deployed. This is a production-baseline health check, not proof that PR #197 is live.
