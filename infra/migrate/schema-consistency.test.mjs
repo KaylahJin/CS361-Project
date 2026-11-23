@@ -35,10 +35,13 @@ describe("base schema parity with V3 migrations (#153)", () => {
     expect(schema).toMatch(/CONSTRAINT\s+fk_plan_attachments_uploader\s+FOREIGN KEY\s*\(uploaded_by\)\s*REFERENCES\s+app_users\(cognito_sub\)/i);
   });
 
-  it("keeps schema.dbml aligned with V3 tables", async () => {
+  it("keeps schema.dbml aligned with V3 tables, column types, and partial unique index", async () => {
     const dbml = await readFile(new URL("../schema.dbml", import.meta.url), "utf8");
 
     for (const table of [
+      "positions",
+      "students",
+      "coop_plans",
       "app_users",
       "advisor_student_assignments",
       "plan_reviews",
@@ -47,5 +50,23 @@ describe("base schema parity with V3 migrations (#153)", () => {
     ]) {
       expect(dbml).toMatch(new RegExp(`Table\\s+${table}\\s*\\{`));
     }
+
+    const studentsBlock = dbml.match(/Table\s+students\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(studentsBlock).toMatch(/first_name\s+text\b/);
+    expect(studentsBlock).toMatch(/last_name\s+text\b/);
+    expect(studentsBlock).toMatch(/email\s+text\b/);
+    expect(studentsBlock).toMatch(/curriculum\s+varchar\(2\)/);
+
+    const positionsBlock = dbml.match(/Table\s+positions\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(positionsBlock).toMatch(/title\s+varchar\(255\)/);
+    expect(positionsBlock).toMatch(/category\s+varchar\(50\)/);
+    expect(positionsBlock).toMatch(/work_mode\s+varchar\(20\)/);
+    expect(positionsBlock).toMatch(/status\s+varchar\(20\)/);
+    expect(positionsBlock).not.toMatch(/\bposition_type\b/);
+
+    const coopPlansBlock = dbml.match(/Table\s+coop_plans\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(coopPlansBlock).toMatch(/\(student_id,\s*period_id\)\s*\[[^\]]*uq_coop_plans_active_period/);
+    const coopPlansAttrsOnly = coopPlansBlock.replace(/"[^"]*"/g, '""');
+    expect(coopPlansAttrsOnly).not.toMatch(/\(student_id,\s*period_id\)\s*\[[^\]]*\bunique\b/);
   });
 });

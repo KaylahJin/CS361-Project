@@ -1,4 +1,4 @@
-// CS361 V2 — DBML for dbdiagram.io
+// CS361 V3 — DBML for dbdiagram.io
 // Paste this whole file into https://dbdiagram.io (or dbdocs.io) to render the ER diagram.
 // Mirrors infra/schema.sql — keep both in sync when the schema changes.
 
@@ -32,28 +32,30 @@ Table coop_info {
   created_at      timestamptz [default: `now()`]
 }
 
-Enum activity_type_enum {
-  APPLICATION
-  INTERVIEW
-  ORIENTATION
-  WORK_PERIOD
-  SUBMISSION
-}
-
 Table positions {
-  position_id   varchar(10) [pk]
-  company_id    varchar(10) [not null, ref: > companies.company_id]
-  title         text        [not null]
-  description   text        [default: '']
-  position_type text
-  created_at    timestamptz [default: `now()`]
+  position_id          varchar(10) [pk]
+  company_id           varchar(10) [not null, ref: > companies.company_id, note: "ON DELETE RESTRICT"]
+  title                varchar(255) [not null]
+  category             varchar(50)  [not null]
+  description          text
+  qualification        text
+  location             text
+  work_mode            varchar(20)  [not null, default: 'unknown']
+  application_deadline date
+  application_url      text
+  status               varchar(20)  [not null, default: 'unknown']
+  source_url           text
+  created_at           timestamptz  [default: `now()`]
 
   indexes {
     company_id
-    position_type
+    category
+    work_mode
+    status
+    title [type: gin, note: "pg_trgm — title search"]
   }
 
-  note: "ON DELETE CASCADE from companies"
+  note: "ON DELETE RESTRICT from companies"
 }
 
 Table periods {
@@ -75,10 +77,10 @@ Table periods {
 
 Table coop_schedules {
   schedule_id   varchar(20) [pk]
-  period_id     varchar(20) [not null, ref: > periods.period_id]
+  period_id     varchar(20) [not null, ref: > periods.period_id, note: "ON DELETE CASCADE"]
   title         text        [not null]
   description   text        [default: '']
-  activity_type varchar(50) [not null]
+  activity_type varchar(50) [not null, note: "APPLICATION | INTERVIEW | ORIENTATION | WORK_PERIOD | SUBMISSION"]
   start_date    date        [not null]
   end_date      date        [not null]
   step_order    integer     [not null]
@@ -86,20 +88,25 @@ Table coop_schedules {
 
   indexes {
     period_id
-    step_order
     activity_type
   }
 }
 
 Table students {
-  student_id VARCHAR(10) [pk]
-  first_name varchar(100) [not null]
-  last_name  varchar(100) [not null]
-  email      varchar(150) [not null, unique]
+  student_id varchar(10)  [pk]
+  first_name text         [not null]
+  last_name  text         [not null]
+  email      text         [not null, unique]
   phone      varchar(20)
   birth_date date
-  curriculum char(2)      [not null]
+  curriculum varchar(2)   [not null]
   gpa        decimal(3,2)
+
+  indexes {
+    curriculum
+    first_name [type: gin, note: "pg_trgm — partial name search"]
+    last_name  [type: gin, note: "pg_trgm — partial name search"]
+  }
 }
 
 Table student_courses {
@@ -135,7 +142,7 @@ Table coop_plans {
     (status, submitted_at)
     period_id
     position_id
-    (student_id, period_id) [unique, note: "partial unique index uq_coop_plans_active_period"]
+    (student_id, period_id) [name: 'uq_coop_plans_active_period', note: "PARTIAL UNIQUE INDEX WHERE status IN ('PREPARING', 'SUBMITTED', 'RETURNED', 'ENDORSED', 'ELIGIBLE', 'SELECTED', 'NOT_SELECTED') — not full-table unique"]
   }
 }
 
