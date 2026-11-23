@@ -19,9 +19,10 @@ const browser = await chromium.launch({
   headless: true,
 });
 
+const apiResponses = [];
+
 try {
   const page = await browser.newPage();
-  const apiResponses = [];
 
   page.on('response', (response) => {
     try {
