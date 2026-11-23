@@ -19,9 +19,14 @@ export class CompanyApiError extends Error {
   }
 }
 
+export interface CompanyRequestOptions {
+  signal?: AbortSignal;
+}
+
 /** Fetch companies with optional search + filter */
 export async function getCompanies(
-  params?: CompanyQueryParams
+  params?: CompanyQueryParams,
+  options?: CompanyRequestOptions
 ): Promise<Company[]> {
   const qs = new URLSearchParams();
   if (params?.search) qs.set('search', params.search);
@@ -29,7 +34,9 @@ export async function getCompanies(
 
   const queryStr = qs.toString();
   const url = `${API_BASE}/companies${queryStr ? `?${queryStr}` : ''}`;
-  const res = await fetch(url);
+  const res = options?.signal
+    ? await fetch(url, { signal: options.signal })
+    : await fetch(url);
 
   if (!res.ok) {
     throw new CompanyApiError(

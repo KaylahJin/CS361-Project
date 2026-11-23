@@ -60,6 +60,12 @@ function makeDb({ status = 'SUBMITTED' } = {}) {
       const assigned = params[0] === ADVISOR.sub && params[1] === OWNER.studentId;
       return { rows: assigned ? [{ student_id: params[1] }] : [] };
     }
+    // The plan read goes first: since #192 (PR #197) getCoopPlanById joins
+    // coop_schedules for the submission deadline, so "FROM coop_schedules"
+    // alone no longer means the submission-window query.
+    if (sql.includes('FROM coop_plans p')) {
+      return { rows: params[0] === state.plan.plan_id ? [{ ...state.plan }] : [] };
+    }
     if (sql.includes('FROM coop_schedules')) {
       return { rows: [{ start_date: '2026-10-01', end_date: '2026-11-30', is_open: true }] };
     }
@@ -114,9 +120,6 @@ function makeDb({ status = 'SUBMITTED' } = {}) {
           reviewer_name: 'advisor@example.com',
         })),
       };
-    }
-    if (sql.includes('FROM coop_plans p')) {
-      return { rows: params[0] === state.plan.plan_id ? [{ ...state.plan }] : [] };
     }
     throw new Error(`unexpected query: ${sql}`);
   }
