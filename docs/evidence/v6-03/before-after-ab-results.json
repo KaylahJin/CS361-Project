@@ -1,0 +1,473 @@
+{
+  "before": {
+    "S1_Open": [
+      {
+        "elapsedMs": 2585.2,
+        "companiesReqCount": 2,
+        "companiesPayloadBytes": 110320,
+        "logoReqCount": 99,
+        "statuses": [
+          200,
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2413.6,
+        "companiesReqCount": 2,
+        "companiesPayloadBytes": 110320,
+        "logoReqCount": 99,
+        "statuses": [
+          200,
+          200
+        ]
+      },
+      {
+        "elapsedMs": 4114,
+        "companiesReqCount": 2,
+        "companiesPayloadBytes": 110320,
+        "logoReqCount": 99,
+        "statuses": [
+          200,
+          200
+        ]
+      },
+      {
+        "elapsedMs": 7333.8,
+        "companiesReqCount": 2,
+        "companiesPayloadBytes": 110320,
+        "logoReqCount": 99,
+        "statuses": [
+          200,
+          200
+        ]
+      },
+      {
+        "elapsedMs": 4980.6,
+        "companiesReqCount": 2,
+        "companiesPayloadBytes": 110320,
+        "logoReqCount": 99,
+        "statuses": [
+          200,
+          200
+        ]
+      }
+    ],
+    "S2_Search": [
+      {
+        "elapsedMs": 764.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 930,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1229.4,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 713.3,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1359.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "Clear_Filter": [
+      {
+        "elapsedMs": 1671,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 99,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1276.5,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 94,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1776.6,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 94,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2537.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 94,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 12794.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 99,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "S3_Province": [
+      {
+        "elapsedMs": 2193.1,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 72,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 907.3,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 72,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2442.3,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 72,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2933.9,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 72,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2445,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 72,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "S4_Combined": [
+      {
+        "elapsedMs": 722,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 665.4,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 694,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 722.4,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 892.1,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      }
+    ]
+  },
+  "after": {
+    "S1_Open": [
+      {
+        "elapsedMs": 4062.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 5164,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2792.3,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 2725.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1781.1,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 55160,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "S2_Search": [
+      {
+        "elapsedMs": 2396,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1054,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1393.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1407.5,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1333,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "Clear_Filter": [
+      {
+        "elapsedMs": 1072.4,
+        "companiesReqCount": 0,
+        "companiesPayloadBytes": 0,
+        "logoReqCount": 8,
+        "statuses": []
+      },
+      {
+        "elapsedMs": 1285.9,
+        "companiesReqCount": 0,
+        "companiesPayloadBytes": 0,
+        "logoReqCount": 8,
+        "statuses": []
+      },
+      {
+        "elapsedMs": 1283.1,
+        "companiesReqCount": 0,
+        "companiesPayloadBytes": 0,
+        "logoReqCount": 8,
+        "statuses": []
+      },
+      {
+        "elapsedMs": 1358.9,
+        "companiesReqCount": 0,
+        "companiesPayloadBytes": 0,
+        "logoReqCount": 8,
+        "statuses": []
+      },
+      {
+        "elapsedMs": 1365.8,
+        "companiesReqCount": 0,
+        "companiesPayloadBytes": 0,
+        "logoReqCount": 8,
+        "statuses": []
+      }
+    ],
+    "S3_Province": [
+      {
+        "elapsedMs": 6439,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 3164.6,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1523.6,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1160.5,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1262.4,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 43264,
+        "logoReqCount": 8,
+        "statuses": [
+          200
+        ]
+      }
+    ],
+    "S4_Combined": [
+      {
+        "elapsedMs": 1122.7,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1414.4,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 975.8,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1409.6,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      },
+      {
+        "elapsedMs": 1274.5,
+        "companiesReqCount": 1,
+        "companiesPayloadBytes": 475,
+        "logoReqCount": 1,
+        "statuses": [
+          200
+        ]
+      }
+    ]
+  },
+  "apiUrl": "https://kkp7n9zb0e.execute-api.us-east-1.amazonaws.com",
+  "timestamp": "2026-11-16T10:42:37.023Z"
+}
