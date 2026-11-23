@@ -105,6 +105,9 @@ CREATE TABLE periods (
     academic_year INT NOT NULL,
     semester      VARCHAR(5) NOT NULL DEFAULT '1',
     is_active     BOOLEAN NOT NULL DEFAULT FALSE,
+    min_gpa       NUMERIC(3,2),
+    min_group_gpa NUMERIC(3,2),
+    capacity      INTEGER,
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -212,7 +215,10 @@ CREATE TABLE coop_plans (
         FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
 
     CONSTRAINT chk_coop_plans_status
-        CHECK (status IN ('PREPARING','SUBMITTED','UNDER_REVIEW','APPROVED','REJECTED')),
+        CHECK (status IN ('PREPARING', 'SUBMITTED', 'RETURNED',
+                          'ENDORSED', 'ELIGIBLE', 'NOT_ELIGIBLE',
+                          'SELECTED', 'NOT_SELECTED',
+                          'APPROVED', 'REJECTED')),
 
     CONSTRAINT chk_coop_plans_submitted
         CHECK (status = 'PREPARING'
@@ -233,6 +239,10 @@ CREATE INDEX idx_coop_plans_student       ON coop_plans(student_id);
 CREATE INDEX idx_coop_plans_status_submit ON coop_plans(status, submitted_at);
 CREATE INDEX idx_coop_plans_period        ON coop_plans(period_id);
 CREATE INDEX idx_coop_plans_position      ON coop_plans(position_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_coop_plans_active_period
+    ON coop_plans(student_id, period_id)
+    WHERE status IN ('PREPARING', 'SUBMITTED', 'RETURNED', 'ENDORSED', 'ELIGIBLE',
+                     'SELECTED', 'NOT_SELECTED');
 
 -- อัปเดต updated_at อัตโนมัติ
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
@@ -256,10 +266,72 @@ CREATE TABLE IF NOT EXISTS position_periods (
 
 CREATE INDEX IF NOT EXISTS idx_position_periods_period ON position_periods(period_id);
 
--- 9. plan_attachments — ไฟล์แนบของแผน (V3-02)
--- uploaded_by -> app_users(cognito_sub) FK is added by
--- infra/migrate/migrations/v3_02_attachments_upgrade.sql, because app_users
--- does not exist yet when this file runs.
+-- 9. app_users — บัญชีผู้ใช้ที่จับคู่กับ Cognito (V3)
+CREATE TABLE IF NOT EXISTS app_users (
+    cognito_sub VARCHAR(64) PRIMARY KEY,
+    email       TEXT UNIQUE NOT NULL,
+    role        VARCHAR(20) NOT NULL,
+    student_id  VARCHAR(10) REFERENCES students(student_id) ON DELETE SET NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT app_users_role_check
+        CHECK (role IN ('STUDENT', 'ADVISOR', 'STAFF', 'COMMITTEE', 'ADMIN')),
+    CONSTRAINT chk_app_users_student_link
+        CHECK (role <> 'STUDENT' OR student_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_student ON app_users(student_id);
+
+-- 10. advisor_student_assignments — อาจารย์ที่ปรึกษากับนักศึกษาในความดูแล (V3)
+CREATE TABLE IF NOT EXISTS advisor_student_assignments (
+    advisor_sub VARCHAR(64) NOT NULL,
+    student_id  VARCHAR(10) NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (advisor_sub, student_id),
+    CONSTRAINT advisor_student_assignments_advisor_sub_fkey
+        FOREIGN KEY (advisor_sub) REFERENCES app_users(cognito_sub)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_advisor_assignments_student
+    ON advisor_student_assignments(student_id);
+
+-- 11. plan_reviews — ประวัติการพิจารณาแผนทุกขั้นตอน (V3)
+CREATE TABLE IF NOT EXISTS plan_reviews (
+    review_id    SERIAL PRIMARY KEY,
+    plan_id      INTEGER NOT NULL REFERENCES coop_plans(plan_id) ON DELETE CASCADE,
+    reviewer_sub VARCHAR(64) NOT NULL,
+    decision     VARCHAR(20) NOT NULL,
+    comment      TEXT,
+    reviewed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    step         VARCHAR(20),
+
+    CONSTRAINT plan_reviews_reviewer_sub_fkey
+        FOREIGN KEY (reviewer_sub) REFERENCES app_users(cognito_sub)
+        ON UPDATE CASCADE,
+    CONSTRAINT plan_reviews_decision_check
+        CHECK (decision IN ('APPROVED', 'RETURNED', 'REJECTED',
+                            'ENDORSED', 'NOT_ENDORSED',
+                            'ELIGIBLE', 'INCOMPLETE', 'NOT_ELIGIBLE',
+                            'SELECTED', 'NOT_SELECTED')),
+    CONSTRAINT chk_plan_reviews_step
+        CHECK (CASE
+            WHEN step IS NULL THEN decision IN ('APPROVED', 'RETURNED', 'REJECTED')
+            WHEN step = 'ENDORSEMENT' THEN decision IN ('ENDORSED', 'NOT_ENDORSED')
+            WHEN step = 'SCREENING' THEN decision IN ('ELIGIBLE', 'INCOMPLETE', 'NOT_ELIGIBLE')
+            WHEN step = 'SELECTION' THEN decision IN ('SELECTED', 'NOT_SELECTED')
+            ELSE FALSE
+        END),
+    CONSTRAINT chk_plan_reviews_comment
+        CHECK (decision IN ('APPROVED', 'ENDORSED', 'ELIGIBLE', 'SELECTED')
+               OR (comment IS NOT NULL AND length(btrim(comment)) > 0))
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_reviews_plan ON plan_reviews(plan_id);
+
+-- 12. plan_attachments — ไฟล์แนบของแผน (V3-02)
 CREATE TABLE IF NOT EXISTS plan_attachments (
     attachment_id SERIAL PRIMARY KEY,
     plan_id       INTEGER NOT NULL REFERENCES coop_plans(plan_id) ON DELETE CASCADE,
@@ -270,6 +342,8 @@ CREATE TABLE IF NOT EXISTS plan_attachments (
     uploaded_by   VARCHAR(64) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
+    CONSTRAINT fk_plan_attachments_uploader
+        FOREIGN KEY (uploaded_by) REFERENCES app_users(cognito_sub),
     CONSTRAINT chk_plan_attachments_type CHECK (content_type = 'application/pdf'),
     CONSTRAINT chk_plan_attachments_size CHECK (size_bytes > 0 AND size_bytes <= 5242880),
     CONSTRAINT chk_plan_attachments_name CHECK (length(btrim(file_name)) > 0)

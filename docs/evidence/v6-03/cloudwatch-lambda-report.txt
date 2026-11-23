@@ -1,0 +1,32 @@
+AWS CloudWatch Logs — /aws/lambda/coop-portal-companies-lambda
+Captured at: 2026-11-16T10:44:38.991Z
+Environment: us-east-1 | Runtime: nodejs22.x | Memory: 128 MB | DB: coop-portal-coop-db-dev (PostgreSQL 16.15, db.t4g.micro)
+
+=== Recent CloudWatch Log Events for /aws/lambda/coop-portal-companies-lambda ===
+Stream: 2026/11/16/[$LATEST]4fae05b4166742eca6369eb313c08273 2026-11-16T10:37:30.882Z
+   REPORT RequestId: 54ca6761-07ea-44b3-aafa-2e5db447a6c7	Duration: 83.27 ms	Billed Duration: 84 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 8eedcd6d-b570-4b9d-b13f-ec78b720acd2	Duration: 4.36 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 819fbeba-836e-4f4c-95c7-17a65aee3423	Duration: 117.39 ms	Billed Duration: 118 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 85e372ae-2806-4ad7-8398-3a9d542281e7	Duration: 4.34 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: f236944d-c786-45c8-9907-f7522c3b1bc1	Duration: 98.39 ms	Billed Duration: 99 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: dede12e7-da98-4cf9-bcb7-256b0e823e0a	Duration: 31.58 ms	Billed Duration: 32 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 6e704a9d-728f-43d5-9912-9aea5fee8111	Duration: 136.37 ms	Billed Duration: 137 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 14225933-a003-4bf3-8603-9717085e5388	Duration: 4.03 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 1fdf95e6-fa6d-4cfc-9a28-783b44444243	Duration: 92.75 ms	Billed Duration: 93 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 02308046-c8e5-48e6-824b-dbb67bd4a9ad	Duration: 4.26 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+Stream: 2026/11/16/[$LATEST]27116035fcc44ef09e652f44f5d14c0f 2026-11-16T10:37:27.236Z
+   REPORT RequestId: 8ca0c39b-3b51-40db-8f1f-f1d26d95a6ac	Duration: 4.64 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: d83283d7-c99a-4e9b-8d36-262f675810d0	Duration: 111.58 ms	Billed Duration: 112 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: 34e54992-3860-43dc-92f8-5603c24782d7	Duration: 83.53 ms	Billed Duration: 84 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: c76e3317-22a4-46ae-94ea-c7c7b30b7c17	Duration: 10.23 ms	Billed Duration: 11 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: d51bec12-1744-40d5-9e36-90089d0d60c9	Duration: 155.12 ms	Billed Duration: 156 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: e5a5f1d3-b1af-44e1-9ee9-bce20f7f5c68	Duration: 4.29 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: a731b62d-37bc-47e7-950a-32ce8455f894	Duration: 112.41 ms	Billed Duration: 113 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: e87c1bae-abcd-4513-93e7-2a6b232e9e1d	Duration: 87.89 ms	Billed Duration: 88 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: 703f9217-ca7f-4f90-86a8-81865e3f4b66	Duration: 4.61 ms	Billed Duration: 5 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+   REPORT RequestId: 8f05acaf-0673-429e-945d-b500d30262d8	Duration: 131.92 ms	Billed Duration: 132 ms	Memory Size: 128 MB	Max Memory Used: 101 MB
+Stream: 2026/11/16/[$LATEST]5810267153d543abaa91b9af41a0b5fe 2026-11-16T10:28:29.454Z
+   REPORT RequestId: d955d7a7-26d1-4bdb-8748-056bb7e4cd7d	Duration: 787.26 ms	Billed Duration: 1299 ms	Memory Size: 128 MB	Max Memory Used: 103 MB	Init Duration: 511.02 ms
+   REPORT RequestId: 7036cff8-ea88-45a5-b265-42c832da57b2	Duration: 57.03 ms	Billed Duration: 58 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 3d0ffbb6-0c71-4a5a-ba83-bd94b13eb532	Duration: 91.04 ms	Billed Duration: 92 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
+   REPORT RequestId: 37e842c2-27f5-4223-a6c0-96b6eabffc72	Duration: 11.11 ms	Billed Duration: 12 ms	Memory Size: 128 MB	Max Memory Used: 103 MB
