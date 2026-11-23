@@ -177,13 +177,13 @@ Example:
 ```bash
 node scripts/benchmark/run-employers-benchmark.mjs \
   --url="https://your-cloud-dev-url/#employers" \
-  --commit="YOUR_BASELINE_COMMIT_SHA" \
+  --commit="DEPLOYED_BUILD_COMMIT_SHA" \
   --network="Mobile Hotspot" \
   --warmup=3 \
   --runs=30 \
   --scenarios=S1,S2,S3,S4 \
   --start-run=1 \
-  --out=docs/evidence/v6-01-employers-baseline
+  --out=docs/evidence/v6-04-employers-after
 ```
 
 The script writes warm-up and measurement results to separate files:
@@ -225,9 +225,13 @@ The summary calculates p50, p95, minimum, and maximum values from the measuremen
 ### Measurement Rules
 
 - Perform 30 measured runs for each scenario.
-- The benchmark script executes warm-up runs before measurement runs for each scenario.
+- For the recorded baseline, warm-up and measurement were executed as separate batches.
+- All automated warm-up runs were collected separately during 2026-11-13 21:53–21:55 UTC.
+- Measurement runs started at approximately 21:57 UTC and continued until approximately 22:33 UTC.
+- Warm-up results were stored separately and were not included in measurement statistics.
 - Warm-up and measurement results are written to separate CSV files.
-- Warm-up runs do not guarantee reuse of the same Lambda execution environment.
+- The time between warm-up and measurement varied by scenario. For example, S4 measurement started approximately 35 minutes after its warm-up run.
+- Browser warm-up does not guarantee reuse of the same AWS Lambda execution environment.
 
 
 ## 6. Measurement Rules

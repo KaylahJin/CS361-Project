@@ -140,6 +140,41 @@ The original recorded measurements were retained. No additional benchmark runs w
 
 The gap should be considered when interpreting the S3 latency distribution.
 
+### Warm-up and Measurement Separation
+
+The warm-up and measurement datasets were collected in separate execution batches.
+
+- Automated warm-up runs were executed during 2026-11-13 21:53–21:55 UTC.
+- Measurement runs started at approximately 21:57 UTC and continued until approximately 22:33 UTC.
+- Warm-up results were stored separately and excluded from the measurement statistics.
+- The time between warm-up and measurement varied by scenario. For example, S4 measurement started approximately 35 minutes after its warm-up run.
+
+Therefore, the warm-up runs should not be interpreted as immediately preceding each corresponding measurement run. Browser warm-up also does not guarantee that the same AWS Lambda execution environment was reused during measurement.
+
+### Cold Start Timestamps
+
+Two Lambda `REPORT` records containing `Init Duration` were identified during the measurement period on 2026-11-13.
+
+| Record | Timestamp (UTC) | Init Duration | Duration | Billed Duration |
+|---|---|---:|---:|---:|
+| 1 | 2026-11-13 22:28:02.415 | 393.95 ms | 854.71 ms | 1,249 ms |
+| 2 | 2026-11-13 22:28:02.460 | 441.94 ms | 815.60 ms | 1,258 ms |
+
+Both records occurred during the measurement period (approximately 21:57–22:33 UTC), not during the warm-up period (21:53–21:55 UTC).
+
+The records were emitted by two different Lambda execution environments, as indicated by their distinct log streams. This confirms that cold starts occurred during measurement.
+
+#### CloudWatch Logs Insights Query
+
+The following query was used to identify Lambda `REPORT` records containing `Init Duration`:
+
+```sql
+fields @timestamp, @logStream, @message
+| filter @message like /REPORT/
+| filter @message like /Init Duration/
+| sort @timestamp asc
+```
+
 ## 10. Cold Start and Warm Invocation
 
 The browser benchmark does not directly measure or isolate AWS Lambda Cold Start and Warm Invocation durations.
