@@ -179,14 +179,24 @@ flowchart LR
 | #268 | Dashboard (issue หลัก) | @Pawit-Billamas, @KaylahJin | — | 12 | #258 |
 | #266 | จำนวนนักศึกษาตามสถานะและรายการค้าง | @Pawit-Billamas | @Tatdanai6609611964 | 6 | #258 |
 | #267 | สถานประกอบการ ภาระงาน และแนวโน้ม | @KaylahJin | @SunanthidaPhaengbao | 6 | #258, #266 |
-| #271 | นำเข้า/ส่งออก (issue หลัก) | @ruvcandyfruit, @KaylahJin | — | 9 | #258 |
-| #269 | ส่งออก CSV ตามสิทธิ์ | @ruvcandyfruit | @KaylahJin | 6 | #258 |
+| #271 | นำเข้า/ส่งออก (issue หลัก) | @KaylahJin | — | 9 | #258 |
+| #269 | ส่งออก CSV ตามสิทธิ์ | @KaylahJin | @Pawit-Billamas | 6 | #258 |
 | #270 | นำเข้านักศึกษาแบบ Atomic Import | @KaylahJin | @Tatdanai6609611964 | 3 | #258 |
 | #272 | [QA] ทดสอบกันเองในขอบเขต V7 (28 พ.ย.) | @ruvcandyfruit | @SunanthidaPhaengbao | 4 | #268, #271 |
 
 **Tester ของ issue หลัก:** #262 → @Pawit-Billamas, #268 → @ruvcandyfruit, #271 → @Tatdanai6609611964 · **QA:** @ruvcandyfruit
 
-รวม V7 49 ชม. เมื่อรวมกับงานใน #264 (54 ชม.) ภาระต่อคนอยู่ระหว่าง 18–23 ชม.
+**การสลับงาน (25 พ.ย. 2569 บันทึกใน #263):** เครดิต Learner Lab ของ @ruvcandyfruit หมด คนวางแผนจึงสลับ #269 (ส่งออก CSV ซึ่งต้อง deploy เอง) ไปให้ @KaylahJin และสลับ #279 (รวมหลักฐาน V5 + V6 ใน milestone Final ซึ่งเป็นงานเอกสาร) ไปให้ @ruvcandyfruit ส่วน #272 ยังเป็นของ @ruvcandyfruit โดยทดสอบบนระบบที่เพื่อน deploy ไว้
+
+รวม V7 49 ชม. เมื่อรวมกับงานใน #264 (54 ชม.) ภาระต่อคนเป็นดังนี้
+
+| คน | ชม. ใน V7 | ชม. รวมสอง milestone |
+|---|---:|---:|
+| @SunanthidaPhaengbao | 15 | 23 |
+| @KaylahJin | 15 | 21 |
+| @ruvcandyfruit | 4 | 21 |
+| @Pawit-Billamas | 6 | 20 |
+| @Tatdanai6609611964 | 9 | 18 |
 
 ## 7. ข้อจำกัดของ Environment
 
