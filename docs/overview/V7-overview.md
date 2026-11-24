@@ -2,7 +2,7 @@
 
 > issue: #259 (sub-issue ของ #262) · milestone: V7 – Integrated System (ครบกำหนด 30 พ.ย. 2569)
 >
-> สถานะเอกสาร: **ร่าง** ส่วน Scope จะปรับตามมติ Grill ใน #257 และ #258 ส่วนการแบ่งงานรอผลการตัดสินใน #263 และช่อง Evidence ที่ต้องวัดจาก AWS จริงจะเติมใน #260
+> Scope มาจากผล Grill ใน #257 และ #258 การแบ่งงานมาจากแผนที่ทีมยืนยันใน #263 และช่อง Evidence ที่ต้องวัดจาก AWS จริงจะเติมใน #260
 
 ## 1. Overview
 
@@ -16,13 +16,13 @@ V7 ไม่เพิ่ม Workflow หรือสถานะใหม่ ง
 
 ส่วนการทดสอบรวม V5–V7 ทั้งระบบ, Feedback, Final Report และพรีเซนต์อยู่ใน milestone `Final – Integration, Feedback & Delivery` (แผนอยู่ใน #264)
 
-## 2. Scope (ร่าง ตาม #257 และ #258)
+## 2. Scope (ตามผล Grill ใน #257 และ #258)
 
 | | รายละเอียด | ที่มา |
 |---|---|---|
-| Primary User | เจ้าหน้าที่สหกิจ (`STAFF`) ส่วนผู้บริหารรับรายงานเป็นไฟล์ | #257 |
-| In scope | flow เดิมของ V1–V6, หน้าสรุปสำหรับ `STAFF` (FR9), ส่งออกรายการแผนเป็น CSV ตามสิทธิ์ (FR10), นำเข้านักศึกษาด้วย script เดิมของ #102 (FR10), บันทึกว่าใครนำเข้าหรือส่งออก (FR7) | #258 |
-| Out of scope | role ผู้บริหาร, สถานะเฟส 2–4 (Applied ถึง Completed), ซิงก์อัตโนมัติกับระบบทะเบียน, การแจ้งเตือน, HTTPS ผ่าน CloudFront, Multi-AZ, ตัวเลขแบบ real-time | #258 |
+| Primary User | เจ้าหน้าที่สหกิจ (`STAFF`) ผู้บริหารรับรายงานเป็นไฟล์ CSV อาจารย์ใช้ Workflow เดิม | #257 |
+| In scope | flow เดิมของ V1–V6, หน้าสรุปสำหรับ `STAFF` (FR9), ส่งออกรายการแผนเป็น CSV ตามสิทธิ์ (FR10), นำเข้านักศึกษาแบบ Atomic Import คือถ้ามีแถวผิดให้ยกเลิกทั้งไฟล์ และตรวจด้วย Dry Run ก่อน (FR10), บันทึกว่าใครนำเข้าหรือส่งออก (FR7) | #258 |
+| Out of scope | role ผู้บริหาร, สถานะเฟส 2–4 (Applied ถึง Completed), ซิงก์อัตโนมัติกับระบบทะเบียนหรือสถานประกอบการ, การแจ้งเตือน, HTTPS ผ่าน CloudFront, Multi-AZ, ตัวเลขแบบ real-time, เครื่องมือ BI ภายนอก | #257, #258 |
 
 ## 3. Architecture ทั้งระบบ
 
@@ -96,7 +96,7 @@ flowchart LR
 |---|---|---|---|
 | อาจารย์เห็นแผนของนักศึกษาที่ไม่ได้อยู่ในความดูแล | กรองด้วย `advisor_student_assignments` | `reviewAccess.test.mjs`, `docs/permission-matrix.md` | ต้องดูแลข้อมูลการจับคู่ให้ถูก |
 | ไฟล์แนบหลุดเป็นลิงก์สาธารณะ | bucket private และ presigned URL อายุ 300 วินาที | `attachmentRules.mjs`, `deploy-attachments-bucket.sh` | ลิงก์หมดอายุเร็ว ผู้ใช้ต้องกดใหม่ |
-| ไฟล์ส่งออก (FR10) มีข้อมูลส่วนบุคคลเกินสิทธิ์ | ตาราง role × ฟิลด์ที่ส่งออกได้ และ test ยืนยัน | ตัดสินใน #258 และทำในงาน FR10 ตามแผน #263 | ไฟล์ที่ส่งออกไปแล้วระบบควบคุมต่อไม่ได้ |
+| ไฟล์ส่งออก (FR10) มีข้อมูลส่วนบุคคลเกินสิทธิ์ (`students` มี `email`, `phone`, `birth_date`, `gpa`) | ตาราง role × ฟิลด์ที่ส่งออกได้ ตัดที่ฝั่ง server และมี test ต่อ role | มติ Grill ข้อ 7 ใน #258 และ test ใน #269 | ไฟล์ที่ส่งออกไปแล้วระบบควบคุมต่อไม่ได้ |
 | ข้อมูลระหว่างทางถูกดักอ่าน | API ใช้ HTTPS และ DB ใช้ TLS (`ssl` ใน `db.mjs`) | `db.mjs` | หน้าเว็บเป็น HTTP แต่ไม่ได้ส่งข้อมูลส่วนบุคคลผ่านเส้นทางนั้นตรงๆ และ `rejectUnauthorized: false` ยังไม่ตรวจ certificate |
 
 > **Decision (Privacy):** เราเลือกส่งออกเป็นไฟล์ CSV ที่กรองฟิลด์ตาม role แทนการให้ผู้บริหารมีบัญชีในระบบ เพราะผู้บริหารต้องการแค่รายงาน เราพิจารณาเพิ่ม role ผู้บริหารแต่ไม่เลือก เพราะต้องเพิ่มสิทธิ์และหน้าจอใหม่ Trade-off คือข้อมูลในไฟล์ที่ส่งออกไปแล้วอยู่นอกการควบคุมของระบบ
@@ -108,6 +108,7 @@ flowchart LR
 | AZ ของ RDS ล่ม | ไม่มี Multi-AZ ใช้การสร้างใหม่จาก Terraform และ seed (V5) เป็นแผน DR แบบ backup & restore (ACA M16 หน้า 30–42) | `rds.tf`, `docs/terraform-setup-guide.md`, RPO/RTO และ backup retention → **#260** | ข้อมูลที่สร้างหลัง backup ล่าสุดหาย |
 | Learner Lab session หมดอายุแล้ว resource หยุด | ข้อจำกัดของ environment บันทึกไว้และมีขั้นตอนเปิดใหม่ | `docs/working-agreement.md` §8 | ระบบไม่ได้เปิดตลอด 24 ชม. |
 | Lambda cold start ใน VPC ช้าจน timeout | timeout 10 วินาที | `lambda.tf` | request แรกหลังว่างนานช้า |
+| ไฟล์นำเข้าผิดบางแถวแล้วข้อมูลเข้าไปครึ่งเดียว | Atomic Import ทั้งไฟล์อยู่ใน transaction เดียว และ Dry Run ก่อน (มติ #258) | #270 (script เดิมของ #102 commit ทีละแถว) | แถวที่ถูกต้องต้องรอจนแก้แถวที่ผิดครบ |
 
 > **Decision (Availability):** เราเลือก backup & restore ด้วย Terraform และ seed แทน Multi-AZ เพราะระบบใช้ในการเรียนและข้อมูลสร้างใหม่ได้ เราพิจารณา Multi-AZ แต่ไม่เลือก เพราะค่า instance เพิ่มเป็นราว 2 เท่า Trade-off คือมี downtime ระหว่างสร้างใหม่ ตัวเลข RPO/RTO จริงรอ #260
 
@@ -116,7 +117,7 @@ flowchart LR
 | Threat | Control | Evidence | Trade-off |
 |---|---|---|---|
 | Lambda scale จน connection ของ RDS เต็ม (ไม่มี RDS Proxy, CS361 Module06 หน้า 15) | pool ต่อ execution context มี `max: 5` | `db.mjs`, ค่า `max_connections` และเพดาน concurrency ตามสูตร (max_connections − others) × 0.8 ÷ 5 (CS361 Module10 หน้า 27) → **#260**, ปรับ config → **#261** | ยังไม่มี reserved concurrency ถ้าตั้งไว้ request ส่วนเกินจะถูก throttle |
-| ตัวเลขสรุป (FR9) ช้าเมื่อข้อมูลโต | ใช้ aggregate query (GROUP BY/JOIN) บน RDS ก่อน ส่วน cache และ read replica เป็นทางเลือกที่ไม่เลือก (ACA M06 หน้า 9, ACA M12 หน้า 11 และ 16) | ผลวัดในงาน FR9 ตามแผน #263 | ทุกครั้งที่เปิดหน้าคือ query ใหม่ |
+| ตัวเลขสรุป (FR9) ช้าเมื่อข้อมูลโต | ใช้ aggregate query (GROUP BY/JOIN) บน RDS ก่อน ส่วน cache และ read replica เป็นทางเลือกที่ไม่เลือก (ACA M06 หน้า 9, ACA M12 หน้า 11 และ 16) | ผลวัดใน #266 และ #267 | ทุกครั้งที่เปิดหน้าคือ query ใหม่ |
 
 > **Decision (Scalability):** เราตัด RDS Proxy ออกแล้วให้ Lambda ต่อ RDS ตรงด้วย pool ขนาดเล็ก เพราะ Proxy ทำให้ apply ช้าและติดสิทธิ์ใน Learner Lab (working agreement §8) เราพิจารณาคง Proxy ไว้แต่ไม่เลือก เพราะ traffic ระดับนี้ยังไม่คุ้ม Trade-off คือต้องคุมจำนวน connection เอง ซึ่ง #260 จะวัดเพดานจริง
 
@@ -125,7 +126,7 @@ flowchart LR
 | Threat | Control | Evidence | Trade-off |
 |---|---|---|---|
 | ค้นหา/กรองสถานประกอบการช้า | ปรับการโหลดหน้า Employers ใน V6 (#240, PR #251) | `docs/overview/V6-overview.md`, `docs/evidence/v6-03/` | วัดเฉพาะเส้นทาง Employers |
-| หน้าสรุป FR9 ช้า | ตั้ง SLO ตามผู้ทดสอบ (CS361 Module10) แล้ววัดก่อนตัดสินใจเพิ่ม cache | ผลวัดในงาน FR9 | ยังไม่มีตัวเลข |
+| หน้าสรุป FR9 ช้า | ตั้ง SLO ตามผู้ทดสอบ (CS361 Module10) แล้ววัดก่อนตัดสินใจเพิ่ม cache | ผลวัดใน #266 และ #267 | ยังไม่มีตัวเลข |
 
 > **Decision (Performance):** เราเลือกวัดก่อนแล้วค่อยปรับ (Monitor → Measure → Decide, CS361 Module10 หน้า 3) แทนการเพิ่ม cache ล่วงหน้า เพราะ cache เพิ่มทั้งค่าใช้จ่ายและความเสี่ยงที่ตัวเลขไม่ตรงกับข้อมูลจริง และยังไม่มีตัวเลขว่าช้า Trade-off คือหน้าใหม่อาจช้าจนกว่าจะวัด
 
@@ -155,29 +156,42 @@ flowchart LR
 | User Story | FR | Issue |
 |---|---|---|
 | US1–US10 ของ V4 (ดูข้อมูล, สร้าง/ส่งแผน, ตรวจแผน, Deadline, สิทธิ์และประวัติ, ค้นหา/กรอง) | FR1–FR8 | ดู `docs/overview/V4-overview.md` §6.1 |
-| US11: เจ้าหน้าที่เห็นจำนวนนักศึกษาในแต่ละสถานะและรายการค้างหรือเกินกำหนด | FR9 | รอเปิดตามผลการตัดสินใน #263 |
-| US12: เจ้าหน้าที่เห็นสถานประกอบการที่มีนักศึกษาไป ช่วงภาระงานสูง และแนวโน้มการจัดสรรแหล่งฝึก | FR9 | รอเปิดตามผลการตัดสินใน #263 |
-| US13: เจ้าหน้าที่ส่งออกรายการแผนเป็นไฟล์ได้เฉพาะฟิลด์ที่มีสิทธิ์ | FR10, FR7 | รอเปิดตามผลการตัดสินใน #263 |
-| US14: ผู้ดูแลนำเข้านักศึกษารอบใหม่ได้โดยข้อมูลเดิมไม่เสีย | FR10 | #102 (script เดิม) และงานตามผลการตัดสินใน #263 |
-| US15: ทีมอธิบาย Architecture และ trade-off ทั้งระบบได้ด้วยหลักฐาน | ทุก FR | #262 (#259, #260, #261) |
+| US11: เจ้าหน้าที่เห็นจำนวนนักศึกษาในแต่ละสถานะและรายการค้างหรือเกินกำหนด | FR9 | #266 (ใต้ #268) |
+| US12: เจ้าหน้าที่เห็นสถานประกอบการที่มีนักศึกษาไป ช่วงภาระงานสูง และแนวโน้มการจัดสรรแหล่งฝึก | FR9 | #267 (ใต้ #268) |
+| US13: เจ้าหน้าที่ส่งออกรายการแผนเป็นไฟล์ได้เฉพาะฟิลด์ที่มีสิทธิ์ | FR10, FR7 | #269 (ใต้ #271) |
+| US14: ผู้ดูแลนำเข้านักศึกษารอบใหม่ได้โดยข้อมูลเดิมไม่เสีย | FR10 | #270 (ใต้ #271) ต่อยอด script ของ #102 |
+| US15: ทีมอธิบาย Architecture และ trade-off ทั้งระบบได้ด้วยหลักฐาน | ทุก FR | #262 (#259, #260, #261, #263) |
+| US16: ทีมมั่นใจว่า FR9 และ FR10 ใช้ได้กับทุก role ก่อนปิด V7 | FR9, FR10 | #272 |
 
 ## 6. การแบ่งงานของทีม
 
-ตารางนี้ใส่เฉพาะงานที่มี issue แล้ว งานที่เหลือจะเติมหลังทีมยืนยันแผนใน #263 (ร่างแผนอยู่ใน comment ของ #263)
+ตามแผนที่ทีมยืนยันใน #263 (เลยกำหนดยืนยัน 24 พ.ย. 2569 เวลา 21:00 น. โดยไม่มีผู้คัดค้าน) งานช่วงปิดโปรเจกต์อยู่ใน milestone `Final – Integration, Feedback & Delivery` ตามแผนใน #264
 
-| issue | งาน | ใคร | ชม. | รอ |
-|---|---|---|---:|---|
-| #257 | Definition | @SunanthidaPhaengbao | 3 | — |
-| #258 | Boundary | @SunanthidaPhaengbao | 3 | #257 |
-| #262 | Overview & Architecture (issue หลัก, ผลรวม sub-issue) | @SunanthidaPhaengbao | 18 | #257, #258 |
-| #259 | เอกสารนี้ | @SunanthidaPhaengbao | 6 | #257, #258, #263 |
-| #260 | หลักฐาน Architecture จาก AWS | รอเลือก | 5 | #259 |
-| #261 | ปรับ config ตามผลทบทวน | รอเลือก | 4 | #260 |
-| #263 | วางแผนและแบ่งงาน V7 | @SunanthidaPhaengbao | 3 | #257, #258 |
+| issue | งาน | Assignee | Reviewer | ชม. | รอ |
+|---|---|---|---|---:|---|
+| #257 | Definition | @SunanthidaPhaengbao | ทุกคน (Grill) | 3 | — |
+| #258 | Boundary | @SunanthidaPhaengbao | ทุกคน (Grill) | 3 | #257 |
+| #262 | Overview & Architecture (issue หลัก) | @SunanthidaPhaengbao | — | 18 | #257, #258 |
+| #259 | เอกสารนี้ | @SunanthidaPhaengbao | @KaylahJin | 6 | #257, #258, #263 |
+| #260 | หลักฐาน Architecture จาก AWS | @Tatdanai6609611964 | @Pawit-Billamas | 5 | #259 |
+| #261 | ปรับ config ตามผลทบทวน | @Tatdanai6609611964 | @ruvcandyfruit | 4 | #260 |
+| #263 | วางแผนและแบ่งงาน V7 | @SunanthidaPhaengbao | ทุกคน (ติ๊ก) | 3 | #257, #258 |
+| #268 | Dashboard (issue หลัก) | @Pawit-Billamas, @KaylahJin | — | 12 | #258 |
+| #266 | จำนวนนักศึกษาตามสถานะและรายการค้าง | @Pawit-Billamas | @Tatdanai6609611964 | 6 | #258 |
+| #267 | สถานประกอบการ ภาระงาน และแนวโน้ม | @KaylahJin | @SunanthidaPhaengbao | 6 | #258, #266 |
+| #271 | นำเข้า/ส่งออก (issue หลัก) | @ruvcandyfruit, @KaylahJin | — | 9 | #258 |
+| #269 | ส่งออก CSV ตามสิทธิ์ | @ruvcandyfruit | @KaylahJin | 6 | #258 |
+| #270 | นำเข้านักศึกษาแบบ Atomic Import | @KaylahJin | @Tatdanai6609611964 | 3 | #258 |
+| #272 | [QA] ทดสอบกันเองในขอบเขต V7 (28 พ.ย.) | @ruvcandyfruit | @SunanthidaPhaengbao | 4 | #268, #271 |
+
+**Tester ของ issue หลัก:** #262 → @Pawit-Billamas, #268 → @ruvcandyfruit, #271 → @Tatdanai6609611964 · **QA:** @ruvcandyfruit
+
+รวม V7 49 ชม. เมื่อรวมกับงานใน #264 (54 ชม.) ภาระต่อคนอยู่ระหว่าง 18–23 ชม.
 
 ## 7. ข้อจำกัดของ Environment
 
 - AWS Academy Learner Lab ใช้ `LabRole` ร่วมกัน สร้าง IAM Role และใช้ CloudFront ไม่ได้ และ session หมดอายุเป็นรอบ (`docs/working-agreement.md` §8)
+- เครดิต Learner Lab มีจำกัด และมีสมาชิกแจ้งใน #263 ว่าเครดิตเต็มแล้ว งานที่ต้อง deploy จึงต้องใช้บัญชีของสมาชิกที่ยังมีเครดิต
 - ห้าม commit secret และหลักฐานทุกชิ้นต้องปิด secret กับข้อมูลส่วนบุคคลก่อนเก็บใน `docs/evidence/`
 - สไลด์ของรายวิชาไม่ได้พูดถึง Terraform, PDPA, materialized view หรือ RDS Proxy ในเชิงลึก การตัดสินใจเรื่องเหล่านี้เป็นของทีมเอง
 
