@@ -500,7 +500,9 @@ function PlanDetail({
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid items-start gap-6 lg:grid-cols-2">
+      {/* Left Column */}
+      <div className="flex min-w-0 flex-col gap-6">
         {/* Student */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
@@ -512,7 +514,6 @@ function PlanDetail({
               <h2 className="font-bold text-slate-800">
                 ข้อมูลนักศึกษา
               </h2>
-
               <p className="text-xs text-slate-400">
                 Student Information
               </p>
@@ -520,9 +521,18 @@ function PlanDetail({
           </div>
 
           <InfoRow label="รหัสนักศึกษา" value={plan.student_id} />
-          <InfoRow label="ชื่อ-นามสกุล" value={`${plan.first_name} ${plan.last_name}`} />
-          <InfoRow label="หลักสูตร" value={`หลักสูตร ${plan.curriculum}`} />
-          <InfoRow label="รอบสหกิจ" value={plan.period_name || plan.period_id} />
+          <InfoRow
+            label="ชื่อ-นามสกุล"
+            value={`${plan.first_name} ${plan.last_name}`}
+          />
+          <InfoRow
+            label="หลักสูตร"
+            value={`หลักสูตร ${plan.curriculum}`}
+          />
+          <InfoRow
+            label="รอบสหกิจ"
+            value={plan.period_name || plan.period_id}
+          />
         </section>
 
         {/* Company */}
@@ -536,7 +546,6 @@ function PlanDetail({
               <h2 className="font-bold text-slate-800">
                 สถานประกอบการ
               </h2>
-
               <p className="text-xs text-slate-400">
                 Company Information
               </p>
@@ -550,8 +559,17 @@ function PlanDetail({
           <InfoRow label="รหัสตำแหน่ง" value={plan.position_id} />
         </section>
 
+        {/* Attachments */}
+        <PlanAttachmentSummary
+          planId={plan.plan_id}
+          getIdToken={getIdToken}
+        />
+      </div>
+
+      {/* Right Column */}
+      <div className="flex min-w-0 flex-col gap-6">
         {/* Terms */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="self-start w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="rounded-xl bg-emerald-50 p-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -561,14 +579,13 @@ function PlanDetail({
               <h2 className="font-bold text-slate-800">
                 การยอมรับเงื่อนไข
               </h2>
-
               <p className="text-xs text-slate-400">
                 Pre-co-op Conditions
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-4">
             <div>
               <p className="text-sm font-semibold text-slate-700">
                 ยอมรับเงื่อนไขก่อนเริ่มสหกิจ
@@ -582,19 +599,22 @@ function PlanDetail({
             </div>
 
             {plan.acknowledged_pre_course ? (
-              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+              <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-500" />
             ) : (
-              <XCircle className="h-6 w-6 text-slate-300" />
+              <XCircle className="h-6 w-6 shrink-0 text-slate-300" />
             )}
           </div>
 
           <div className="mt-4">
-            <InfoRow label="หมายเหตุจากนักศึกษา" value={plan.student_note} />
+            <InfoRow
+              label="หมายเหตุจากนักศึกษา"
+              value={plan.student_note}
+            />
           </div>
         </section>
 
         {/* Review */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="self-start w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="rounded-xl bg-amber-50 p-3">
               <UserRound className="h-5 w-5 text-amber-600" />
@@ -604,21 +624,16 @@ function PlanDetail({
               <h2 className="font-bold text-slate-800">
                 ผลการพิจารณา
               </h2>
-
               <p className="text-xs text-slate-400">
                 Review Information
               </p>
             </div>
           </div>
 
-          <InfoRow label="ผู้ตรวจสอบ" value={plan.reviewer_name} />
-          <InfoRow label="วันที่ตรวจสอบ" value={formatDate(plan.reviewed_at)} />
-          <InfoRow label="ความคิดเห็น" value={plan.review_comment} />
-
-          <div className="pt-4">
-            <h3 className="mb-2 text-xs font-semibold text-slate-400">ประวัติการพิจารณา</h3>
-            <ReviewHistory reviews={plan.reviews} />
-          </div>
+          <ReviewHistory
+            reviews={plan.reviews}
+            planStatus={plan.status}
+          />
 
           <div className="mt-4 border-t border-slate-100 pt-4">
             <h3 className="mb-2 text-xs font-semibold text-slate-400">
@@ -627,12 +642,8 @@ function PlanDetail({
             <PlanActivityTimeline plan={plan} />
           </div>
         </section>
-
-        <PlanAttachmentSummary
-          planId={plan.plan_id}
-          getIdToken={getIdToken}
-        />
       </div>
+    </div>
 
       {confirmSubmit && (
         <div

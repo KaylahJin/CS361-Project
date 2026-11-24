@@ -10,6 +10,7 @@
     StudentCourseImportRecord,
   } from "../../../../src/types/studentImport.js";
   import { parseStudentCsv, parseStudentCoursesCsv} from "./import-validation.js";
+  import { mergeStudentForUpdate } from "./import-update.mjs";
 
   const { Pool } = pg;
 
@@ -192,12 +193,13 @@
           return { file: "students.csv", row: rowNumber, key: row.student_id, status: "SKIPPED", message: "ข้อมูลตรงกับฐานข้อมูลแล้ว" };
         }
 
+        const preserved = mergeStudentForUpdate(existing.rows[0], row);
         await client.query(
           `UPDATE students
           SET first_name = $2, last_name = $3, email = $4, phone = $5,
               birth_date = $6, curriculum = $7, gpa = $8
           WHERE student_id = $1`,
-          [row.student_id, row.first_name, row.last_name, row.email, row.phone, row.birth_date, row.curriculum, row.gpa],
+          [row.student_id, row.first_name, row.last_name, row.email, preserved.phone, preserved.birth_date, row.curriculum, preserved.gpa],
         );
         await client.query("COMMIT");
         return { file: "students.csv", row: rowNumber, key: row.student_id, status: "UPDATED", message: "ปรับปรุงข้อมูลนักศึกษาเดิม" };

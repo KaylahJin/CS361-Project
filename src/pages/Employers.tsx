@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   Calendar,
@@ -12,6 +12,37 @@ import type { Company, ProvinceOption } from '../types/company';
 import { DATA_CONTEXT } from '../constants/dataContext';
 
 const SEARCH_DEBOUNCE_MS = 300;
+const INITIAL_EAGER_LOGO_COUNT = 8;
+
+function deriveCompanyMetadata(data: Company[]): {
+  totalCount: number;
+  provinceOptions: ProvinceOption[];
+} {
+  const counts = new Map<string, number>();
+
+  for (const company of data) {
+    counts.set(company.province, (counts.get(company.province) ?? 0) + 1);
+  }
+
+  const provinceOptions = Array.from(counts, ([province, count]) => ({
+    province,
+    count,
+  })).sort((a, b) => a.province.localeCompare(b.province, 'th'));
+
+  return {
+    totalCount: data.length,
+    provinceOptions,
+  };
+}
+
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof Error && err.name === 'AbortError') ||
+    (typeof DOMException !== 'undefined' &&
+      err instanceof DOMException &&
+      err.name === 'AbortError')
+  );
+}
 
 interface EmployersProps {
   onViewPositions: (company: Company) => void;
@@ -85,6 +116,8 @@ const EmployerCard: React.FC<EmployerCardProps> = ({
               <img
                 src={`/images/logos/${company.logo_filename}`}
                 alt={`โลโก้ ${company.name}`}
+                loading={index < INITIAL_EAGER_LOGO_COUNT ? 'eager' : 'lazy'}
+                decoding="async"
                 onError={() => setHasError(true)}
                 className="max-h-10 max-w-full object-contain sm:max-h-12"
               />
@@ -158,6 +191,16 @@ export const Employers: React.FC<EmployersProps> = ({
   const [selectedProvince, setSelectedProvince] = useState('');
   const [provinceOptions, setProvinceOptions] = useState<ProvinceOption[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
+  const unfilteredCompaniesRef = useRef<Company[] | null>(null);
+  const unfilteredRequestRef = useRef<Promise<Company[]> | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // หน่วงเวลาค้นหาเพื่อลดจำนวน request
   useEffect(() => {
@@ -169,51 +212,73 @@ export const Employers: React.FC<EmployersProps> = ({
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  // โหลดข้อมูลบริษัททั้งหมดครั้งแรกเพื่อสร้างตัวกรองจังหวัดและนับจำนวนบริษัท
-  useEffect(() => {
-    getCompanies()
-      .then((data) => {
-        setTotalCount(data.length);
-
-        const counts = new Map<string, number>();
-
-        for (const company of data) {
-          counts.set(
-            company.province,
-            (counts.get(company.province) ?? 0) + 1
-          );
-        }
-
-        const provinces = Array.from(
-          counts,
-          ([province, count]) => ({ province, count })
-        ).sort((a, b) => a.province.localeCompare(b.province, 'th'));
-
-        setProvinceOptions(provinces);
-      })
-      .catch(() => {
-        // ไม่ใช่ข้อผิดพลาดหลัก หากโหลดข้อมูลสำหรับตัวกรองไม่สำเร็จ
-      });
-  }, []);
-
-  // โหลดรายการบริษัทตามคำค้นหาและจังหวัดที่เลือก
+  // โหลดข้อมูลบริษัทแบบรวมคำขอเดียวเมื่อเปิดหน้า พร้อมแคชรายการเริ่มต้นไว้ใช้ซ้ำเมื่อล้างตัวกรอง
   useEffect(() => {
     let cancelled = false;
+    const hasFilter = Boolean(debouncedSearch || selectedProvince);
+
+    const fetchUnfilteredOnce = () => {
+      if (unfilteredCompaniesRef.current !== null) {
+        return Promise.resolve(unfilteredCompaniesRef.current);
+      }
+
+      if (!unfilteredRequestRef.current) {
+        unfilteredRequestRef.current = getCompanies()
+          .then((data) => {
+            unfilteredCompaniesRef.current = data;
+            if (isMountedRef.current) {
+              const meta = deriveCompanyMetadata(data);
+              setTotalCount(meta.totalCount);
+              setProvinceOptions(meta.provinceOptions);
+            }
+            return data;
+          })
+          .catch((err) => {
+            unfilteredRequestRef.current = null;
+            throw err;
+          });
+      }
+
+      return unfilteredRequestRef.current;
+    };
+
+    if (!hasFilter && unfilteredCompaniesRef.current !== null) {
+      setCompanies(unfilteredCompaniesRef.current);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
-    getCompanies({
-      search: debouncedSearch || undefined,
-      province: selectedProvince || undefined,
-    })
+    const controller =
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
+
+    if (hasFilter && unfilteredCompaniesRef.current === null) {
+      fetchUnfilteredOnce().catch(() => {
+        // ไม่ใช่ข้อผิดพลาดหลัก หากโหลดข้อมูลสำหรับตัวกรองไม่สำเร็จ
+      });
+    }
+
+    const request = hasFilter
+      ? getCompanies(
+          {
+            search: debouncedSearch || undefined,
+            province: selectedProvince || undefined,
+          },
+          controller ? { signal: controller.signal } : undefined
+        )
+      : fetchUnfilteredOnce();
+
+    request
       .then((data) => {
         if (!cancelled) {
           setCompanies(data);
         }
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled || isAbortError(err)) return;
 
         setError(
           err instanceof CompanyApiError
@@ -229,6 +294,9 @@ export const Employers: React.FC<EmployersProps> = ({
 
     return () => {
       cancelled = true;
+      if (hasFilter) {
+        controller?.abort();
+      }
     };
   }, [debouncedSearch, selectedProvince]);
 

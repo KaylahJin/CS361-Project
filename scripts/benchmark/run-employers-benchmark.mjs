@@ -1,16 +1,67 @@
 
 import { chromium } from 'playwright';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
+const commitArg = process.argv.find((arg) =>
+  arg.startsWith('--commit='),
+);
+
+const COMMIT_SHA = (
+  commitArg?.slice('--commit='.length) ||
+  process.env.BENCHMARK_COMMIT_SHA ||
+  execFileSync('git', ['rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  }).trim()
+).trim();
+
+if (!COMMIT_SHA) {
+  throw new Error('Commit SHA cannot be empty.');
+}
+
+const urlArg = process.argv.find((arg) =>
+  arg.startsWith('--url='),
+);
+
+const BENCHMARK_URL = (
+  urlArg?.slice('--url='.length) ||
+  process.env.BENCHMARK_URL ||
+  ''
+).trim();
+
+if (!BENCHMARK_URL) {
+  throw new Error(
+    'Benchmark URL is required. Use --url= or BENCHMARK_URL.',
+  );
+}
+
+try {
+  const parsedUrl = new URL(BENCHMARK_URL);
+
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new Error('Unsupported protocol.');
+  }
+} catch {
+  throw new Error(
+    `Invalid benchmark URL: ${BENCHMARK_URL}. Use HTTP or HTTPS.`,
+  );
+}
+
+const networkArg = process.argv.find((arg) =>
+  arg.startsWith('--network='),
+);
+
+const BENCHMARK_NETWORK = (
+  networkArg?.slice('--network='.length) ||
+  process.env.BENCHMARK_NETWORK ||
+  'Unknown'
+).trim();
+
 const CONFIG = {
-  url: 'http://aa-coop-web-617500348719.s3-website-us-east-1.amazonaws.com/#employers',
-  commitSha: '0ae16a57576f065b89f016bc179bd366b019110f',
   region: 'us-east-1',
   environment: 'Cloud/Dev',
-  client: 'Microsoft Edge 157.0.4341.46 (Playwright 1.65.0)',
-  network: 'Mobile Hotspot',
   expectedRows: {
     S1: 103,
     S2: 1,
@@ -19,9 +70,38 @@ const CONFIG = {
   },
 };
 
-const OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
-const RAW_FILE = path.join(OUTPUT_DIR, 'measurement-raw-results.csv');
-const SUMMARY_FILE = path.join(OUTPUT_DIR, 'measurement-run-summary.csv');
+const DEFAULT_OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
+
+const outputDirArg = process.argv.find((arg) => arg.startsWith('--out='));
+
+const OUTPUT_DIR = outputDirArg
+  ? outputDirArg.slice('--out='.length).trim()
+  : DEFAULT_OUTPUT_DIR;
+
+if (!OUTPUT_DIR) {
+  throw new Error('Output directory cannot be empty.');
+}
+
+const OUTPUT_FILES = {
+  warmup: {
+    raw: path.join(OUTPUT_DIR, 'warmup-raw-results.csv'),
+    summary: path.join(OUTPUT_DIR, 'warmup-run-summary.csv'),
+  },
+  measurement: {
+    raw: path.join(OUTPUT_DIR, 'measurement-raw-results.csv'),
+    summary: path.join(OUTPUT_DIR, 'measurement-run-summary.csv'),
+  },
+};
+
+function getOutputFiles(runType) {
+  const files = OUTPUT_FILES[runType];
+
+  if (!files) {
+    throw new Error(`Invalid run type: ${runType}`);
+  }
+
+  return files;
+}
 
 const warmupRuns = Number(
   process.argv.find((arg) => arg.startsWith('--warmup='))?.split('=')[1] ?? 0
@@ -77,13 +157,20 @@ function csv(value) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-function appendCsv(file, values) {
+function appendCsv(file, headers, values) {
+  const isNewFile = !fs.existsSync(file) || fs.statSync(file).size === 0;
+
+  if (isNewFile) {
+    fs.appendFileSync(file, `${headers.map(csv).join(',')}\n`);
+  }
+
   fs.appendFileSync(file, `${values.map(csv).join(',')}\n`);
 }
 
-
 function hasMeasurementRun(scenario, runNumber) {
-  if (!fs.existsSync(SUMMARY_FILE)) return false;
+  const summaryFile = OUTPUT_FILES.measurement.summary;
+
+  if (!fs.existsSync(summaryFile)) return false;
 
   const prefix = [
     csv(scenario),
@@ -92,7 +179,7 @@ function hasMeasurementRun(scenario, runNumber) {
   ].join(',');
 
   return fs
-    .readFileSync(SUMMARY_FILE, 'utf8')
+    .readFileSync(summaryFile, 'utf8')
     .split(/\r?\n/)
     .some((line) => line.startsWith(`${prefix},`));
 }
@@ -118,17 +205,18 @@ function extractRows(data) {
   return '';
 }
 
-
 async function collectResponses(
   page,
   action,
-  expectedCount,
   predicate = () => true
 ) {
   const responses = [];
 
   let resolveResponses;
   let rejectResponses;
+  let quietTimer;
+  let actionCompleted = false;
+  let settled = false;
 
   const responsePromise = new Promise((resolve, reject) => {
     resolveResponses = resolve;
@@ -136,31 +224,42 @@ async function collectResponses(
   });
 
   const timeout = setTimeout(() => {
+    if (settled) return;
+    settled = true;
     rejectResponses(
-      new Error(`Timed out waiting for ${expectedCount} companies response(s).`)
+      new Error('Timed out waiting for companies responses.')
     );
   }, 30000);
 
+  function scheduleQuietPeriod() {
+    if (!actionCompleted || responses.length === 0 || settled) {
+      return;
+    }
+
+    clearTimeout(quietTimer);
+
+    quietTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolveResponses(responses);
+    }, 500);
+  }
+
   const listener = (response) => {
-    if (!isCompaniesResponse(response)) return;
+    if (settled || !isCompaniesResponse(response)) return;
 
     const url = new URL(response.url());
 
-    // Collect only responses that match the supplied condition.
     if (!predicate(url)) return;
 
-    // Start reading the response body immediately.
     const detailsPromise = getResponseDetails(response).then(
       (details) => ({ details }),
       (error) => ({ error })
     );
 
     responses.push(detailsPromise);
-
-    if (responses.length === expectedCount) {
-      clearTimeout(timeout);
-      resolveResponses(responses);
-    }
+    scheduleQuietPeriod();
   };
 
   page.on('response', listener);
@@ -169,6 +268,11 @@ async function collectResponses(
 
   try {
     await action();
+
+    const actionEndTime = performance.now();
+
+    actionCompleted = true;
+    scheduleQuietPeriod();
 
     const collected = await responsePromise;
     const results = await Promise.all(collected);
@@ -182,9 +286,12 @@ async function collectResponses(
     return {
       responses: results.map((result) => result.details),
       startTime,
+      actionEndTime,
     };
   } finally {
+    settled = true;
     clearTimeout(timeout);
+    clearTimeout(quietTimer);
     page.off('response', listener);
   }
 }
@@ -228,47 +335,46 @@ async function waitForCards(page, expectedRows) {
   );
 }
 
-
 async function resetPage(page) {
   const initial = await collectResponses(
     page,
-    () => page.reload({ waitUntil: 'domcontentloaded' }),
-    2,
+    async () => {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByRole(searchInput.role, {
+        name: searchInput.name,
+      }).waitFor();
+      await waitForCards(page, 103);
+    },
     (url) =>
       !url.searchParams.has('search') &&
       !url.searchParams.has('province')
   );
 
-  await page.getByRole(searchInput.role, {
-    name: searchInput.name,
-  }).waitFor();
-
-  await waitForCards(page, 103);
-
-  const invalidResponse = initial.responses.some(
-    (response) => response.status !== 200 || response.rows !== 103
-  );
+  const invalidResponse =
+    initial.responses.length === 0 ||
+    initial.responses.some(
+      (response) => response.status !== 200 || response.rows !== 103
+    );
 
   if (invalidResponse) {
     throw new Error(
-      'Page reset failed: expected two successful unfiltered responses with 103 rows.'
+      'Page reset failed: expected successful unfiltered responses with 103 rows.'
     );
   }
 }
 
 async function recordRun(page, scenario, runType, runNumber) {
+  const outputFiles = getOutputFiles(runType);
   let result;
-  let expectedRequestCount;
 
   if (scenario === 'S1') {
     result = await collectResponses(
       page,
-      () => page.reload({ waitUntil: 'domcontentloaded' }),
-      2
+      async () => {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitForCards(page, CONFIG.expectedRows.S1);
+      }
     );
-
-    await waitForCards(page, CONFIG.expectedRows.S1);
-    expectedRequestCount = 2;
   }
 
   if (scenario === 'S2') {
@@ -276,14 +382,14 @@ async function recordRun(page, scenario, runType, runNumber) {
 
     result = await collectResponses(
       page,
-      () => page.getByRole(searchInput.role, {
-        name: searchInput.name,
-      }).fill('CDG'),
-      1
-    );
+      async () => {
+        await page.getByRole(searchInput.role, {
+          name: searchInput.name,
+        }).fill('CDG');
 
-    await waitForCards(page, CONFIG.expectedRows.S2);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S2);
+      }
+    );
   }
 
   if (scenario === 'S3') {
@@ -291,14 +397,14 @@ async function recordRun(page, scenario, runType, runNumber) {
 
     result = await collectResponses(
       page,
-      () => page.getByRole(provinceSelect.role, {
-        name: provinceSelect.name,
-      }).selectOption({ value: 'กรุงเทพมหานคร' }),
-      1
-    );
+      async () => {
+        await page.getByRole(provinceSelect.role, {
+          name: provinceSelect.name,
+        }).selectOption({ value: 'กรุงเทพมหานคร' });
 
-    await waitForCards(page, CONFIG.expectedRows.S3);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S3);
+      }
+    );
   }
 
   if (scenario === 'S4') {
@@ -307,37 +413,46 @@ async function recordRun(page, scenario, runType, runNumber) {
     // Set the province as a precondition, not part of the measured action.
     const setup = await collectResponses(
       page,
-      () => page.getByRole(provinceSelect.role, {
-        name: provinceSelect.name,
-      }).selectOption({ value: 'กรุงเทพมหานคร' }),
-      1
+      async () => {
+        await page.getByRole(provinceSelect.role, {
+          name: provinceSelect.name,
+        }).selectOption({ value: 'กรุงเทพมหานคร' });
+
+        await waitForCards(page, 79);
+      }
     );
 
-    await waitForCards(page, 79);
+    const invalidSetup =
+      setup.responses.length === 0 ||
+      setup.responses.some(
+        (response) => response.status !== 200 || response.rows !== 79
+      );
 
-    const setupDetails = setup.responses[0];
-
-    if (setupDetails.status !== 200 || setupDetails.rows !== 79) {
-    throw new Error('S4 province setup failed. Expected HTTP 200 and 79 rows.');
+    if (invalidSetup) {
+      throw new Error(
+        'S4 province setup failed. Expected successful responses with 79 rows.'
+      );
     }
 
     result = await collectResponses(
       page,
-      () => page.getByRole(searchInput.role, {
-        name: searchInput.name,
-      }).fill('CDG'),
-      1
-    );
+      async () => {
+        await page.getByRole(searchInput.role, {
+          name: searchInput.name,
+        }).fill('CDG');
 
-    await waitForCards(page, CONFIG.expectedRows.S4);
-    expectedRequestCount = 1;
+        await waitForCards(page, CONFIG.expectedRows.S4);
+      }
+    );
   }
 
-  const scenarioE2e = performance.now() - result.startTime;
+  const scenarioE2e = result.actionEndTime - result.startTime;
 
   const details = result.responses;
 
-  const allSuccessful = details.every((item) => item.status === 200);
+  const allSuccessful =
+    details.length > 0 &&
+    details.every((item) => item.status === 200);
   const allExpectedRows = details.every(
     (item) => item.rows === CONFIG.expectedRows[scenario]
   );
@@ -353,17 +468,35 @@ async function recordRun(page, scenario, runType, runNumber) {
   for (let index = 0; index < details.length; index += 1) {
     const item = details[index];
 
-    appendCsv(RAW_FILE, [
+    appendCsv(outputFiles.raw, [
+      'scenario',
+      'run_type',
+      'run_number',
+      'response_number',
+      'timestamp',
+      'environment',
+      'commit_sha',
+      'region',
+      'client',
+      'network',
+      'search',
+      'province',
+      'http_status',
+      'api_duration_ms',
+      'response_bytes',
+      'response_rows',
+      'note',
+    ], [
       scenario,
       runType,
       runNumber,
       index + 1,
       item.timestamp,
       CONFIG.environment,
-      CONFIG.commitSha,
+      COMMIT_SHA,
       CONFIG.region,
       CONFIG.client,
-      CONFIG.network,
+      BENCHMARK_NETWORK,
       item.search,
       item.province,
       item.status,
@@ -374,24 +507,37 @@ async function recordRun(page, scenario, runType, runNumber) {
     ]);
   }
 
-  appendCsv(SUMMARY_FILE, [
+  appendCsv(outputFiles.summary, [
+    'scenario',
+    'run_type',
+    'run_number',
+    'timestamp',
+    'environment',
+    'commit_sha',
+    'region',
+    'client',
+    'network',
+    'request_count',
+    'e2e_duration_ms',
+    'note',
+  ], [
     scenario,
     runType,
     runNumber,
     new Date().toISOString(),
     CONFIG.environment,
-    CONFIG.commitSha,
+    COMMIT_SHA,
     CONFIG.region,
     CONFIG.client,
-    CONFIG.network,
-    expectedRequestCount,
+    BENCHMARK_NETWORK,
+    details.length,
     scenarioE2e.toFixed(2),
     'Automated Playwright run',
   ]);
 
   console.log(
     `${scenario} ${runType} ${runNumber}: PASS | ` +
-    `Requests: ${expectedRequestCount} | ` +
+    `Requests: ${details.length} | ` +
     `E2E: ${scenarioE2e.toFixed(2)} ms`
   );
 }
@@ -400,10 +546,10 @@ async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const browser = await chromium.launch({
+    channel: 'msedge',
     headless: true,
-    executablePath:
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   });
+  CONFIG.client = `Microsoft Edge ${browser.version()}`;
 
   try {
     const context = await browser.newContext();
@@ -416,7 +562,9 @@ async function main() {
       cacheDisabled: true,
     });
 
-    await page.goto(CONFIG.url, { waitUntil: 'domcontentloaded' });
+    await page.goto(BENCHMARK_URL, {
+      waitUntil: 'domcontentloaded',
+    });
     await page.getByRole(searchInput.role, {
       name: searchInput.name,
     }).waitFor();

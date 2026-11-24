@@ -1,0 +1,13 @@
+Issue #153 / PR #244 — Base Schema & Student Import Verification
+Captured at: 2026-11-22T12:37:00.556Z
+
+$ npx vitest run infra/migrate/schema-consistency.test.mjs infra/migrate/source/student-import/import-update.test.mjs
+RUN  v3.2.7 G:/ObsidianCS/CS/CloudCS/CS361-Project
+
+ ✓  backend  infra/migrate/schema-consistency.test.mjs (3 tests) 8ms
+ ✓  backend  infra/migrate/source/student-import/import-update.test.mjs (1 test) 4ms
+
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+   Start at  19:36:59
+   Duration  727ms (transform 45ms, setup 0ms, collect 66ms, tests 12ms, environment 1ms, prepare 463ms)

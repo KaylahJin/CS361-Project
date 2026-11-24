@@ -1,8 +1,6 @@
 # Cognito User Pool setup (V3-02.1)
 
-Infra is defined in `infra/terraform/cognito.tf`. This doc covers the
-one-time manual steps `terraform apply` does not do for you, so any
-teammate can reproduce the pool from scratch.
+Infrastructure is defined in `infra/terraform/cognito.tf` and provisioned through Terraform. This guide explains the additional steps required to configure test accounts and assign application roles after the infrastructure has been created, so any teammate can reproduce the Cognito setup.
 
 ## What Terraform creates
 
@@ -17,10 +15,11 @@ UI. The React app calls Cognito directly through
 `amazon-cognito-identity-js`, so there is no redirect flow and no callback
 URL to configure.
 
-Roles (`STUDENT` / `ADVISOR` / `STAFF` / `ADMIN`) are **not** Cognito
-groups. Per `docs/overview/V3-01-data-model.md` they live in
-`app_users.role` in the application database and are assigned by an Admin.
-Cognito answers only "who is this"; the app answers "what may they do".
+Application roles (`STUDENT`, `ADVISOR`, `STAFF`, `ADMIN`, and optionally `COMMITTEE`) are **not** Cognito groups. They are stored in `app_users.role` in the application database and assigned through administrator-approved Cognito `sub` values using `npm run db:seed-users`.
+
+Cognito is responsible for user authentication, while the application database determines each user's role and permissions. An authenticated Cognito account without an approved `app_users` mapping cannot access protected application resources.
+
+Cognito answers only "who is this"; the application answers "what may they do".
 
 ## Apply
 
@@ -34,79 +33,188 @@ fails with `ExpiredToken` once they do.
 
 ## After apply
 
-1. Copy the outputs into `.env` (gitignored):
+### 1. Sync frontend environment variables
 
-   ```bash
-   terraform -chdir=infra/terraform output -raw cognito_user_pool_id
-   terraform -chdir=infra/terraform output -raw cognito_user_pool_client_id
-   ```
+After Terraform finishes successfully, run the environment synchronization script from the repository root:
 
-   ```
-   VITE_COGNITO_USER_POOL_ID=<cognito_user_pool_id>
-   VITE_COGNITO_CLIENT_ID=<cognito_user_pool_client_id>
-   ```
+```bash
+npm run env:sync
+```
 
-   Neither value is a secret — a public SPA client has no client secret and
-   both are compiled into the shipped JavaScript bundle. They live in `.env`
-   because they differ per stack, not because they need protecting.
+The script reads the latest Terraform outputs and updates the following variables in the root `.env` file:
 
-2. Create the allowlisted test users for manual QA. Public self-sign-up is
-   disabled; an administrator must create accounts through Cognito admin
-   operations. The test accounts are `student1@example.com`,
-   `advisor1@example.com`, `staff1@example.com`, and
-   `admin1@example.com`, plus `committee1@example.com` for the COMMITTEE
-   role (#147). The Self-test accounts map onto them: ADV-1 is
-   `advisor1`, COORD-1 is `staff1` (role `STAFF`), COM-1 is `committee1`.
+| Environment variable | Terraform output |
+|---|---|
+| `VITE_API_URL` | `api_url` |
+| `VITE_COGNITO_USER_POOL_ID` | `cognito_user_pool_id` |
+| `VITE_COGNITO_CLIENT_ID` | `cognito_user_pool_client_id` |
 
-   Create each account with `aws cognito-idp admin-create-user`, using
-   `--message-action SUPPRESS` and setting `email_verified=true`. Then set
-   a permanent password with `aws cognito-idp admin-set-user-password`
-   so the SPA does not encounter the unsupported `NEW_PASSWORD_REQUIRED`
-   challenge.
+The script only updates these three variables and preserves other existing environment variables.
 
-   Choose a **different password for each account** that satisfies the
-   password policy in `infra/terraform/cognito.tf` (at least 12 characters,
-   including lowercase, uppercase, numbers, and symbols). Do not commit
-   passwords to the repository or share them in source files. Share
-   credentials only through an appropriate private channel.
+Both Cognito IDs are public configuration values, not secrets. The SPA App Client has no client secret, and Vite includes these values in the frontend build.
 
-   Repeat for all four role accounts to exercise the permission matrix in
-   `docs/permission-matrix.md`.
+Run `npm run env:sync` again after Terraform recreates the API or Cognito User Pool. Restart the Vite development server after synchronization because environment variables are loaded at startup.
 
-   After creating the four accounts, retrieve each account's Cognito `sub`
-   from the Users page in the Cognito console. Confirm each account's identity
-   and intended role with the project administrator, then set these variables
-   in the same shell used to run `npm run db:seed-users`:
+### 2. Create test accounts
 
-   ```bash
-   export COOP_APPROVED_STUDENT_SUB='<student-cognito-sub>'
-   export COOP_APPROVED_ADVISOR_SUB='<advisor-cognito-sub>'
-   export COOP_APPROVED_STAFF_SUB='<staff-cognito-sub>'
-   export COOP_APPROVED_ADMIN_SUB='<admin-cognito-sub>'
-   export COOP_APPROVED_COMMITTEE_SUB='<committee-cognito-sub>'  # optional until #149
-   npm run db:seed-users
-   ```
+Public self-sign-up is disabled. All test accounts must be created by an administrator using the AWS CLI.
 
-   Replace each placeholder with the actual `sub` value from the configured
-   pool. These values are an administrator-controlled role allowlist: never
-   infer or assign a role from an email address. After a pool rebuild or
-   account recreation, verify the identities and update the approved `sub`
-   values before seeding again.
+First, retrieve the User Pool ID:
 
-   Also create `nobody1@example.com` as a fifth Cognito account with its own
-   distinct password satisfying the same policy. Do **not** insert this
-   account into `app_users`; `npm run verify:auth` uses it to check that a
-   valid Cognito identity without an application mapping receives `403`.
-   Set its password in `COOP_UNMAPPED_PASSWORD`.
+```bash
+POOL_ID=$(terraform -chdir=infra/terraform output -raw cognito_user_pool_id)
+```
 
-3. Role assignment means inserting the matching `app_users` row. The tables
-   arrived with issue #98 (V3-03.1), and `npm run db:seed-users` writes a row
-   for each demo account. An account with no row authenticates successfully
-   — API Gateway accepts the token — and then the API answers `403`: known
-   caller, no permission yet. That is the designed behaviour, not a bug, and
-   it is the normal state of a new account before an admin grants it a role.
-   `nobody1@example.com` is kept unmapped on purpose so this path stays
-   testable; see `docs/v3-02-auth.md`.
+Create the four administrator-approved test accounts:
+
+| Email | Intended application role |
+|---|---|
+| `student1@example.com` | STUDENT |
+| `advisor1@example.com` | ADVISOR |
+| `staff1@example.com` | STAFF |
+| `admin1@example.com` | ADMIN |
+
+Create each account using:
+
+```bash
+aws cognito-idp admin-create-user \
+  --user-pool-id "$POOL_ID" \
+  --username student1@example.com \
+  --message-action SUPPRESS \
+  --user-attributes \
+    Name=email,Value=student1@example.com \
+    Name=email_verified,Value=true
+```
+
+Repeat the command for the other accounts, replacing the username and email accordingly.
+
+If an account already exists, do not create it again.
+
+Set a permanent password for each account:
+
+```bash
+read -rs -p "Enter a password: " USER_PASSWORD
+echo
+
+aws cognito-idp admin-set-user-password \
+  --user-pool-id "$POOL_ID" \
+  --username student1@example.com \
+  --password "$USER_PASSWORD" \
+  --permanent
+
+unset USER_PASSWORD
+```
+
+Repeat for each account using a different password.
+
+Passwords must satisfy the policy defined in `infra/terraform/cognito.tf`:
+
+- At least 12 characters.
+- At least one lowercase letter.
+- At least one uppercase letter.
+- At least one number.
+- At least one symbol.
+
+The permanent password avoids the `NEW_PASSWORD_REQUIRED` challenge, which the current frontend login flow does not implement.
+
+Also create `nobody1@example.com` as an additional test account. Give it a distinct password, but do not assign it an application role or insert it into `app_users`. This account is used by `npm run verify:auth` to test that a valid Cognito identity without an application mapping receives HTTP 403.
+
+### 3. Map Cognito identities to application roles
+
+Cognito authentication and application authorization are separate responsibilities.
+
+Cognito identifies the user, while the application's PostgreSQL database determines the user's role through `app_users.role`.
+
+After creating the accounts, retrieve their Cognito `sub` values:
+
+```bash
+aws cognito-idp admin-get-user \
+  --user-pool-id "$POOL_ID" \
+  --username student1@example.com \
+  --query 'UserAttributes[?Name==`sub`].Value | [0]' \
+  --output text
+```
+
+Repeat for each approved account.
+
+Set the approved identities in the same shell used to run the database seed script:
+
+```bash
+export COOP_APPROVED_STUDENT_SUB='<student-cognito-sub>'
+export COOP_APPROVED_ADVISOR_SUB='<advisor-cognito-sub>'
+export COOP_APPROVED_STAFF_SUB='<staff-cognito-sub>'
+export COOP_APPROVED_ADMIN_SUB='<admin-cognito-sub>'
+```
+
+If the COMMITTEE role is required, optionally configure:
+
+```bash
+# Optional: only when an approved COMMITTEE account exists
+export COOP_APPROVED_COMMITTEE_SUB='<committee-cognito-sub>'
+```
+
+Only configure this variable when a corresponding administrator-approved COMMITTEE account exists.
+
+Before seeding, ensure the database schema and V3 migrations have been applied:
+
+```bash
+npm run db:load
+npm run db:migrate-v3
+```
+
+Then run:
+
+```bash
+npm run db:seed-users
+```
+
+The script validates the approved Cognito identities against the configured User Pool before updating `app_users`.
+
+Important:
+- Roles are assigned using explicitly approved Cognito `sub` values, not email addresses.
+- The approved `sub` values must be distinct.
+- The STUDENT account is linked to the configured student record.
+- Accounts without an approved mapping remain unauthorized.
+- After recreating the User Pool or an account, verify the new `sub` values and update the approved environment variables before running the seed script again.
+
+Never commit Cognito passwords or personal credentials to the repository.
+
+### 4. Verify authentication
+
+Set the account-specific passwords in the current shell:
+
+```bash
+export COOP_STUDENT_PASSWORD='<student-password>'
+export COOP_ADVISOR_PASSWORD='<advisor-password>'
+export COOP_STAFF_PASSWORD='<staff-password>'
+export COOP_ADMIN_PASSWORD='<admin-password>'
+export COOP_UNMAPPED_PASSWORD='<unmapped-account-password>'
+```
+
+Run the authentication verification:
+
+```bash
+npm run verify:auth
+```
+
+The verification script checks:
+
+- Public routes are accessible without an authentication token.
+- Protected routes reject requests without a token.
+- Protected routes reject forged tokens.
+- A valid Cognito account can authenticate through SRP.
+- The ID token contains the expected client audience and email.
+- An authenticated account without an `app_users` mapping receives HTTP 403.
+
+For role-based authorization checks, run:
+
+```bash
+npm run verify:roles
+```
+
+The verification scripts require the relevant test account passwords. Never commit these values to the repository.
+
+See [`docs/v3-02-auth.md`](v3-02-auth.md) for details about the authentication flow, role assignment, and authorization rules.
 
 ## AWS Academy Lab limitations
 

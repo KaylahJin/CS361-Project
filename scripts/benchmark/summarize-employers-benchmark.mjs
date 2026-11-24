@@ -1,18 +1,50 @@
 
 import fs from 'node:fs';
 
-const DIR = 'docs/evidence/v6-01-employers-baseline';
+const DEFAULT_OUTPUT_DIR = 'docs/evidence/v6-01-employers-baseline';
 
-const SUMMARY_FILE = `${DIR}/measurement-run-summary.csv`;
-const RAW_FILE = `${DIR}/measurement-raw-results.csv`;
+const outputDirArg = process.argv.find((arg) =>
+  arg.startsWith('--out=')
+);
+
+const OUTPUT_DIR = (
+  outputDirArg !== undefined
+    ? outputDirArg.slice('--out='.length)
+    : process.env.BENCHMARK_OUTPUT_DIR || DEFAULT_OUTPUT_DIR
+).trim();
+
+if (!OUTPUT_DIR) {
+  throw new Error('Output directory cannot be empty.');
+}
+
+const SUMMARY_FILE = `${OUTPUT_DIR}/measurement-run-summary.csv`;
+const RAW_FILE = `${OUTPUT_DIR}/measurement-raw-results.csv`;
 
 function parseCsvLine(line) {
-  return [...line.matchAll(/("(?:[^"]|"")*"|[^,]*)(?:,|$)/g)]
-    .map((match) =>
-      match[1].startsWith('"')
-        ? match[1].slice(1, -1).replaceAll('""', '"')
-        : match[1]
-    );
+  const fields = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(field);
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+
+  fields.push(field);
+  return fields;
 }
 
 function readCsv(file) {
@@ -33,35 +65,27 @@ function percentile(values, p) {
     (sorted[upper] - sorted[lower]) * fraction;
 }
 
-function summarize(label, rows, valueIndex, expectedCount) {
-  console.log(`\n${label}`);
+function printStatistics(label, values, expectedCount) {
+  const count = values.length;
 
-  for (const scenario of ['S1', 'S2', 'S3', 'S4']) {
-    const selected = rows.filter(
-      (row) => row[0] === scenario && row[1] === 'measurement'
-    );
+  if (count === 0) {
+    console.log(`${label}: NO DATA`);
+    return;
+  }
 
-    const values = selected
-      .map((row) => Number(row[valueIndex]))
-      .filter(Number.isFinite);
-
-    const count = values.length;
-
-    if (count !== expectedCount) {
-      console.log(
-        `${scenario}: CHECK REQUIRED - expected ${expectedCount}, got ${count}`
-      );
-      continue;
-    }
-
+  if (count !== expectedCount) {
     console.log(
-      `${scenario}: n=${count}, ` +
-      `p50=${percentile(values, 0.50).toFixed(2)} ms, ` +
-      `p95=${percentile(values, 0.95).toFixed(2)} ms, ` +
-      `min=${Math.min(...values).toFixed(2)} ms, ` +
-      `max=${Math.max(...values).toFixed(2)} ms`
+      `${label}: WARNING - expected ${expectedCount}, got ${count}`
     );
   }
+
+  console.log(
+    `${label}: n=${count}, ` +
+    `p50=${percentile(values, 0.50).toFixed(2)} ms, ` +
+    `p95=${percentile(values, 0.95).toFixed(2)} ms, ` +
+    `min=${Math.min(...values).toFixed(2)} ms, ` +
+    `max=${Math.max(...values).toFixed(2)} ms`
+  );
 }
 
 const summaryRows = readCsv(SUMMARY_FILE);
@@ -70,38 +94,55 @@ const rawRows = readCsv(RAW_FILE);
 console.log('EMPLOYERS BENCHMARK SUMMARY');
 console.log('Percentile method: Linear Interpolation (PERCENTILE.INC)');
 
-summarize(
-  'SCENARIO E2E (30 scenario runs each)',
-  summaryRows,
-  10,
-  30
-);
-
-console.log('\nAPI RESPONSE DURATION');
+console.log('\nSCENARIO E2E');
 
 for (const scenario of ['S1', 'S2', 'S3', 'S4']) {
-  const selected = rawRows.filter(
+  const selected = summaryRows.filter(
     (row) => row[0] === scenario && row[1] === 'measurement'
   );
 
   const values = selected
+    .map((row) => Number(row[10]))
+    .filter(Number.isFinite);
+
+  printStatistics(
+    scenario,
+    values,
+    selected.length
+  );
+}
+
+console.log('\nAPI RESPONSE DURATION');
+
+for (const scenario of ['S1', 'S2', 'S3', 'S4']) {
+  const selectedSummary = summaryRows.filter(
+    (row) => row[0] === scenario && row[1] === 'measurement'
+  );
+
+  const expectedCount = selectedSummary.reduce(
+    (total, row) => {
+      const requestCount = Number(row[9]);
+
+      return total + (
+        Number.isFinite(requestCount) && requestCount >= 0
+          ? requestCount
+          : 0
+      );
+    },
+    0
+  );
+
+  const selectedRaw = rawRows.filter(
+    (row) => row[0] === scenario && row[1] === 'measurement'
+  );
+
+  const values = selectedRaw
     .map((row) => Number(row[13]))
     .filter(Number.isFinite);
 
-  const expectedCount = scenario === 'S1' ? 60 : 30;
-
-  if (values.length !== expectedCount) {
-    console.log(
-      `${scenario}: CHECK REQUIRED - expected ${expectedCount}, got ${values.length}`
-    );
-    continue;
-  }
-
-  console.log(
-    `${scenario}: n=${values.length}, ` +
-    `p50=${percentile(values, 0.50).toFixed(2)} ms, ` +
-    `p95=${percentile(values, 0.95).toFixed(2)} ms, ` +
-    `min=${Math.min(...values).toFixed(2)} ms, ` +
-    `max=${Math.max(...values).toFixed(2)} ms`
+  printStatistics(
+    scenario,
+    values,
+    expectedCount
   );
 }
