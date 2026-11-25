@@ -1,0 +1,76 @@
+# V7-01-2 Raw Verification & Sanitized Configuration Outputs (#260)
+Generated: 2026-11-25T22:39:35+07:00
+Commit SHA (main): 286451c5e8cd9f180ea069efbc3255d905f35aa4
+
+=== 1. Terraform Format & Validate on main (286451c) ===
+$ terraform -chdir=infra/terraform fmt -check -recursive
+(exit code 0 — no formatting drift)
+
+$ terraform -chdir=infra/terraform validate
+Success! The configuration is valid.
+
+=== 2. Automated Security / Auth / Route-Policy / Regression Tests ===
+$ npx vitest run infra/terraform/route-policy.test.mjs infra/lambda/companies/auth.test.mjs infra/lambda/companies/authorize.test.mjs
+ ✓  backend  infra/terraform/route-policy.test.mjs (25 tests) 10ms
+ ✓  backend  infra/lambda/companies/auth.test.mjs (7 tests) 13ms
+ ✓  backend  infra/lambda/companies/authorize.test.mjs (63 tests) 29ms
+ Test Files  3 passed (3)
+      Tests  95 passed (95)
+
+$ npm test
+ Test Files  63 passed (63)
+      Tests  1121 passed (1121)
+
+$ npm run build
+✓ built in 858ms
+
+=== 3. Observed AWS Attributes from Archived Terraform States (Sanitized) ===
+Source A: Learner Lab stack (us-east-1, archived tfstate before teardown; IPs/IDs/secrets masked)
+- RDS (aws_db_instance.coop_db):
+  instance_class          = db.t3.micro (1 GiB RAM; variables.tf default = db.t4g.micro, 1 GiB RAM)
+  engine_version          = 16.15
+  publicly_accessible     = true
+  multi_az                = false
+  backup_retention_period = 0
+  backup_window           = 09:13-09:43
+  storage_encrypted       = false
+  max_allocated_storage   = 0
+- Lambda (aws_lambda_function.companies):
+  runtime                        = nodejs22.x
+  memory_size                    = 128
+  timeout                        = 10
+  reserved_concurrent_executions = -1 (unreserved)
+- Security Group Rules (aws_security_group.rds):
+  rds_ingress_from_lambda : TCP 5432 <- source_security_group_id (aws_security_group.lambda)
+  rds_ingress_from_dev_ip : TCP 5432 <- <DEV_PUBLIC_IP>/32
+
+Source B: Verification stack (ap-southeast-2, archived tfstate before teardown; IPs/IDs/secrets masked)
+- RDS (aws_db_instance.coop_db):
+  instance_class          = db.t3.micro
+  engine_version          = 16.15
+  publicly_accessible     = true
+  multi_az                = false
+  backup_retention_period = 0
+  backup_window           = 17:02-17:32
+  storage_encrypted       = false
+- Security Group Rules (aws_security_group.rds):
+  rds_ingress_from_lambda : TCP 5432 <- source_security_group_id (aws_security_group.lambda)
+  rds_ingress_from_dev_ip : TCP 5432 <- <DEV_PUBLIC_IP>/32
+
+Source C: Previously committed AWS CLI evidence (2026-11-02, us-east-1 Learner Lab)
+- docs/evidence/190-06-aws-rds-security-group-inbound.txt:
+  Observed a manual 0.0.0.0/0 rule alongside 203.0.113.4/32 and Lambda SG on TCP 5432.
+  Demonstrates drift risk when security_groups.tf / variables.tf does not strictly enforce /32 CIDR.
+- docs/evidence/190-07-aws-rds-instance.txt:
+  PubliclyAccessible = true, Engine = postgres, EngineVersion = 16.15, Port = 5432.
+
+=== 4. RDS max_connections Status (No Live AWS Run on 2026-11-25) ===
+- Reason live `SHOW max_connections;` was not re-executed on AWS RDS on 2026-11-25:
+  Learner Lab credits are exhausted (#263 / V7-overview.md §7) and the temporary AWS stack
+  was destroyed (`terraform destroy`) to prevent ongoing RDS charges.
+- Formula (AWS RDS PostgreSQL default parameter group + CS361 Module10 p.27):
+  AWS RDS default max_connections = LEAST({DBInstanceClassMemory / 9531392}, 5000)
+  For db.t4g.micro / db.t3.micro (1 GiB = 1,073,741,824 bytes):
+    floor(1,073,741,824 / 9,531,392) = 112 connections (formula-derived; not live-queried)
+  With db.mjs MAX_CONNECTIONS = 5 per Lambda execution context, reserve others = 12 (admin/RDS/psql):
+    safe_lambda_concurrency = floor((112 - 12) * 0.8 / 5) = 16 concurrent execution contexts
