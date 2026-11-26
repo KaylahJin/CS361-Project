@@ -1,0 +1,9 @@
+workload_component,before_value,after_value,unit,formula_or_assumption
+S1 requests per page load,2,1,requests,"before 2 responses; after 1 response"
+S1 payload per page load,110320,55160,bytes,"HTTP response body bytes"
+S1 requests for 100000 page loads,200000,100000,requests,"before requests = 100000 * 2; after = 100000 * 1"
+S1 payload for 100000 page loads,11032000000,5516000000,bytes,"before/after body bytes"
+API Gateway cost for 100000 page loads,0.2000,0.1000,USD,"HTTP API $1.00 per million requests"
+Lambda request cost for 100000 page loads,0.0400,0.0200,USD,"$0.20 per million requests"
+Lambda duration estimate at 200ms,0.08333,0.04167,USD,"128 MB * 200 ms * $0.0000166667 per GB-second"
+RDS instance,db.t4g.micro,db.t4g.micro,configuration,"Fixed 20 GB gp3; no instance change recorded"
