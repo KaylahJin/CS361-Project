@@ -124,7 +124,19 @@ const selectedScenarios = scenariosArg
   ? scenariosArg.split(',').map((scenario) => scenario.trim())
   : allScenarios;
 
+const s1RequestsArg = process.argv
+  .find((arg) => arg.startsWith('--s1-requests='))
+  ?.split('=')[1];
+const EXPECTED_S1_REQUESTS = s1RequestsArg
+  ? Number(s1RequestsArg)
+  : null;
 
+if (
+  EXPECTED_S1_REQUESTS !== null &&
+  (!Number.isInteger(EXPECTED_S1_REQUESTS) || EXPECTED_S1_REQUESTS < 0)
+) {
+  throw new Error('Invalid --s1-requests value.');
+}
 
 if (
   !Number.isInteger(warmupRuns) ||
@@ -352,6 +364,10 @@ async function resetPage(page) {
 
   const invalidResponse =
     initial.responses.length === 0 ||
+    (
+      EXPECTED_S1_REQUESTS !== null &&
+      initial.responses.length !== EXPECTED_S1_REQUESTS
+    ) ||
     initial.responses.some(
       (response) => response.status !== 200 || response.rows !== 103
     );
@@ -453,13 +469,17 @@ async function recordRun(page, scenario, runType, runNumber) {
   const allSuccessful =
     details.length > 0 &&
     details.every((item) => item.status === 200);
+  const allExpectedRequests =
+    EXPECTED_S1_REQUESTS === null ||
+    scenario !== 'S1' ||
+    details.length === EXPECTED_S1_REQUESTS;
   const allExpectedRows = details.every(
     (item) => item.rows === CONFIG.expectedRows[scenario]
   );
 
   console.log(`${scenario} response details:`, details);
 
-  if (!allSuccessful || !allExpectedRows) {
+  if (!allSuccessful || !allExpectedRequests || !allExpectedRows) {
     throw new Error(
       `${scenario} validation failed. Check HTTP status and response rows.`
     );
