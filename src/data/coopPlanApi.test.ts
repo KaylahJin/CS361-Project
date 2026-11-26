@@ -6,6 +6,7 @@ import {
   getCoopPlan,
   updateCoopPlan,
   submitCoopPlan,
+  downloadCoopPlansCsv,
 } from './coopPlanApi';
 
 const fetchMock = vi.fn();
@@ -128,6 +129,47 @@ const errorWithoutBody = (status: number, statusText: string) =>
       throw new SyntaxError('Unexpected token < in JSON');
     },
   }) as unknown as Response;
+
+describe('downloadCoopPlansCsv', () => {
+  it('sends active filters and the bearer token to the export route', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === 'content-disposition'
+            ? 'attachment; filename="coop-plans-2026-11-26.csv"'
+            : null,
+      },
+      blob: async () => new Blob(['csv']),
+    } as unknown as Response);
+
+    const result = await downloadCoopPlansCsv(
+      {
+        status: 'APPROVED',
+        search: 'ใจดี',
+        curriculum: '66',
+        periodId: 'P2568-1',
+        companyId: 'C47',
+      },
+      'the-id-token',
+    );
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toContain('/coop-plans/export');
+    expect(url).toContain('status=APPROVED');
+    expect(url).toContain('search=%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5');
+    expect(options.headers).toMatchObject({ Authorization: 'Bearer the-id-token' });
+    expect(result.filename).toBe('coop-plans-2026-11-26.csv');
+  });
+
+  it('throws on 403 instead of downloading an error response', async () => {
+    fetchMock.mockResolvedValue(errorResponse(403, 'Forbidden'));
+    await expect(downloadCoopPlansCsv({}, 'the-id-token'))
+      .rejects.toMatchObject({ status: 403 });
+  });
+});
 
 describe('createCoopPlan', () => {
   it('POSTs the period and position as JSON to /coop-plans', async () => {

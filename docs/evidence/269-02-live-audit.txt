@@ -1,0 +1,37 @@
+PostgreSQL live audit result from coop_db
+Captured: 2026-11-26
+
+-[ RECORD 1 ]-+-------------------------------------------
+export_id     | 6
+exported_by   | d4a8a448-7051-703b-ed0e-bfbec1b86d05
+exporter_role | STAFF
+exported_at   | 2026-11-26 04:19:40.207348+00
+filters       | {}
+
+-[ RECORD 2 ]-+-------------------------------------------
+export_id     | 5
+exported_by   | d4a8a448-7051-703b-ed0e-bfbec1b86d05
+exporter_role | STAFF
+exported_at   | 2026-11-26 04:19:35.039093+00
+filters       | {"status": "SUBMITTED"}
+
+-[ RECORD 3 ]-+-------------------------------------------
+export_id     | 4
+exported_by   | d4a8a448-7051-703b-ed0e-bfbec1b86d05
+exporter_role | STAFF
+exported_at   | 2026-11-26 04:15:57.248047+00
+filters       | {"status": "REJECTED", "curriculum": "66"}
+
+-[ RECORD 4 ]-+-------------------------------------------
+export_id     | 3
+exported_by   | d4a8a448-7051-703b-ed0e-bfbec1b86d05
+exporter_role | STAFF
+exported_at   | 2026-11-26 04:13:47.519601+00
+filters       | {"curriculum": "61"}
+
+-[ RECORD 5 ]-+-------------------------------------------
+export_id     | 2
+exported_by   | d4a8a448-7051-703b-ed0e-bfbec1b86d05
+exporter_role | STAFF
+exported_at   | 2026-11-26 04:04:08.754428+00
+filters       | {}

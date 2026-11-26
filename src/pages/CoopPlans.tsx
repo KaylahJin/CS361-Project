@@ -9,6 +9,7 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Download,
   FileText,
   GraduationCap,
   Inbox,
@@ -27,6 +28,7 @@ import {
 import {
   getCoopPlan,
   getCoopPlans,
+  downloadCoopPlansCsv,
   submitCoopPlan,
   endorseCoopPlan,
   screenCoopPlan,
@@ -749,6 +751,7 @@ export default function CoopPlans({
   const [periodId, setPeriodId] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [exporting, setExporting] = useState(false);
 
   const [toast, setToast] = useState<ToastState>({
     show: false,
@@ -765,6 +768,41 @@ export default function CoopPlans({
   // A student sees only their own plans, so the reviewer's search and filters
   // would be noise (#203).
   const showReviewTools = canUsePlanReviewTools(role);
+
+  const canExportPlans = role === 'STAFF' || role === 'ADMIN';
+
+  const handleExportCsv = async () => {
+    if (!canExportPlans) return;
+    setExporting(true);
+    try {
+      const result = await downloadCoopPlansCsv(
+        {
+          status: statusFilter !== 'ALL' ? statusFilter as CoopPlanStatus : undefined,
+          search: searchQuery.trim() || undefined,
+          curriculum: curriculumFilter !== 'ALL' ? curriculumFilter : undefined,
+          periodId: periodId || undefined,
+          companyId: companyId || undefined,
+        },
+        await getIdToken()
+      );
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setToast({
+        show: true,
+        title: 'ส่งออก CSV ไม่สำเร็จ',
+        description: describePlanError(err, 'ไม่สามารถส่งออกไฟล์ได้').detail,
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loadPlans = async () => {
     setLoading(true);
@@ -1190,6 +1228,21 @@ export default function CoopPlans({
               </div>
 
               <div className="flex items-center gap-2">
+                {canExportPlans && (
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    disabled={exporting}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">ส่งออก CSV</span>
+                  </button>
+                )}
                 <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
                   <button
                     type="button"

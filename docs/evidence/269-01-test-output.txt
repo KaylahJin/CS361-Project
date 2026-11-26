@@ -1,0 +1,16 @@
+npm test -- --run infra/lambda/companies/exportCoopPlans.test.mjs infra/terraform/route-policy.test.mjs src/data/coopPlanApi.test.ts src/pages/CoopPlans.test.tsx
+
+> cs361-project@0.0.0 test
+> vitest run --run infra/lambda/companies/exportCoopPlans.test.mjs infra/terraform/route-policy.test.mjs src/data/coopPlanApi.test.ts src/pages/CoopPlans.test.tsx
+
+ RUN  v3.2.7
+
+ ✓  backend  infra/terraform/route-policy.test.mjs (26 tests) 6ms
+ ✓  backend  infra/lambda/companies/exportCoopPlans.test.mjs (9 tests) 8ms
+ ✓  frontend  src/data/coopPlanApi.test.ts (36 tests) 37ms
+ ✓  frontend  src/pages/CoopPlans.test.tsx (67 tests) 5945ms
+   ✓ CoopPlans: create and edit > editing a plan > saves, and the detail page then shows success
+   ✓ CoopPlans: create and edit > editing a plan > a refused save keeps the form open
+
+ Test Files  4 passed (4)
+ Test 138 passed (138)
