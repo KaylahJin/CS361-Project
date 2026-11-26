@@ -1,0 +1,209 @@
+PostgreSQL 16.15 on x86_64-pc-linux-gnu, compiled by x86_64-pc-linux-gnu-gcc (GCC) 12.4.0, 64-bit
+Environment: AWS RDS (db.t3.micro, ap-southeast-2, coop_db, role=coop_app)
+Collation: en_US.UTF-8 (datlocprovider=c)
+Dataset: 103 rows from infra/seed.sql (source: infra/migrate/source/v1-companies.json), after ANALYZE companies;
+Captured: 2026-11-24T00:02:50+07:00 (2026-11-23T17:02:50Z)
+
+=== Table & Index Metadata ===
+ total_companies 
+-----------------
+             103
+
+        indexname         |                                           indexdef                                            
+--------------------------+-----------------------------------------------------------------------------------------------
+ companies_pkey           | CREATE UNIQUE INDEX companies_pkey ON public.companies USING btree (company_id)
+ idx_companies_name       | CREATE INDEX idx_companies_name ON public.companies USING gin (name gin_trgm_ops)
+ idx_companies_province   | CREATE INDEX idx_companies_province ON public.companies USING btree (province)
+ idx_companies_short_name | CREATE INDEX idx_companies_short_name ON public.companies USING gin (short_name gin_trgm_ops)
+
+  relname  | n_live_tup | table_size | indexes_size | total_size 
+-----------+------------+------------+--------------+------------
+ companies |        103 | 48 kB      | 296 kB       | 376 kB
+
+       indexrelname       | index_size 
+--------------------------+------------
+ companies_pkey           | 16 kB
+ idx_companies_name       | 144 kB
+ idx_companies_province   | 16 kB
+ idx_companies_short_name | 72 kB
+
+=== S1: Open Employers (no filter, 103 rows) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+ORDER BY name;
+
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10.47..10.73 rows=103 width=395) (actual time=78.563..78.571 rows=103 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 67kB
+   Buffers: shared hit=9
+   ->  Seq Scan on companies  (cost=0.00..7.03 rows=103 width=395) (actual time=0.005..0.018 rows=103 loops=1)
+         Buffers: shared hit=6
+ Planning:
+   Buffers: shared hit=63
+ Planning Time: 0.182 ms
+ Execution Time: 78.599 ms
+
+=== S2: Search CDG (low match, 1 row) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE (name ILIKE '%CDG%' OR short_name ILIKE '%CDG%')
+ORDER BY name;
+
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Sort  (cost=7.55..7.56 rows=1 width=395) (actual time=0.212..0.213 rows=1 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=6
+   ->  Seq Scan on companies  (cost=0.00..7.54 rows=1 width=395) (actual time=0.013..0.207 rows=1 loops=1)
+         Filter: ((name ~~* '%CDG%'::text) OR (short_name ~~* '%CDG%'::text))
+         Rows Removed by Filter: 102
+         Buffers: shared hit=6
+ Planning:
+   Buffers: shared hit=13
+ Planning Time: 1.976 ms
+ Execution Time: 0.254 ms
+
+=== S2b: Search จำกัด (high match, 89 rows) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE (name ILIKE '%จำกัด%' OR short_name ILIKE '%จำกัด%')
+ORDER BY name;
+
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10.55..10.78 rows=92 width=395) (actual time=62.285..62.292 rows=89 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 62kB
+   Buffers: shared hit=6
+   ->  Seq Scan on companies  (cost=0.00..7.54 rows=92 width=395) (actual time=0.010..0.202 rows=89 loops=1)
+         Filter: ((name ~~* '%จำกัด%'::text) OR (short_name ~~* '%จำกัด%'::text))
+         Rows Removed by Filter: 14
+         Buffers: shared hit=6
+ Planning:
+   Buffers: shared hit=2
+ Planning Time: 0.338 ms
+ Execution Time: 62.322 ms
+
+=== S3: Province กรุงเทพมหานคร (high match, 79 rows) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE province = 'กรุงเทพมหานคร'
+ORDER BY name;
+
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Sort  (cost=9.78..9.97 rows=79 width=395) (actual time=58.695..58.705 rows=79 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 58kB
+   Buffers: shared hit=6
+   ->  Seq Scan on companies  (cost=0.00..7.29 rows=79 width=395) (actual time=0.007..0.033 rows=79 loops=1)
+         Filter: (province = 'กรุงเทพมหานคร'::text)
+         Rows Removed by Filter: 24
+         Buffers: shared hit=6
+ Planning Time: 0.088 ms
+ Execution Time: 58.732 ms
+
+=== S3b: Province ปทุมธานี (low match, 9 rows) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE province = 'ปทุมธานี'
+ORDER BY name;
+
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Sort  (cost=7.43..7.45 rows=9 width=395) (actual time=3.790..3.792 rows=9 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 28kB
+   Buffers: shared hit=6
+   ->  Seq Scan on companies  (cost=0.00..7.29 rows=9 width=395) (actual time=0.008..0.031 rows=9 loops=1)
+         Filter: (province = 'ปทุมธานี'::text)
+         Rows Removed by Filter: 94
+         Buffers: shared hit=6
+ Planning Time: 0.077 ms
+ Execution Time: 3.809 ms
+
+=== S4: Search CDG + Province กรุงเทพมหานคร (combined, 1 row) ===
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE (name ILIKE '%CDG%' OR short_name ILIKE '%CDG%') AND province = 'กรุงเทพมหานคร'
+ORDER BY name;
+
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=7.81..7.82 rows=1 width=395) (actual time=0.174..0.175 rows=1 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=6
+   ->  Seq Scan on companies  (cost=0.00..7.80 rows=1 width=395) (actual time=0.010..0.169 rows=1 loops=1)
+         Filter: ((province = 'กรุงเทพมหานคร'::text) AND ((name ~~* '%CDG%'::text) OR (short_name ~~* '%CDG%'::text)))
+         Rows Removed by Filter: 102
+         Buffers: shared hit=6
+ Planning:
+   Buffers: shared hit=2
+ Planning Time: 0.291 ms
+ Execution Time: 0.191 ms
+
+=== DIAGNOSTIC ONLY (enable_seqscan = off in rolled-back txn): verify indexes ===
+BEGIN;
+SET LOCAL enable_seqscan = off;
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE (name ILIKE '%CDG%' OR short_name ILIKE '%CDG%')
+ORDER BY name;
+
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=25.39..25.40 rows=1 width=395) (actual time=0.038..0.039 rows=1 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=7
+   ->  Bitmap Heap Scan on companies  (cost=21.37..25.38 rows=1 width=395) (actual time=0.033..0.034 rows=1 loops=1)
+         Recheck Cond: ((name ~~* '%CDG%'::text) OR (short_name ~~* '%CDG%'::text))
+         Heap Blocks: exact=1
+         Buffers: shared hit=7
+         ->  BitmapOr  (cost=21.37..21.37 rows=1 width=0) (actual time=0.026..0.026 rows=0 loops=1)
+               Buffers: shared hit=6
+               ->  Bitmap Index Scan on idx_companies_name  (cost=0.00..12.81 rows=1 width=0) (actual time=0.012..0.013 rows=0 loops=1)
+                     Index Cond: (name ~~* '%CDG%'::text)
+                     Buffers: shared hit=3
+               ->  Bitmap Index Scan on idx_companies_short_name  (cost=0.00..8.56 rows=1 width=0) (actual time=0.012..0.012 rows=1 loops=1)
+                     Index Cond: (short_name ~~* '%CDG%'::text)
+                     Buffers: shared hit=3
+ Planning:
+   Buffers: shared hit=2
+ Planning Time: 0.282 ms
+ Execution Time: 0.143 ms
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT company_id, name, short_name, province, location, description, logo_filename, url, created_at
+FROM companies
+WHERE province = 'ปทุมธานี'
+ORDER BY name;
+
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10.47..10.49 rows=9 width=395) (actual time=3.943..3.945 rows=9 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 28kB
+   Buffers: shared hit=6
+   ->  Bitmap Heap Scan on companies  (cost=4.21..10.32 rows=9 width=395) (actual time=0.168..0.174 rows=9 loops=1)
+         Recheck Cond: (province = 'ปทุมธานี'::text)
+         Heap Blocks: exact=5
+         Buffers: shared hit=6
+         ->  Bitmap Index Scan on idx_companies_province  (cost=0.00..4.21 rows=9 width=0) (actual time=0.163..0.163 rows=9 loops=1)
+               Index Cond: (province = 'ปทุมธานี'::text)
+               Buffers: shared hit=1
+ Planning Time: 0.081 ms
+ Execution Time: 3.968 ms
+
+ROLLBACK;
