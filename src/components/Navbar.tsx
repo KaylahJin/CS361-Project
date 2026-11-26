@@ -7,6 +7,7 @@ import {
   GraduationCap,
   CalendarClock,
   ClipboardCheck,
+  BarChart3,
   Menu,
   X,
   LogIn,
@@ -14,7 +15,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { canViewCoopPlans, canViewStudentList } from '../auth/roles';
+import { canViewCoopPlans, canViewDashboard, canViewStudentList } from '../auth/roles';
 
 export type TabType =
   | 'home'
@@ -23,6 +24,7 @@ export type TabType =
   | 'positions'
   | 'students'
   | 'coop-plans'
+  | 'dashboard'
   | 'periods'
   | 'login'
   | 'account';
@@ -42,6 +44,7 @@ const navItems = [
   { id: 'positions', label: 'ตำแหน่งงาน', icon: Briefcase },
   { id: 'students', label: 'นักศึกษา', icon: GraduationCap, requiresAuth: true },
   { id: 'coop-plans', label: 'แผนสหกิจ', icon: ClipboardCheck },
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3, requiresAuth: true },
   { id: 'periods', label: 'รอบเวลา', icon: CalendarClock },
 ] as const;
 
@@ -67,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // login form underneath an otherwise unchanged screen, and the coop-plan
   // page just sits there. Public pages are left alone — someone reading the
   // announcements should stay on the announcements.
-  const SIGNED_IN_ONLY: TabType[] = ['account', 'coop-plans', 'students'];
+  const SIGNED_IN_ONLY: TabType[] = ['account', 'coop-plans', 'dashboard', 'students'];
 
   // Student records need a token, so the tab is no use to a signed-out
   // visitor. Everything else in navItems is public content.
@@ -75,6 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // signed-in student does not get the tab either.
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === 'students') return status === 'authenticated' && canViewStudentList(role);
+    if (item.id === 'dashboard') return status === 'authenticated' && canViewDashboard(role);
     if (item.id === 'coop-plans') {
       // Keep the entry for signed-out visitors so they can reach the login
       // prompt, but don't send an authenticated role to a page that returns 403.

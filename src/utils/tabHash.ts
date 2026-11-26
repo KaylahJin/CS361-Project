@@ -17,6 +17,7 @@ export const TAB_IDS: readonly TabType[] = [
   'positions',
   'students',
   'coop-plans',
+  'dashboard',
   'periods',
   'login',
   'account',

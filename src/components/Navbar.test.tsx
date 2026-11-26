@@ -127,3 +127,22 @@ describe('Navbar and the coop-plan page', () => {
     },
   );
 });
+
+describe('Navbar and the dashboard tab (#266)', () => {
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    logout.mockReset();
+  });
+
+  it.each([['STAFF'], ['ADMIN']])('shows the Dashboard tab to %s', (role) => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', role, logout });
+    renderNavbar('home');
+    expect(screen.getAllByRole('button', { name: /Dashboard/ }).length).toBeGreaterThan(0);
+  });
+
+  it.each([['STUDENT'], ['ADVISOR'], ['COMMITTEE'], [null]])('hides Dashboard from %s', (role) => {
+    useAuthMock.mockReturnValue({ status: 'authenticated', role, logout });
+    renderNavbar('home');
+    expect(screen.queryByRole('button', { name: /Dashboard/ })).not.toBeInTheDocument();
+  });
+});

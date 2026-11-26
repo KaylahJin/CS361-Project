@@ -223,3 +223,12 @@ resource "aws_apigatewayv2_route" "download_attachment_url" {
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
+
+# Staff/Admin dashboard status summary and overdue plans (#266).
+resource "aws_apigatewayv2_route" "get_dashboard_summary" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/dashboard"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
