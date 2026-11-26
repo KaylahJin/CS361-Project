@@ -350,3 +350,15 @@ CREATE TABLE IF NOT EXISTS plan_attachments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_plan_attachments_plan ON plan_attachments(plan_id);
+
+-- 13. export_audit — การส่งออก CSV และตัวกรองที่ใช้ (V7)
+CREATE TABLE IF NOT EXISTS export_audit (
+    export_id      BIGSERIAL PRIMARY KEY,
+    exported_by    TEXT NOT NULL,
+    exporter_role  TEXT NOT NULL,
+    exported_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    filters        JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_export_audit_exported_at
+    ON export_audit(exported_at DESC);

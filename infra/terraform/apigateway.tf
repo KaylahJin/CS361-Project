@@ -106,6 +106,14 @@ resource "aws_apigatewayv2_route" "list_coop_plans" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
 
+resource "aws_apigatewayv2_route" "export_coop_plans" {
+  api_id             = aws_apigatewayv2_api.companies.id
+  route_key          = "GET /coop-plans/export"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
 resource "aws_apigatewayv2_route" "get_coop_plan" {
   api_id             = aws_apigatewayv2_api.companies.id
   route_key          = "GET /coop-plans/{planId}"

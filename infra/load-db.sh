@@ -153,6 +153,9 @@ apply_v3_migration() {
   # One plan per period counts SELECTED / NOT_SELECTED too (#149).
   echo "--- migrate/migrations/v3_05_one_plan_per_period_upgrade.sql"
   run_sql "$REPO_ROOT/infra/migrate/migrations/v3_05_one_plan_per_period_upgrade.sql" || return 1
+  # CSV export audit and its least-privilege insert grants (V7).
+  echo "--- migrate/migrations/v7_01_plan_export_upgrade.sql"
+  run_sql "$REPO_ROOT/infra/migrate/migrations/v7_01_plan_export_upgrade.sql" || return 1
 }
 
 # Needs Cognito, so it is skipped rather than fatal when this stack has no

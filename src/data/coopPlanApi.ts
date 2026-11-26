@@ -149,6 +149,35 @@ export async function getCoopPlans(
   }
 }
 
+export async function downloadCoopPlansCsv(
+  params: CoopPlanQueryParams = {},
+  idToken?: string | null
+): Promise<{ blob: Blob; filename: string }> {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set('status', params.status);
+  if (params.studentId) qs.set('studentId', params.studentId);
+  if (params.search) qs.set('search', params.search);
+  if (params.curriculum) qs.set('curriculum', params.curriculum);
+  if (params.periodId) qs.set('periodId', params.periodId);
+  if (params.companyId) qs.set('companyId', params.companyId);
+  if (params.positionId) qs.set('positionId', params.positionId);
+  if (params.submittedFrom) qs.set('submittedFrom', params.submittedFrom);
+  if (params.submittedTo) qs.set('submittedTo', params.submittedTo);
+
+  const url = `${API_BASE}/coop-plans/export${qs.size ? `?${qs.toString()}` : ''}`;
+  const res = await fetchWithTimeout(url, authHeaders(idToken));
+  if (!res.ok) {
+    throw new CoopPlanApiError(`Failed to export coop plans: ${res.statusText}`, res.status);
+  }
+
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const filenameMatch = disposition.match(/filename="([^"]+)"/);
+  return {
+    blob: await res.blob(),
+    filename: filenameMatch?.[1] || `coop-plans.csv`,
+  };
+}
+
 export async function getCoopPlan(
   planId: number,
   idToken?: string | null

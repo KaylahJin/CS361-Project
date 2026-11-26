@@ -45,6 +45,7 @@ import { confirmAttachment } from './confirmAttachment.mjs';
 import { deleteAttachment } from './deleteAttachment.mjs';
 import { listAttachments } from './listAttachments.mjs';
 import { downloadAttachmentUrl } from './downloadAttachmentUrl.mjs';
+import { exportCoopPlans } from './exportCoopPlans.mjs';
 
 const ROUTES = Object.assign(Object.create(null), {
   'GET /companies': listCompanies,
@@ -57,6 +58,7 @@ const ROUTES = Object.assign(Object.create(null), {
   'GET /students/{studentId}': getStudentById,
   'GET /periods': listPeriods,
   'GET /coop-plans': listCoopPlans,                   
+  'GET /coop-plans/export': exportCoopPlans,
   'GET /coop-plans/{planId}': getCoopPlanById,
   'POST /coop-plans': createCoopPlan,
   'PATCH /coop-plans/{planId}': updateCoopPlan,

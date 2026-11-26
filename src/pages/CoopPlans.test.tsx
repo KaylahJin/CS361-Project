@@ -13,6 +13,7 @@ const createCoopPlanMock = vi.fn();
 const updateCoopPlanMock = vi.fn();
 const submitCoopPlanMock = vi.fn();
 const screenCoopPlanMock = vi.fn();
+const downloadCoopPlansCsvMock = vi.fn();
 
 vi.mock('../data/coopPlanApi', async () => {
   const actual = await vi.importActual<typeof import('../data/coopPlanApi')>(
@@ -26,6 +27,7 @@ vi.mock('../data/coopPlanApi', async () => {
     updateCoopPlan: updateCoopPlanMock,
     submitCoopPlan: submitCoopPlanMock,
     screenCoopPlan: screenCoopPlanMock,
+    downloadCoopPlansCsv: downloadCoopPlansCsvMock,
     getPlanEligibility: vi.fn().mockResolvedValue({
       plan_id: 1,
       period_id: 'P2568-1',
@@ -103,6 +105,27 @@ describe('CoopPlans and the signed-in session', () => {
     getCoopPlansMock.mockReset();
     getCoopPlanMock.mockReset();
     submitCoopPlanMock.mockReset();
+    downloadCoopPlansCsvMock.mockReset();
+  });
+
+  it.each(['STAFF', 'ADMIN'])('shows CSV export to %s', async (role) => {
+    signedIn(role);
+    getCoopPlansMock.mockResolvedValue(role === 'STAFF' ? [PLAN] : []);
+
+    render(<CoopPlans />);
+
+    expect(await screen.findByRole('button', { name: /ส่งออก CSV/i })).toBeInTheDocument();
+  });
+
+  it.each(['STUDENT', 'ADVISOR', 'COMMITTEE'])('hides CSV export from %s', async (role) => {
+    signedIn(role);
+    getCoopPlansMock.mockResolvedValue(role === 'STUDENT' ? [PLAN] : []);
+
+    render(<CoopPlans />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /ส่งออก CSV/i })).not.toBeInTheDocument();
+    });
   });
 
   it('loads the plans the signed-in caller may see', async () => {
