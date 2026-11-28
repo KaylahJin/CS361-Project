@@ -13,6 +13,7 @@ import type {
   CoopPlan,
   CoopPlanQueryParams,
   CreateCoopPlanInput,
+  DashboardSummary,
   UpdateCoopPlanInput,
 } from '../types/coopPlan';
 import type { EndorseDecision, PlanEligibility, ScreenDecision, SelectDecision } from '../types/planReview';
@@ -430,6 +431,17 @@ export async function getPlanEligibility(
 
   if (!res.ok) {
     throw new CoopPlanApiError(`Failed to fetch eligibility for plan ${planId}: ${res.statusText}`, res.status);
+  }
+  return await res.json();
+}
+
+/** Live status counts and overdue plans for STAFF and ADMIN (#266). */
+export async function getDashboardSummary(
+  idToken?: string | null
+): Promise<DashboardSummary> {
+  const res = await fetchWithTimeout(`${API_BASE}/coop-plans/dashboard`, authHeaders(idToken));
+  if (!res.ok) {
+    throw new CoopPlanApiError(`Failed to fetch dashboard summary: ${res.statusText}`, res.status);
   }
   return await res.json();
 }

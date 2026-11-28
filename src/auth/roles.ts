@@ -17,6 +17,9 @@ export const REVIEWER_ROLES: readonly string[] = ['ADVISOR', 'STAFF', 'COMMITTEE
 /** Roles that get the student list page (D9 in #125). */
 export const STUDENT_LIST_ROLES: readonly string[] = ['ADVISOR', 'STAFF', 'ADMIN'];
 
+/** Roles allowed on the V7 overview dashboard (#258, #266). */
+export const DASHBOARD_ROLES: readonly string[] = ['STAFF', 'ADMIN'];
+
 /** Roles with a supported workflow on the coop-plan page. */
 export const COOP_PLAN_ROLES: readonly string[] = [
   'STUDENT',
@@ -78,4 +81,8 @@ export function canEndorsePlans(role: string | null | undefined): boolean {
 
 export function canViewStudentList(role: string | null | undefined): boolean {
   return role != null && STUDENT_LIST_ROLES.includes(role);
+}
+
+export function canViewDashboard(role: string | null | undefined): boolean {
+  return role != null && DASHBOARD_ROLES.includes(role);
 }

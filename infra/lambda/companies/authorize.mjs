@@ -179,6 +179,12 @@ export function assertCanListStudents(user) {
   throw new ForbiddenError(`role ${user.role} may not list student records`);
 }
 
+/** Dashboard summary access is limited to STAFF and ADMIN (#258, #266). */
+export function assertCanViewDashboard(user) {
+  if (user.role === 'STAFF' || user.role === 'ADMIN') return;
+  throw new ForbiddenError(`role ${user.role} may not view dashboard`);
+}
+
 /**
  * The columns this caller may read, plus whether student_courses should be
  * joined at all.

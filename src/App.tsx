@@ -8,6 +8,7 @@ import Positions from './pages/Positions';
 import Students from './pages/Students';
 import Periods from './pages/Periods';
 import CoopPlans from './pages/CoopPlans';
+import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Account from './pages/Account';
 import Footer from './components/Footer';
@@ -110,6 +111,13 @@ function App() {
               routePlanId={route.planId}
               onRoutePlanChange={handlePlanChange}
             />
+          </ProtectedRoute>
+        );
+
+      case 'dashboard':
+        return (
+          <ProtectedRoute fallback={<Login onSuccess={() => handleTabChange('dashboard')} />}>
+            <Dashboard onOpenPlan={(planId) => navigate({ tab: 'coop-plans', planId })} />
           </ProtectedRoute>
         );
 

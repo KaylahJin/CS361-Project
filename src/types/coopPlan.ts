@@ -110,3 +110,23 @@ export function isPlanEditable(status: CoopPlanStatus): boolean {
 
 /** Same limit the API enforces on studentNote. */
 export const MAX_STUDENT_NOTE = 2000;
+
+export interface DashboardOverduePlan {
+  plan_id: number;
+  student_id: string;
+  status: CoopPlanStatus;
+  first_name: string;
+  last_name: string;
+  company_name: string | null;
+  company_short_name: string | null;
+  period_name: string | null;
+  submission_deadline: string | null;
+  days_overdue: number;
+}
+
+export interface DashboardSummary {
+  statusCounts: Record<CoopPlanStatus, number>;
+  totalPlans: number;
+  overdueCount: number;
+  overduePlans: DashboardOverduePlan[];
+}

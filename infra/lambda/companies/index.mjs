@@ -31,6 +31,7 @@ import { listCoopInfo } from './listCoopInfo.mjs';
 import { listStudents } from './listStudents.mjs';
 import { getStudentById } from './getStudentById.mjs';
 import { listCoopPlans } from './listCoopPlans.mjs';
+import { getDashboardSummary } from './getDashboardSummary.mjs';
 import { getCoopPlanById } from './getCoopPlanById.mjs';
 import { createCoopPlan } from './createCoopPlan.mjs';
 import { updateCoopPlan } from './updateCoopPlan.mjs';
@@ -56,7 +57,8 @@ const ROUTES = Object.assign(Object.create(null), {
   'GET /students': listStudents,
   'GET /students/{studentId}': getStudentById,
   'GET /periods': listPeriods,
-  'GET /coop-plans': listCoopPlans,                   
+  'GET /coop-plans': listCoopPlans,
+  'GET /coop-plans/dashboard': getDashboardSummary,
   'GET /coop-plans/{planId}': getCoopPlanById,
   'POST /coop-plans': createCoopPlan,
   'PATCH /coop-plans/{planId}': updateCoopPlan,
